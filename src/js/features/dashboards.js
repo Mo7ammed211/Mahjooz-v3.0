@@ -2498,8 +2498,11 @@ window._svcModalBody = function(s = {}, section = null) {
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           <input class="form-control" id="svc-lat" value="${s.lat||''}" placeholder="خط العرض (Latitude)" style="flex:1;min-width:120px">
           <input class="form-control" id="svc-lng" value="${s.lng||''}" placeholder="خط الطول (Longitude)" style="flex:1;min-width:120px">
-          <button type="button" class="btn btn-secondary btn-sm" onclick="svcUseMyLocation()" title="حدد موقعي">📍 موقعي</button>
-          <button type="button" class="btn btn-primary btn-sm" onclick="openServiceMapPicker()" title="افتح الخريطة">🗺️ الخريطة</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="svcUseMyLocation()" title="حدد موقعي" style="display:flex;align-items:center;gap:5px;white-space:nowrap;">📍 موقعي</button>
+          <button type="button" onclick="openServiceMapPicker()" title="افتح الخريطة" onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 5px 16px rgba(26,115,232,0.45)'" onmouseout="this.style.transform='';this.style.boxShadow='0 2px 8px rgba(26,115,232,0.3)'" style="display:flex;align-items:center;gap:7px;background:linear-gradient(135deg,#1a73e8,#1557b0);color:#fff;border:none;border-radius:9px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(26,115,232,0.3);transition:all 0.2s ease;white-space:nowrap;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="flex-shrink:0"><circle cx="12" cy="9" r="3.5" fill="#fff" opacity="0.9"/><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" stroke="#fff" stroke-width="1.5" fill="rgba(255,255,255,0.15)"/></svg>
+            خرائط قوقل
+          </button>
         </div>
         <div id="svc-loc-hint" style="font-size:12px;color:var(--text-muted);margin-top:6px">${s.lat?'✅ موقع محفوظ':''}</div>
       </div>

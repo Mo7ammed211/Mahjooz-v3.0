@@ -2391,9 +2391,10 @@ window.ph46_showAddItemModalDirect = function(sectionId, catId = null) {
               <input class="form-control" type="number" step="any" id="ph46-item-lng" placeholder="46.6753">
             </div>
           </div>
-          <button type="button" onclick="openPh46MapPicker()" style="margin-top:10px;display:flex;align-items:center;gap:8px;background:linear-gradient(135deg,#1a73e8,#0d47a1);color:#fff;border:none;border-radius:10px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;width:100%;justify-content:center;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="#fff"/></svg>
-            اختر الموقع من خرائط قوقل
+          <button type="button" onclick="openPh46MapPicker()" onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 6px 20px rgba(26,115,232,0.45)'" onmouseout="this.style.transform='';this.style.boxShadow='0 2px 10px rgba(26,115,232,0.3)'" style="margin-top:12px;display:flex;align-items:center;gap:10px;background:linear-gradient(135deg,#1a73e8 0%,#1557b0 100%);color:#fff;border:none;border-radius:12px;padding:11px 20px;font-size:13px;font-weight:700;cursor:pointer;width:100%;justify-content:center;box-shadow:0 2px 10px rgba(26,115,232,0.3);transition:all 0.2s ease;letter-spacing:0.3px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0"><circle cx="12" cy="9" r="3.5" fill="#fff" opacity="0.9"/><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" stroke="#fff" stroke-width="1.5" fill="rgba(255,255,255,0.15)"/></svg>
+            <span>اختر الموقع من خرائط قوقل</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="margin-right:auto;opacity:0.7"><path d="M9 18l6-6-6-6" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
           <div id="ph46-item-coords-warning" style="display:none; font-size:11px; color:#a78bfa; margin-top:6px; font-weight:600; line-height:1.4; padding:6px 10px; border-radius:6px; background:rgba(167,139,250,0.08); border:1px solid rgba(167,139,250,0.2);"></div>
         </div>
@@ -2589,9 +2590,10 @@ window.ph46_showEditItemModal = function(itemId) {
               <input class="form-control" type="number" step="any" id="ph46-item-lng" placeholder="46.6753" value="${item.lng !== null ? item.lng : ''}">
             </div>
           </div>
-          <button type="button" onclick="openPh46MapPicker()" style="margin-top:10px;display:flex;align-items:center;gap:8px;background:linear-gradient(135deg,#1a73e8,#0d47a1);color:#fff;border:none;border-radius:10px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;width:100%;justify-content:center;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="#fff"/></svg>
-            اختر الموقع من خرائط قوقل
+          <button type="button" onclick="openPh46MapPicker()" onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 6px 20px rgba(26,115,232,0.45)'" onmouseout="this.style.transform='';this.style.boxShadow='0 2px 10px rgba(26,115,232,0.3)'" style="margin-top:12px;display:flex;align-items:center;gap:10px;background:linear-gradient(135deg,#1a73e8 0%,#1557b0 100%);color:#fff;border:none;border-radius:12px;padding:11px 20px;font-size:13px;font-weight:700;cursor:pointer;width:100%;justify-content:center;box-shadow:0 2px 10px rgba(26,115,232,0.3);transition:all 0.2s ease;letter-spacing:0.3px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0"><circle cx="12" cy="9" r="3.5" fill="#fff" opacity="0.9"/><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" stroke="#fff" stroke-width="1.5" fill="rgba(255,255,255,0.15)"/></svg>
+            <span>اختر الموقع من خرائط قوقل</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="margin-right:auto;opacity:0.7"><path d="M9 18l6-6-6-6" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
           <div id="ph46-item-coords-warning" style="display:none; font-size:11px; color:#a78bfa; margin-top:6px; font-weight:600; line-height:1.4; padding:6px 10px; border-radius:6px; background:rgba(167,139,250,0.08); border:1px solid rgba(167,139,250,0.2);"></div>
         </div>
