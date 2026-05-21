@@ -2391,6 +2391,10 @@ window.ph46_showAddItemModalDirect = function(sectionId, catId = null) {
               <input class="form-control" type="number" step="any" id="ph46-item-lng" placeholder="46.6753">
             </div>
           </div>
+          <button type="button" onclick="openPh46MapPicker()" style="margin-top:10px;display:flex;align-items:center;gap:8px;background:linear-gradient(135deg,#1a73e8,#0d47a1);color:#fff;border:none;border-radius:10px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;width:100%;justify-content:center;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="#fff"/></svg>
+            اختر الموقع من خرائط قوقل
+          </button>
           <div id="ph46-item-coords-warning" style="display:none; font-size:11px; color:#a78bfa; margin-top:6px; font-weight:600; line-height:1.4; padding:6px 10px; border-radius:6px; background:rgba(167,139,250,0.08); border:1px solid rgba(167,139,250,0.2);"></div>
         </div>
         ` : ''}
@@ -2585,6 +2589,10 @@ window.ph46_showEditItemModal = function(itemId) {
               <input class="form-control" type="number" step="any" id="ph46-item-lng" placeholder="46.6753" value="${item.lng !== null ? item.lng : ''}">
             </div>
           </div>
+          <button type="button" onclick="openPh46MapPicker()" style="margin-top:10px;display:flex;align-items:center;gap:8px;background:linear-gradient(135deg,#1a73e8,#0d47a1);color:#fff;border:none;border-radius:10px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;width:100%;justify-content:center;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="#fff"/></svg>
+            اختر الموقع من خرائط قوقل
+          </button>
           <div id="ph46-item-coords-warning" style="display:none; font-size:11px; color:#a78bfa; margin-top:6px; font-weight:600; line-height:1.4; padding:6px 10px; border-radius:6px; background:rgba(167,139,250,0.08); border:1px solid rgba(167,139,250,0.2);"></div>
         </div>
         ` : ''}
@@ -2905,6 +2913,90 @@ window.ph46_goBack = function(dest) {
     State._ph46.view = 'cats';
   }
   render();
+};
+
+// ═══════════════════════════════════════════════════════
+//  منتقي الخريطة لحقول ph46-item-lat / ph46-item-lng
+// ═══════════════════════════════════════════════════════
+let _ph46PickerMap, _ph46PickerMarker;
+window.openPh46MapPicker = function() {
+  const latEl = document.getElementById('ph46-item-lat');
+  const lngEl = document.getElementById('ph46-item-lng');
+  const currentLat = latEl ? (parseFloat(latEl.value) || 15.3694) : 15.3694;
+  const currentLng = lngEl ? (parseFloat(lngEl.value) || 44.1817) : 44.1817;
+
+  openModal(`
+    <div class="modal-header">
+      <h2 class="modal-title">🗺️ اختر الموقع من خرائط قوقل</h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div style="padding:20px">
+      <div style="position:relative;margin-bottom:12px;">
+        <input id="ph46-map-search" type="text" class="form-control" placeholder="🔍 ابحث عن موقع بسرعة..." style="font-size:14px;">
+      </div>
+      <div id="ph46-map-canvas" style="height:340px;background:#f0f0f0;border-radius:12px;margin-bottom:16px;border:1px solid var(--border);overflow:hidden;"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group"><label class="form-label">📍 Latitude</label><input class="form-control" id="ph46-map-lat-val" type="number" step="0.000001" value="${currentLat}"></div>
+        <div class="form-group"><label class="form-label">📍 Longitude</label><input class="form-control" id="ph46-map-lng-val" type="number" step="0.000001" value="${currentLng}"></div>
+      </div>
+      <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="savePh46Location()">✅ تأكيد الموقع</button>
+    </div>`);
+
+  if (typeof google !== 'undefined' && google.maps) {
+    setTimeout(() => {
+      _ph46PickerMap = new google.maps.Map(document.getElementById('ph46-map-canvas'), {
+        center: { lat: currentLat, lng: currentLng },
+        zoom: 13,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: false
+      });
+      _ph46PickerMarker = new google.maps.Marker({
+        position: { lat: currentLat, lng: currentLng },
+        map: _ph46PickerMap,
+        draggable: true,
+        title: 'حدد الموقع'
+      });
+      _ph46PickerMarker.addListener('dragend', () => {
+        const pos = _ph46PickerMarker.getPosition();
+        document.getElementById('ph46-map-lat-val').value = pos.lat().toFixed(6);
+        document.getElementById('ph46-map-lng-val').value = pos.lng().toFixed(6);
+      });
+      _ph46PickerMap.addListener('click', (e) => {
+        _ph46PickerMarker.setPosition(e.latLng);
+        document.getElementById('ph46-map-lat-val').value = e.latLng.lat().toFixed(6);
+        document.getElementById('ph46-map-lng-val').value = e.latLng.lng().toFixed(6);
+      });
+      if (google.maps.places) {
+        const searchInput = document.getElementById('ph46-map-search');
+        if (searchInput) {
+          const autocomplete = new google.maps.places.Autocomplete(searchInput, { fields: ['geometry', 'name'] });
+          autocomplete.addListener('place_changed', () => {
+            const place = autocomplete.getPlace();
+            if (!place.geometry || !place.geometry.location) return;
+            const loc = place.geometry.location;
+            _ph46PickerMap.setCenter(loc);
+            _ph46PickerMap.setZoom(15);
+            _ph46PickerMarker.setPosition(loc);
+            document.getElementById('ph46-map-lat-val').value = loc.lat().toFixed(6);
+            document.getElementById('ph46-map-lng-val').value = loc.lng().toFixed(6);
+          });
+        }
+      }
+    }, 200);
+  }
+};
+
+window.savePh46Location = function() {
+  const lat = document.getElementById('ph46-map-lat-val')?.value;
+  const lng = document.getElementById('ph46-map-lng-val')?.value;
+  if (lat && lng) {
+    const latEl = document.getElementById('ph46-item-lat');
+    const lngEl = document.getElementById('ph46-item-lng');
+    if (latEl) latEl.value = lat;
+    if (lngEl) lngEl.value = lng;
+  }
+  closeModal();
 };
 
 // ═══════════════════════════════════════════════════════

@@ -942,7 +942,7 @@ window.showEditCatModal = function(catId, contextSection = null) {
     <div class="form-group"><label class="form-label">ترتيب الظهور</label><input class="form-control" id="cat-order" type="number" value="${c.order||0}"></div>
     <div class="form-group"><label class="form-label">الوصف (اختياري)</label><textarea class="form-control" id="cat-desc" rows="3">${c.description||''}</textarea></div>
     <div class="form-group" style="display: none;"><label class="form-label">القسم</label>
-    	<select class="form-control" id="cat-section">
+        <select class="form-control" id="cat-section">
         ${['professions', 'services'].includes(section) ? `
           <option value="services" ${c.section==='services'?'selected':''}>🔧 الخدمات العامة</option>
           <option value="professions" ${c.section==='professions'?'selected':''}>🛠️ نظام المهن</option>
@@ -955,7 +955,7 @@ window.showEditCatModal = function(catId, contextSection = null) {
     </div>
     ${section === 'bookings' ? `
     <div class="form-group"><label class="form-label">نوع التصنيف</label>
-    	<select class="form-control" id="cat-type">
+        <select class="form-control" id="cat-type">
         <option value="booking" ${c.catType !== 'rental' ? 'selected' : ''}>📅 حجز عادي (خدمات)</option>
         <option value="rental" ${c.catType === 'rental' ? 'selected' : ''}>🏷️ متجر تأجير (منتجات)</option>
       </select>
@@ -2749,6 +2749,9 @@ window.openServiceMapPicker = function() {
   openModal(`
     <div class="modal-header"><h2 class="modal-title">🗺️ تحديد موقع الخدمة</h2><button class="modal-close" onclick="ph_popModalState() || closeModal()">✕</button></div>
     <div style="padding:20px">
+      <div style="position:relative;margin-bottom:12px;">
+        <input id="map-search-box" type="text" class="form-control" placeholder="🔍 ابحث عن موقع بسرعة..." style="padding-left:12px;padding-right:12px;font-size:14px;">
+      </div>
       <div id="map-picker-canvas" style="height:320px; background:#f0f0f0; border-radius:12px; margin-bottom:16px; border:1px solid var(--border); overflow:hidden;"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
         <div class="form-group"><label class="form-label">📍 Latitude</label><input class="form-control" id="map-lat-input" type="number" step="0.000001" value="${currentLat}"></div>
@@ -2783,6 +2786,23 @@ window.openServiceMapPicker = function() {
         document.getElementById('map-lat-input').value = e.latLng.lat().toFixed(6);
         document.getElementById('map-lng-input').value = e.latLng.lng().toFixed(6);
       });
+      // ── صندوق البحث السريع بخرائط قوقل ──
+      if (google.maps.places) {
+        const searchInput = document.getElementById('map-search-box');
+        if (searchInput) {
+          const autocomplete = new google.maps.places.Autocomplete(searchInput, { fields: ['geometry', 'name'] });
+          autocomplete.addListener('place_changed', () => {
+            const place = autocomplete.getPlace();
+            if (!place.geometry || !place.geometry.location) return;
+            const loc = place.geometry.location;
+            _pickerMap.setCenter(loc);
+            _pickerMap.setZoom(15);
+            _pickerMarker.setPosition(loc);
+            document.getElementById('map-lat-input').value = loc.lat().toFixed(6);
+            document.getElementById('map-lng-input').value = loc.lng().toFixed(6);
+          });
+        }
+      }
     }, 200);
   }
 };
