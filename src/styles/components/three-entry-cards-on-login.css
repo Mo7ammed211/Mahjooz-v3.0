@@ -1,0 +1,49 @@
+/* Three entry cards on login */
+.login-cards {
+  display: grid; grid-template-columns: 1fr; gap: 14px; margin-bottom: 28px;
+}
+.entry-card {
+  background: var(--bg-card); border: 1.5px solid var(--glass-border);
+  border-radius: var(--radius); padding: 20px 22px; cursor: pointer;
+  text-align: start; position: relative; overflow: hidden;
+  transition: var(--transition); display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-rows: auto auto;
+  column-gap: 16px; row-gap: 4px; align-items: center;
+  font-family: inherit;
+}
+.entry-card::before {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(135deg, transparent 30%, rgba(139, 92, 246, 0.08));
+  opacity: 0; transition: var(--transition); pointer-events: none;
+}
+.entry-card:hover {
+  transform: translateY(-3px); box-shadow: var(--shadow-lg);
+  border-color: var(--primary);
+}
+.entry-card:hover::before { opacity: 1; }
+.entry-icon {
+  grid-row: 1 / span 2; font-size: 36px;
+  width: 56px; height: 56px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 14px; background: rgba(139, 92, 246, 0.12);
+}
+.entry-login .entry-icon  { background: linear-gradient(135deg, rgba(99,102,241,.18), rgba(99,102,241,.05)); }
+.entry-signup .entry-icon { background: linear-gradient(135deg, rgba(245,158,11,.18), rgba(245,158,11,.05)); }
+.entry-guest .entry-icon  { background: linear-gradient(135deg, rgba(13,148,136,.18), rgba(13,148,136,.05)); }
+.entry-title {
+  grid-column: 2; grid-row: 1;
+  font-size: 17px; font-weight: 800; color: var(--text-main);
+}
+.entry-desc {
+  grid-column: 2; grid-row: 2;
+  font-size: 13.5px; color: var(--text-muted);
+}
+.entry-arrow {
+  grid-column: 3; grid-row: 1 / span 2;
+  font-size: 22px; color: var(--text-muted);
+  transition: var(--transition);
+}
+.entry-card:hover .entry-arrow { color: var(--primary); transform: translateX(-4px); }
+[dir="ltr"] .entry-card:hover .entry-arrow { transform: translateX(4px); }
+[dir="ltr"] .entry-arrow { transform: scaleX(-1); }

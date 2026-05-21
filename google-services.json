@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1056495725021",
+    "project_id": "mahjooz-b502f",
+    "storage_bucket": "mahjooz-b502f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1056495725021:android:454c1adb3db5de9d88ae34",
+        "android_client_info": {
+          "package_name": "com.mahjooz.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA2BB7KHjEv4H8wQnnoeN88ZjHvAoMKaWc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

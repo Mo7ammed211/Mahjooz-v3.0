@@ -1,0 +1,55 @@
+/* Service detail */
+.svc-detail { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
+@media (max-width: 900px) { .svc-detail { grid-template-columns: 1fr; } }
+.svc-gallery .gal-main, .gal-main-placeholder {
+  width: 100%; aspect-ratio: 4/3; border-radius: var(--radius-md); object-fit: cover;
+  background: linear-gradient(135deg, #1f1530, #2a1c44);
+  display: flex; align-items: center; justify-content: center; font-size: 110px;
+}
+.gal-thumbs { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.gal-thumbs img { width: 76px; height: 76px; object-fit: cover; border-radius: 8px;
+  cursor: pointer; opacity: .65; border: 2px solid transparent; transition: .2s; }
+.gal-thumbs img:hover, .gal-thumbs img.on { opacity: 1; border-color: var(--accent-purple); }
+.svc-info { display: flex; flex-direction: column; gap: 14px; }
+.svc-quick { display: flex; gap: 8px; flex-wrap: wrap; }
+.svc-price-big {
+  font-size: 32px; font-weight: 800;
+  background: var(--gradient-main); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.svc-provider-line { color: var(--text-secondary); font-size: 16px; }
+.svc-section {
+  background: var(--gradient-card); border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm); padding: 16px;
+}
+.svc-section h3 { margin-bottom: 10px; font-size: 16px; }
+.svc-section p { color: var(--text-secondary); line-height: 1.8; }
+.svc-contact-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.reviews-list { display: flex; flex-direction: column; gap: 10px; }
+.review-card {
+  background: var(--gradient-card); border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm); padding: 14px;
+}
+
+/* Day chips (admin opening hours + filter) */
+.day-chip {
+  display: inline-flex; align-items: center; padding: 6px 12px;
+  border-radius: 999px; font-size: 13px; cursor: pointer; user-select: none;
+  background: rgba(255,255,255,.05); color: var(--text-secondary);
+  border: 1px solid var(--glass-border); transition: .2s;
+}
+.day-chip:hover { border-color: var(--accent-purple); color: var(--text-primary); }
+.day-chip.on {
+  background: var(--gradient-main); color: #fff; border-color: transparent;
+}
+
+/* Listing toolbar (search + filter) */
+.listing-toolbar { display: flex; gap: 10px; align-items: center; padding: 0 20px 12px; flex-wrap: wrap; }
+
+/* Section title row (with action button) */
+.section-title-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 20px; margin-bottom: 12px; }
+.section-title-row .section-title { padding: 0; margin: 0; }
+
+/* Cat description preview on category card */
+.cat-desc { font-size: 12px; color: var(--text-muted); line-height: 1.5; margin-top: 6px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }

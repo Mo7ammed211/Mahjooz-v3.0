@@ -1,0 +1,9 @@
+/* Map container */
+.ph10-map {
+  width: 100%; height: 380px;
+  border-radius: 14px; overflow: hidden;
+  border: 1px solid var(--glass-border, rgba(255,255,255,0.1));
+  background: #0f0c1f;
+  position: relative; z-index: 1;
+}
+@media (max-width: 540px) { .ph10-map { height: 300px; } }

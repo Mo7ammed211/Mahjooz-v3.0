@@ -1,0 +1,24 @@
+/* Wider modal for the tracker */
+.modal-content.ph10-modal-wide,
+.modal-overlay.open .ph10-modal-wide {
+  max-width: 720px !important; width: 95vw;
+}
+
+.ph10-tracker {
+  display: flex; flex-direction: column; gap: 14px;
+}
+
+.ph10-trk-header {
+  display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--glass-border, rgba(255,255,255,0.08));
+}
+.ph10-trk-title { font-size: 17px; font-weight: 800; }
+.ph10-trk-sub   { font-size: 13px; color: var(--text-muted, #aaa); margin-top: 4px; }
+.ph10-trk-close {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.35);
+  color: #ef4444; font-size: 16px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.ph10-trk-close:hover { background: rgba(239,68,68,0.22); }

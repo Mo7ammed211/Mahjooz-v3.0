@@ -1,0 +1,5 @@
+/* Login choose method */
+.login-choose-title {
+  text-align: center; color: var(--text-main); font-size: 22px;
+  font-weight: 800; margin: 8px 0 24px;
+}

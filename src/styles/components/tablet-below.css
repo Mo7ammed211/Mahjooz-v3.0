@@ -1,0 +1,16 @@
+/* Tablet & below */
+@media (max-width: 900px) {
+  #app-content { padding: 24px 16px; }
+  .hero { padding: 36px 0 24px; }
+  .hero-title { font-size: 34px; }
+  .hero-sub { font-size: 16px; padding: 0 8px; }
+  .section-title { font-size: 18px; }
+  .stats-grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+  .stat-card { padding: 16px 12px; }
+  .stat-num { font-size: 26px; }
+  .hub-grid, .cat-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
+  .hub-card, .cat-card { padding: 18px 14px; }
+  .hub-icon, .cat-icon { font-size: 36px; margin-bottom: 10px; }
+  .hub-title, .cat-name { font-size: 16px; }
+  .service-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+}

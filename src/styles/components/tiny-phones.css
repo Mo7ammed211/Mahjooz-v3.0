@@ -1,0 +1,6 @@
+/* Tiny phones */
+@media (max-width: 380px) {
+  .brand-text { display: none; }
+  .nav-brand { font-size: 0; }
+  .brand-mark { font-size: 18px; }
+}

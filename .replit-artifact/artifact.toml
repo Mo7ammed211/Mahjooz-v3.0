@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "محجوز"
+version = "1.0.0"
+id = "artifacts/mahjooz"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23202
+
+[services.development]
+run = "pnpm --filter @workspace/mahjooz run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/mahjooz", "run", "build" ]
+publicDir = "artifacts/mahjooz/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23202"
+BASE_PATH = "/"

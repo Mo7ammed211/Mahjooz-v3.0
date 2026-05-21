@@ -1,0 +1,23 @@
+/* Language buttons */
+.ph9-lang-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.ph9-lang-btn {
+  flex: 1; min-width: 140px;
+  display: flex; align-items: center; gap: 10px; padding: 14px 16px;
+  background: rgba(255,255,255,0.04); color: var(--text, #fff);
+  border: 1px solid var(--glass-border, rgba(255,255,255,0.08));
+  border-radius: 12px; cursor: pointer; font-weight: 700; font-size: 14px;
+  transition: all 0.18s ease;
+}
+.ph9-lang-btn:hover { background: rgba(124,58,237,0.1); border-color: rgba(168,85,247,0.35); }
+.ph9-lang-btn.on {
+  background: linear-gradient(135deg, rgba(124,58,237,0.22), rgba(168,85,247,0.12));
+  border-color: #a855f7; color: #fff;
+  box-shadow: 0 4px 16px rgba(168,85,247,0.25);
+}
+.ph9-lang-ic { font-size: 22px; }
+
+/* Toggle row (theme/2FA) */
+.ph9-toggle-row {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+}
+.ph9-toggle-title { font-weight: 700; font-size: 14px; margin-bottom: 4px; }

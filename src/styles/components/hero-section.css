@@ -1,0 +1,5 @@
+/* Hero Section */
+.hero { text-align: center; padding: 60px 0; }
+.hero-title { font-size: 48px; color: var(--text-main); margin-bottom: 16px; }
+.hero-sub { font-size: 18px; color: var(--text-muted); max-width: 600px; margin: 0 auto 32px; }
+.hero-actions { display: flex; gap: 16px; justify-content: center; }

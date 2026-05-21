@@ -1,0 +1,6 @@
+/* Responsive adjustments */
+
+@media (max-width: 768px) {
+  .hero-title { font-size: 32px; }
+  #chat-window { bottom: 90px; right: 16px; left: 16px; width: auto; height: 80vh; transform-origin: bottom center; }
+}

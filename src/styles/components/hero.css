@@ -1,0 +1,7 @@
+  /* Hero */
+  #app-content { padding: 20px 14px; }
+  .hero { padding: 28px 0 20px; }
+  .hero-title { font-size: 26px; line-height: 1.25; }
+  .hero-sub { font-size: 14px; margin-bottom: 22px; }
+  .hero-actions { flex-direction: column; gap: 10px; padding: 0 8px; }
+  .hero-actions .btn { width: 100%; }

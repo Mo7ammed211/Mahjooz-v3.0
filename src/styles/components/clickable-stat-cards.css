@@ -1,0 +1,27 @@
+/* Clickable stat cards */
+.stat-card.stat-clickable {
+  cursor: pointer;
+  position: relative;
+  border-style: solid;
+  transition: transform .2s, box-shadow .2s, border-color .2s;
+  background: var(--gradient-card);
+  text-align: right;
+  padding: 22px 18px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--glass-border);
+}
+.stat-card.stat-clickable:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lg);
+}
+.stat-card .stat-arrow {
+  position: absolute;
+  top: 14px; left: 14px;
+  opacity: .35;
+  font-size: 18px;
+  transition: opacity .2s, transform .2s;
+}
+.stat-card.stat-clickable:hover .stat-arrow {
+  opacity: 1;
+  transform: translateX(-4px);
+}

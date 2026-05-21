@@ -1,0 +1,13 @@
+/* Inputs & Forms */
+.form-group { margin-bottom: 20px; }
+.form-label { display: block; margin-bottom: 8px; font-weight: 600; color: var(--text-main); font-size: 14px; }
+.form-control, .search-input {
+  width: 100%; padding: 12px 16px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border); background: var(--bg-main); color: var(--text-main);
+  font-family: var(--font); font-size: 15px; transition: var(--transition);
+}
+.form-control:focus, .search-input:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px rgba(59,130,246,0.2); }
+textarea.form-control { resize: vertical; min-height: 100px; }
+.search-wrap { position: relative; max-width: 500px; margin: 0 auto 32px; }
+.search-icon { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); font-size: 20px; color: var(--text-muted); }
+.search-input { padding-right: 44px; }

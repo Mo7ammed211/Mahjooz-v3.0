@@ -1,0 +1,108 @@
+/* Premium UI Enhancements (Added for Mahjooz Launch) */
+
+:root {
+  --glass-bg: rgba(26, 22, 49, 0.6);
+  --glass-border: rgba(139, 92, 246, 0.2);
+  --glow-primary: 0 0 20px rgba(139, 92, 246, 0.4);
+  --glow-subtle: 0 0 10px rgba(139, 92, 246, 0.2);
+}
+
+body.light-theme {
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(139, 92, 246, 0.15);
+  --glow-primary: 0 0 20px rgba(139, 92, 246, 0.25);
+  --glow-subtle: 0 0 10px rgba(139, 92, 246, 0.1);
+}
+
+/* Glassmorphism Cards */
+.glass-card, .admin-sidebar, .admin-nav-item.active {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  background: var(--glass-bg) !important;
+  border: 1px solid var(--glass-border) !important;
+}
+
+/* Splash Loader Overlay */
+#global-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: var(--bg-main);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.4s;
+}
+
+#global-loader.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.loader-spinner {
+  width: 60px;
+  height: 60px;
+  border: 4px solid var(--glass-border);
+  border-top: 4px solid var(--primary);
+  border-radius: 50%;
+  animation: spin 1s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
+  box-shadow: var(--glow-primary);
+  margin-bottom: 24px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(180deg) scale(1.1); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+
+.loader-text {
+  color: var(--primary);
+  font-family: var(--font);
+  font-weight: 800;
+  font-size: 22px;
+  letter-spacing: -0.5px;
+  animation: pulse 2s infinite ease-in-out;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(0.95); text-shadow: var(--glow-primary); }
+}
+
+/* Modern Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-main);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(139, 92, 246, 0.45);
+  border: 1.5px solid transparent;
+  background-clip: padding-box;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 92, 246, 0.85);
+}
+
+/* Animated Gradient Text */
+.text-gradient {
+  background: linear-gradient(135deg, var(--primary), #ec4899);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Hover glow effects for standard buttons */
+.btn-primary:hover {
+  box-shadow: var(--glow-primary) !important;
+}
+
+.admin-nav-item:hover {
+  box-shadow: var(--glow-subtle);
+}

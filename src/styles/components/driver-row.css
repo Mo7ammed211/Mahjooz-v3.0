@@ -1,0 +1,20 @@
+/* Driver row */
+.ph10-trk-driver {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--glass-border, rgba(255,255,255,0.08));
+  border-radius: 12px; padding: 10px 14px; flex-wrap: wrap;
+}
+.ph10-driver-name { font-size: 14px; }
+.ph10-driver-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.ph10-mini-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 6px 12px; border-radius: 8px;
+  background: rgba(124,58,237,0.18); color: var(--text, #fff);
+  border: 1px solid rgba(168,85,247,0.32);
+  font-size: 12px; font-weight: 700; cursor: pointer;
+  text-decoration: none;
+}
+.ph10-mini-btn:hover { background: rgba(124,58,237,0.32); }
+.ph10-mini-wa { background: rgba(37,211,102,0.18); border-color: rgba(37,211,102,0.4); }
+.ph10-mini-wa:hover { background: rgba(37,211,102,0.3); }

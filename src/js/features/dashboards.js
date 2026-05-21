@@ -1,0 +1,2942 @@
+// ═══════════════════════════════════════════════════════
+//  محجوز v2.0 — Admin, Vendor, Driver, Staff Dashboards
+// ═══════════════════════════════════════════════════════
+
+// ─── Helper: Render content for rental_stores_ tabs ─────
+function _renderRentalStoresTab(catId) {
+  if (!catId) return '<div style="padding:40px;text-align:center;color:var(--text-muted)">معرف التصنيف غير موجود</div>';
+  if (typeof window.ph_renderAdminRentalStores !== 'function') {
+    return '<div style="padding:40px;color:red;text-align:center;font-weight:bold;font-size:18px;">❌ عذراً، ملف نظام التأجير لم يتم تحميله. يرجى تحديث الصفحة (Refresh).</div>';
+  }
+  try {
+    return window.ph_renderAdminRentalStores(catId);
+  } catch (err) {
+    console.error('Rental Stores Render Error:', err);
+    return '<div style="padding:40px;color:red;text-align:center;font-weight:bold;font-size:18px;">❌ حدث خطأ أثناء فتح المتاجر: ' + (err.message || err) + '</div>';
+  }
+}
+
+// ─── Hub Page Renderer ────────────────────────────────────────
+function _renderHubPage(hubId, groups) {
+  const hub = groups.find(g => g.id === hubId);
+  if (!hub) return '';
+  return `
+  <div class="admin-hub-page">
+    <div class="admin-hub-hero">
+      <span class="admin-hub-hero-icon">${hub.icon}</span>
+      <div>
+        <h1 class="admin-hub-hero-title">${hub.title}</h1>
+        <p class="admin-hub-hero-sub">اختر القسم المطلوب</p>
+      </div>
+    </div>
+    <div class="admin-hub-grid">
+      ${hub.items.map(item => `
+        <div class="admin-hub-card" onclick="setAdminTab('${item.k}')">
+          <div class="admin-hub-card-icon">${item.icon}</div>
+          <div class="admin-hub-card-body">
+            <div class="admin-hub-card-title">${item.label}</div>
+            <div class="admin-hub-card-desc">${item.desc || ''}</div>
+          </div>
+          ${item.badge ? `<span class="admin-hub-badge${item.urgent ? ' urgent' : ''}">${item.badge}</span>` : ''}
+          <span class="admin-hub-card-arrow">›</span>
+        </div>`).join('')}
+    </div>
+  </div>`;
+}
+
+
+window.renderAdmin = function () {
+  const u = State.currentUser;
+  if (!u || u.role !== 'admin') { navigate('home'); return ''; }
+  // ── حارس: يضمن دائماً إمكانية التمرير عند عرض لوحة المدير ──
+  if (document.body.style.overflow === 'hidden') document.body.style.overflow = '';
+
+  const activeTab = State.adminTab || 'hub_stats';
+  const initial = (u.name || 'A').trim().charAt(0).toUpperCase();
+
+  // ── إحصائيات سريعة ──
+  const pendingOrders  = (AppData.orders   || []).filter(o => o.status === 'pending' || o.status === 'pending_admin').length;
+  const pendingUsers   = (AppData.users    || []).filter(u => u.status === 'pending').length;
+  const pendingSvcs    = (AppData.services || []).filter(s => s.status === 'pending_approval').length;
+  const totalOrders    = (AppData.orders   || []).length;
+
+  // ── مجموعات Hub (كل زر = صفحة كروت منفصلة) ──
+  const groups = [
+    {
+      id: 'hub_stats', icon: '📊', title: 'الإحصائيات والتقارير',
+      items: [
+        { k: 'dashboard',     icon: '🏠', label: 'نظرة عامة',          desc: 'ملخص الأداء والأرقام الرئيسية' },
+        { k: 'reports',       icon: '📈', label: 'التقارير المالية',    desc: 'إيرادات ومصروفات مفصّلة' },
+        { k: 'advance_stats', icon: '🔬', label: 'التحليلات المتقدمة', desc: 'إحصائيات وتوقعات ذكية' },
+        { k: 'advanced',      icon: '📊', label: 'الإحصائيات المتقدمة', desc: 'رسوم بيانية وتحليلات الأداء' },
+      ]
+    },
+    {
+      id: 'hub_systems', icon: '⚙️', title: 'الأنظمة المستقلة',
+      items: [
+        { k: 'sys_catalog',     icon: '🗂️', label: 'المنتجات والخدمات', desc: 'قاعدة البيانات الموحدة — إدارة شاملة',
+          badge: (() => { try { return (AppData.catalogItems||[]).filter(i=>i.status==='pending_approval').length || null; } catch(e){ return null; } })(),
+          urgent: (() => { try { return (AppData.catalogItems||[]).some(i=>i.status==='pending_approval'); } catch(e){ return false; } })()
+        },
+        { k: 'sys_bookings',    icon: '📅', label: 'نظام الحجوزات',   desc: 'فنادق، قاعات، مرافق الحجز' },
+        { k: 'sys_professions', icon: '🔧', label: 'نظام المهن',       desc: 'مهنيون وخدمات متخصصة' },
+        { k: 'sys_stores',      icon: '🏪', label: 'نظام المتاجر',     desc: 'منتجات وتسوق إلكتروني' },
+        { k: 'sys_digital',     icon: '🛒', label: 'المتاجر الرقمية',   desc: 'بيع بطاقات شبكة وأكواد رقمية' },
+        { k: 'sys_services',    icon: '🛠️', label: 'الخدمات العامة',   desc: 'خدمات متنوعة وعامة' },
+      ]
+    },
+    {
+      id: 'hub_ops', icon: '📦', title: 'العمليات والطلبات',
+      items: [
+        { k: 'orders',        icon: '📦', label: 'إدارة الطلبات',    desc: 'مراجعة وتتبع جميع الطلبات',       badge: pendingOrders || null, urgent: pendingOrders > 0 },
+        { k: 'live_tracking', icon: '🗺️', label: 'التتبع المباشر',   desc: 'تتبع المندوبين لحظياً على الخريطة' },
+        { k: 'provider_svcs', icon: '🛎️', label: 'خدمات المزودين',  desc: 'مراجعة وقبول خدمات المزودين',     badge: pendingSvcs || null, urgent: pendingSvcs > 0 },
+        { k: 'ads',           icon: '📣', label: 'الكوبونات والعروض',desc: 'إدارة العروض الترويجية' },
+      ]
+    },
+    {
+      id: 'hub_finance', icon: '💰', title: 'الإدارة المالية',
+      items: [
+        { k: 'wallet', icon: '👛', label: 'المحافظ الإلكترونية', desc: 'رصيد المستخدمين وسجل المعاملات' },
+        { k: 'banks',  icon: '🏦', label: 'الحسابات البنكية',    desc: 'إدارة حسابات التحويل البنكي' },
+      ]
+    },
+    {
+      id: 'hub_content', icon: '🎨', title: 'التسويق والمحتوى',
+      items: [
+        { k: 'ads',         icon: '📢', label: 'الإعلانات',      desc: 'بانرات وإعلانات الصفحة الرئيسية' },
+        { k: 'cms_banners', icon: '💬', label: 'إدارة الرسائل',  desc: 'رسائل ونصوص النظام' },
+      ]
+    },
+    {
+      id: 'hub_users', icon: '👥', title: 'إدارة المستخدمين',
+      items: [
+        { k: 'users',       icon: '👤', label: 'كل المستخدمين', desc: 'عرض وإدارة حسابات المنصة',       badge: (AppData.users||[]).length || null },
+        { k: 'users',       icon: '⏳', label: 'حسابات معلقة',  desc: 'حسابات تنتظر الموافقة',           badge: pendingUsers || null, urgent: pendingUsers > 0 },
+        { k: 'permissions', icon: '🔑', label: 'الصلاحيات',     desc: 'أدوار وصلاحيات الموظفين' },
+      ]
+    },
+    {
+      id: 'hub_settings', icon: '🔧', title: 'إعدادات النظام',
+      items: [
+        { k: 'signup_settings',  icon: '📝', label: 'حقول التسجيل',     desc: 'تخصيص نموذج التسجيل' },
+        { k: 'login_settings',   icon: '🔐', label: 'إعدادات الدخول',   desc: 'خيارات تسجيل الدخول' },
+        { k: 'regions',          icon: '🌍', label: 'المناطق والمدن',    desc: 'إدارة المناطق الجغرافية' },
+        { k: 'delivery_pricing', icon: '🚚', label: 'أسعار التوصيل',    desc: 'تسعير التوصيل بين المناطق' },
+        { k: 'cms_texts',        icon: '✏️', label: 'النصوص والأيقونات', desc: 'تخصيص نصوص المنصة' },
+        { k: 'cms_pages',        icon: '📄', label: 'الصفحات الثابتة',  desc: 'شروط الخدمة وسياسة الخصوصية' },
+        { k: 'ph17settings',     icon: '⚙️', label: 'الإعدادات العامة', desc: 'إعدادات النظام الشاملة' },
+        { k: 'direct_routing',   icon: '🚦', label: 'التوجيه المباشر',  desc: 'ضبط توزيع الطلبات تلقائياً' },
+      ]
+    },
+  ];
+
+  // أيّ hub يحتوي على التبويب النشط حالياً
+  const activeHub = groups.find(g => g.items.some(i => i.k === activeTab))?.id || null;
+
+  const navHTML = groups.map(g => {
+    const isActive = activeTab === g.id || activeHub === g.id;
+    return `
+    <button class="admin-hub-nav-btn${isActive ? ' active' : ''}" onclick="setAdminTab('${g.id}')">
+      <span class="hub-nav-icon">${g.icon}</span>
+      <span class="hub-nav-title">${g.title}</span>
+      <span class="hub-nav-arrow">›</span>
+    </button>`;
+  }).join('');
+
+
+  return `
+    <div id="app-content">
+      <div class="admin-sidebar-overlay" id="adminSidebarOverlay" onclick="closeAdminSidebar()"></div>
+
+      <div class="admin-layout">
+        <aside class="admin-sidebar" id="adminSidebar">
+
+          <!-- ══ رأس الدرج ══ -->
+          <div class="admin-sidebar-header">
+            <div class="sidebar-header-row">
+              <div class="sidebar-user-block">
+                <div class="sidebar-avatar-lg">${initial}</div>
+                <div class="sidebar-user-meta">
+                  <div class="sidebar-user-name">${u.name || 'المدير'}</div>
+                  <div class="sidebar-user-role">
+                    <span class="sidebar-role-dot"></span>مدير النظام
+                  </div>
+                </div>
+              </div>
+              <button class="admin-sidebar-close" onclick="closeAdminSidebar()">✕</button>
+            </div>
+            <div class="sidebar-deposit-wrap">
+              <div class="sidebar-deposit-chip${pendingSvcs > 0 ? ' urgent' : ''}">
+                <span class="dep-val">${pendingSvcs || 0}</span>
+                <span class="dep-lbl">إيداعات معلقة</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- ══ بحث سريع ══ -->
+          <div class="sidebar-search-wrap">
+            <span class="sidebar-search-icon">🔍</span>
+            <input class="sidebar-search-input" id="adminNavSearch"
+              placeholder="بحث في القائمة..."
+              oninput="filterAdminNav(this.value)" autocomplete="off">
+          </div>
+
+          <!-- ══ التنقل ══ -->
+          <div class="admin-sidebar-body" id="adminSidebarBody">
+            ${navHTML}
+          </div>
+
+          <!-- ══ تذييل الدرج ══ -->
+          <div class="sidebar-footer">
+            <button class="sidebar-footer-btn" onclick="closeAdminSidebar();navigate('settings')">
+              <span>⚙️</span><span>الإعدادات</span>
+            </button>
+            <button class="sidebar-footer-btn sidebar-footer-danger" onclick="closeAdminSidebar();logoutConfirm()">
+              <span>🚪</span><span>تسجيل الخروج</span>
+            </button>
+          </div>
+
+        </aside>
+
+        <main class="admin-main">
+          ${activeTab.startsWith('hub_')        ? _renderHubPage(activeTab, groups) : ''}
+          ${activeTab === 'dashboard'            ? renderAdminDash() : ''}
+          ${activeTab === 'users'               ? renderAdminUsers() : ''}
+          ${activeTab === 'sys_catalog'         ? (typeof ph46_renderAdminProductsCatalog === 'function' ? ph46_renderAdminProductsCatalog() : '<div style="padding:40px;text-align:center;color:var(--text-muted)">⏳ جاري تحميل النظام...</div>') : ''}
+          ${activeTab === 'sys_bookings'        ? renderAdminSystem('bookings') : ''}
+          ${activeTab === 'sys_professions'     ? renderAdminSystem('professions') : ''}
+          ${activeTab === 'sys_services'        ? renderAdminSystem('services') : ''}
+          ${activeTab === 'sys_stores'          ? (typeof ph43_renderAdminStores === 'function' ? ph43_renderAdminStores() : renderAdminSystem('stores')) : ''}
+          ${activeTab === 'sys_digital'         ? (typeof ph45_renderAdminDigitalStores === 'function' ? ph45_renderAdminDigitalStores() : 'جاري التحميل...') : ''}
+          ${activeTab.startsWith('rental_stores_') ? _renderRentalStoresTab(activeTab.replace('rental_stores_', '')) : ''}
+          ${activeTab === 'orders'              ? renderAdminOrders() : ''}
+          ${activeTab === 'ads'                 ? renderAdminAds() : ''}
+          ${activeTab === 'wallet'              ? renderAdminWallet() : ''}
+          ${activeTab === 'reports'             ? renderAdminReports() : ''}
+          ${activeTab === 'permissions'         ? (typeof renderAdminPermissions === 'function' ? renderAdminPermissions() : renderAdminUsers()) : ''}
+          ${activeTab === 'live_tracking'       ? (typeof renderAdminLiveTracking === 'function' ? renderAdminLiveTracking() : renderAdminOrders()) : ''}
+          ${activeTab === 'advance_stats'       ? (typeof renderAdvancedAnalytics === 'function' ? renderAdvancedAnalytics() : renderAdminReports()) : ''}
+          ${activeTab === 'advanced'            ? (typeof renderAdminAdvancedStats === 'function' ? renderAdminAdvancedStats() : renderAdminReports()) : ''}
+          ${activeTab === 'provider_svcs'       ? (typeof renderAdminProviderSvcs === 'function' ? renderAdminProviderSvcs() : renderAdminDash()) : ''}
+          ${activeTab === 'banks'               ? (typeof renderAdminBanks === 'function' ? renderAdminBanks() : renderAdminWallet()) : ''}
+          ${activeTab === 'cms_banners'         ? (typeof renderAdminCmsBanners === 'function' ? renderAdminCmsBanners() : renderAdminDash()) : ''}
+          ${activeTab === 'login_settings'      ? (typeof renderLoginSettings === 'function' ? renderLoginSettings() : renderAdminDash()) : ''}
+          ${activeTab === 'regions'             ? (typeof renderAdminRegions === 'function' ? renderAdminRegions() : renderAdminDash()) : ''}
+          ${activeTab === 'cms_texts'           ? (typeof renderAdminCmsTexts === 'function' ? renderAdminCmsTexts() : renderAdminDash()) : ''}
+          ${activeTab === 'cms_pages'           ? (typeof renderAdminCmsPages === 'function' ? renderAdminCmsPages() : renderAdminDash()) : ''}
+          ${activeTab === 'ph17settings'        ? (typeof renderPh17Settings === 'function' ? renderPh17Settings() : renderAdminDash()) : ''}
+          ${activeTab === 'direct_routing'      ? (typeof renderDirectRouting === 'function' ? renderDirectRouting() : renderAdminDash()) : ''}
+          ${activeTab === 'signup_settings'     ? (typeof renderSignupSettings === 'function' ? renderSignupSettings() : 'جاري التحميل...') : ''}
+          ${activeTab === 'delivery_pricing'    ? (typeof renderAdminDeliveryPricing === 'function' ? renderAdminDeliveryPricing() : 'جاري التحميل...') : ''}
+        </main>
+      </div>
+    </div>
+  `;
+};
+
+window.filterAdminNav = function(query) {
+  const q = (query || '').trim().toLowerCase();
+  const btns = document.querySelectorAll('.admin-hub-nav-btn');
+  btns.forEach(btn => {
+    const matches = !q || btn.textContent.toLowerCase().includes(q);
+    btn.style.display = matches ? '' : 'none';
+  });
+};
+
+function toggleAdminSidebar() {
+  const sidebar = document.getElementById('adminSidebar');
+  if (!sidebar) return;
+  sidebar.classList.contains('open') ? closeAdminSidebar() : openAdminSidebar();
+}
+
+function openAdminSidebar() {
+  const sidebar  = document.getElementById('adminSidebar');
+  const overlay  = document.getElementById('adminSidebarOverlay');
+  const hint     = document.getElementById('adminSwipeHint');
+  if (sidebar)  sidebar.classList.add('open');
+  if (overlay)  overlay.classList.add('open');
+  if (hint)     hint.style.opacity = '0';
+  document.body.style.overflow = 'hidden';
+  _restoreSidebarGroupState();
+  setTimeout(_scrollToActiveSidebarTab, 380);
+  // ── دعم زر الرجوع في الهاتف ──
+  if (!history.state || !history.state._adminSidebarOpen) {
+    history.pushState({ _adminSidebarOpen: true }, '');
+  }
+}
+window.openAdminSidebar = openAdminSidebar;
+
+function closeAdminSidebar(_fromPopstate) {
+  const sidebar  = document.getElementById('adminSidebar');
+  const overlay  = document.getElementById('adminSidebarOverlay');
+  const hint     = document.getElementById('adminSwipeHint');
+  if (sidebar) { sidebar.classList.remove('open'); sidebar.classList.remove('dragging'); }
+  if (overlay)  overlay.classList.remove('open');
+  if (hint)     hint.style.opacity = '0.5';
+  document.body.style.overflow = '';
+  // إذا أُغلق يدوياً (لا popstate) نرجع في التاريخ لإزالة الـ state
+  if (!_fromPopstate && history.state && history.state._adminSidebarOpen) {
+    window._adminSidebarJustClosed = true;
+    history.back();
+  }
+}
+window.closeAdminSidebar = closeAdminSidebar;
+
+// ── زر الرجوع في الهاتف يُغلق الدرج ──
+window.addEventListener('popstate', function() {
+  const sidebar = document.getElementById('adminSidebar');
+  if (sidebar && sidebar.classList.contains('open')) {
+    window._adminSidebarJustClosed = true;
+    closeAdminSidebar(true);
+  }
+});
+
+// ── طي/فتح مجموعة ──
+window.toggleSidebarGroup = function(groupId) {
+  const group = document.getElementById(groupId);
+  if (!group) return;
+  group.classList.toggle('collapsed');
+  try {
+    const saved = JSON.parse(localStorage.getItem('_sbGroups') || '{}');
+    saved[groupId] = group.classList.contains('collapsed');
+    localStorage.setItem('_sbGroups', JSON.stringify(saved));
+  } catch(e) {}
+};
+
+function _restoreSidebarGroupState() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('_sbGroups') || '{}');
+    Object.entries(saved).forEach(([id, collapsed]) => {
+      const el = document.getElementById(id);
+      if (el) el.classList.toggle('collapsed', collapsed);
+    });
+  } catch(e) {}
+}
+
+function _scrollToActiveSidebarTab() {
+  const body = document.querySelector('.admin-sidebar-body');
+  const active = body && body.querySelector('.admin-nav-item.active');
+  if (active) active.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// ── إغلاق بـ Escape ──
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeAdminSidebar();
+});
+
+// ── السحب بالإصبع لفتح (من حافة اليمين) وإغلاق (داخل الدرج) ──
+(function initAdminSwipeGesture() {
+  let startX = 0, startY = 0, edgeSwipe = false, sidebarSwipe = false, currentX = 0;
+  const EDGE_ZONE = 28, OPEN_THRESH = 60, CLOSE_THRESH = 60, MAX_AX_DIFF = 40;
+
+  document.addEventListener('touchstart', function(e) {
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    edgeSwipe = startX > window.innerWidth - EDGE_ZONE;
+    const sb = document.getElementById('adminSidebar');
+    sidebarSwipe = sb && sb.classList.contains('open');
+    currentX = startX;
+  }, { passive: true });
+
+  document.addEventListener('touchmove', function(e) {
+    if (!edgeSwipe && !sidebarSwipe) return;
+    currentX = e.touches[0].clientX;
+    const dy = Math.abs(e.touches[0].clientY - startY);
+    if (dy > MAX_AX_DIFF) { edgeSwipe = false; sidebarSwipe = false; return; }
+
+    const sb = document.getElementById('adminSidebar');
+    if (!sb) return;
+    const dx = startX - currentX;
+
+    if (edgeSwipe && dx < 0) {
+      const pull = Math.min(-dx, 300);
+      sb.classList.add('dragging');
+      sb.style.transform = 'translateX(' + (300 - pull) + 'px)';
+    } else if (sidebarSwipe && dx > 0) {
+      sb.classList.add('dragging');
+      sb.style.transform = 'translateX(' + Math.min(dx, 300) + 'px)';
+    }
+  }, { passive: true });
+
+  document.addEventListener('touchend', function(e) {
+    const sb = document.getElementById('adminSidebar');
+    if (!sb) return;
+    sb.classList.remove('dragging');
+    sb.style.transform = '';
+    const dx = startX - currentX;
+    if (edgeSwipe && dx < -OPEN_THRESH) openAdminSidebar();
+    if (sidebarSwipe && dx > CLOSE_THRESH) closeAdminSidebar();
+    edgeSwipe = false; sidebarSwipe = false;
+  }, { passive: true });
+})();
+
+async function setAdminTab(tab) {
+  State.adminSearch = '';
+  const sidebarOpen = document.getElementById('adminSidebar')?.classList.contains('open');
+  if (sidebarOpen) {
+    const sidebar = document.getElementById('adminSidebar');
+    const overlay = document.getElementById('adminSidebarOverlay');
+    if (sidebar) { sidebar.classList.remove('open'); sidebar.classList.remove('dragging'); }
+    if (overlay) overlay.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+  window._adminNavFromTab = true;
+  document.body.style.overflow = '';
+  await navigate('admin', { tab }, sidebarOpen);
+}
+
+// ── فتح تلقائي للدرج عند دخول لوحة المدير على الموبايل ──
+(function _watchAdminSidebarMount() {
+  let _lastSidebar = null;
+  const obs = new MutationObserver(function() {
+    const sb = document.getElementById('adminSidebar');
+    if (!sb || sb === _lastSidebar) return;
+    _lastSidebar = sb;
+    if (window.innerWidth <= 768) {
+      if (window._adminNavFromTab) {
+        window._adminNavFromTab = false;
+      } else {
+        if (State.currentPage === 'admin' && !State._adminSidebarAutoOpened) {
+          State._adminSidebarAutoOpened = true;
+          setTimeout(function() {
+            if (!sb.classList.contains('open')) openAdminSidebar();
+          }, 180);
+        }
+      }
+    }
+  });
+  obs.observe(document.body, { childList: true, subtree: true });
+})();
+
+// ─── Direct DOM Injection for Rental Stores ─────
+// This bypasses setAdminTab overrides from stats.js / roles-permissions.js
+window.ph_openRentalAdmin = async function(catId, storeId = null) {
+  State.adminTab = 'rental_stores_' + catId;
+  State.adminRentalView = storeId;
+  State.adminRentalCat = null;
+
+  // Find the admin-main container
+  const mainEl = document.querySelector('.admin-main');
+  if (!mainEl) {
+    if (typeof render === 'function') render();
+    return;
+  }
+
+  // Show loading indicator inside the panel while we fetch
+  mainEl.innerHTML = '<div style="padding:60px;text-align:center;color:var(--text-muted)"><div style="font-size:40px;margin-bottom:12px">⏳</div><div>جاري تحميل المتاجر...</div></div>';
+
+  // Always fetch fresh data from Firestore for rental collections
+  try {
+    const [freshStores, freshSubCats, freshProducts] = await Promise.all([
+      db.collection('rentalStores').get(),
+      db.collection('rentalSubCats').get(),
+      db.collection('rentalProducts').get()
+    ]);
+    AppData.rentalStores   = freshStores.docs.map(d => ({ id: d.id, ...d.data() }));
+    AppData.rentalSubCats  = freshSubCats.docs.map(d => ({ id: d.id, ...d.data() }));
+    AppData.rentalProducts = freshProducts.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (e) {
+    console.error('ph_openRentalAdmin fetch error:', e);
+  }
+
+  // Update sidebar active state
+  document.querySelectorAll('.admin-nav-item').forEach(b => b.classList.remove('active'));
+
+  // Render into the main panel
+  const html = _renderRentalStoresTab(catId);
+  mainEl.innerHTML = '<div data-rental-stores="' + catId + '">' + html + '</div>';
+};
+
+
+
+function renderAdminDash() {
+  const stats = {
+    users: AppData.users.filter(u=>u.role!=='admin').length,
+    vendors: AppData.users.filter(u=>u.role==='vendor').length,
+    customers: AppData.users.filter(u=>u.role==='customer').length,
+    orders: AppData.orders.length,
+    completedOrders: AppData.orders.filter(o=>o.status==='completed').length,
+    totalRevenue: AppData.transactions.filter(t=>t.type==='debit').reduce((a,t)=>a+t.amount,0),
+  };
+  
+  // Initialize Chart.js safely after render
+  setTimeout(() => {
+    const ctx = document.getElementById('revenueChart');
+    if (ctx && window.Chart) {
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو'],
+          datasets: [{
+            label: 'الإيرادات الشهرية (ريال)',
+            data: [0, 0, 0, 500, 1200, stats.totalRevenue],
+            borderColor: '#8b5cf6',
+            backgroundColor: 'rgba(139, 92, 246, 0.2)',
+            borderWidth: 3,
+            tension: 0.4,
+            fill: true
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } }, x: { grid: { display: false } } }
+        }
+      });
+    }
+  }, 100);
+
+  return `
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 12px;">
+      <h2 style="margin:0; font-size:20px;">📊 لوحة الإحصائيات</h2>
+      <button class="btn btn-primary btn-sm" onclick="ph6_generateStatement && ph6_generateStatement(State.currentUser.uid||State.currentUser.id, 30)">📄 تقرير PDF</button>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card glass-card"><div class="stat-num">${stats.users}</div><div class="stat-label">المستخدمون</div></div>
+      <div class="stat-card glass-card"><div class="stat-num">${stats.vendors}</div><div class="stat-label">مزودي الخدمات</div></div>
+      <div class="stat-card glass-card"><div class="stat-num">${stats.customers}</div><div class="stat-label">العملاء</div></div>
+      <div class="stat-card glass-card"><div class="stat-num">${stats.orders}</div><div class="stat-label">إجمالي الطلبات</div></div>
+      <div class="stat-card glass-card"><div class="stat-num">${stats.completedOrders}</div><div class="stat-label">الطلبات المكتملة</div></div>
+      <div class="stat-card glass-card"><div class="stat-num">${stats.totalRevenue}</div><div class="stat-label">إجمالي الإيرادات</div></div>
+    </div>
+    
+    <div class="glass-card" style="margin-top:24px; padding:24px; border-radius: var(--radius); height: 350px;">
+      <h3 style="margin-bottom:16px;">📈 الأداء المالي</h3>
+      <div style="height: 250px; width: 100%;"><canvas id="revenueChart"></canvas></div>
+    </div>
+    
+    <div class="glass-card" style="padding:24px;margin-top:24px; border-radius: var(--radius);">
+      <h3 style="margin-bottom:12px">إجراءات سريعة</h3>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <button class="btn btn-primary btn-sm" onclick="setAdminTab('cats')">إضافة تصنيف</button>
+        <button class="btn btn-primary btn-sm" onclick="setAdminTab('services')">إضافة خدمة</button>
+        <button class="btn btn-secondary btn-sm" onclick="setAdminTab('orders')">إدارة الطلبات</button>
+        <button class="btn btn-secondary btn-sm" onclick="setAdminTab('wallet')">إدارة المحافظ</button>
+      </div>
+    </div>`;
+}
+
+window.renderAdminSystem = function(section) {
+  const titles   = { bookings: 'نظام الحجوزات', professions: 'نظام المهن', services: 'خدمات أخرى', stores: 'نظام المتاجر' };
+  const secIcons = { bookings: '📅', professions: '🔧', services: '🛠️', stores: '🏪' };
+
+  // ── مستوى التصفح الحالي ──
+  // State._sysBrowse[section] = null  →  نعرض التصنيفات
+  // State._sysBrowse[section] = catId →  نعرض خدمات ذلك التصنيف
+  if (!State._sysBrowse) State._sysBrowse = {};
+  const activeCatId = State._sysBrowse[section] || null;
+
+  if (activeCatId) {
+    return _renderSysServices(section, activeCatId, titles, secIcons);
+  }
+  return _renderSysCats(section, titles, secIcons);
+}
+
+function _renderSysCats(section, titles, secIcons) {
+  const cats = (AppData.cats||[]).filter(c=>c.section===section).sort((a,b)=>(a.order||0)-(b.order||0));
+  const allSvcs = AppData.services || [];
+  const q = (State.adminSearch||'').toLowerCase();
+  const filtered = cats.filter(c => !q || (c.name||'').toLowerCase().includes(q));
+  const totalSvcs = cats.reduce((t,c)=>t+allSvcs.filter(s=>s.catId===c.id).length,0);
+
+  const grid = filtered.map(cat => {
+    const svcCount = cat.catType==='rental'
+      ? (AppData.rentalStores||[]).filter(s=>s.catId===cat.id).length
+      : allSvcs.filter(s=>s.catId===cat.id).length;
+    const isRental = cat.catType === 'rental';
+    return `
+    <div class="sb-cat-card" onclick="sysNavInto('${section}','${cat.id}')">
+      <div class="sb-cat-icon">${cat.icon||'📂'}</div>
+      <div class="sb-cat-body">
+        <div class="sb-cat-name">
+          ${cat.name}
+          ${section === 'bookings' ? `
+            <span class="ph46-badge" style="background:${isRental ? 'rgba(234,179,8,0.15)' : 'rgba(16,185,129,0.15)'}; color:${isRental ? '#eab308' : '#10b981'}; font-size:10px; margin-right:6px; padding:2px 6px; border-radius:6px; border:1px solid ${isRental ? 'rgba(234,179,8,0.3)' : 'rgba(16,185,129,0.3)'}">
+              ${isRental ? 'متجر تأجير' : 'خدمة حجز'}
+            </span>
+          ` : ''}
+        </div>
+        <div class="sb-cat-count">${isRental ? `🏷️ ${svcCount} متجر تأجير` : `🛎️ ${svcCount} خدمة`}</div>
+      </div>
+      <div class="sb-cat-foot" onclick="event.stopPropagation()">
+        <button class="btn btn-xs btn-secondary" onclick="showEditCatModal('${cat.id}','${section}')">✏️</button>
+        <button class="btn btn-xs btn-danger"    onclick="deleteCat('${cat.id}')">🗑️</button>
+        <span class="sb-arrow">›</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  return `
+  <div class="sb-header">
+    <div class="sb-title"><span>${secIcons[section]||'📂'}</span>${titles[section]||section}</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <input type="text" class="form-control" id="admin-sys-cats-search-${section}" placeholder="🔍 بحث في التصنيفات..." value="${State.adminSearch||''}"
+        oninput="State.adminSearch=this.value;render();" style="width:210px">
+      <button class="btn btn-secondary btn-sm" onclick="showAddCatModalWithSection('${section}')">📂 تصنيف جديد</button>
+    </div>
+  </div>
+
+  <div class="sb-stat-bar">
+    <div class="sb-pill">📂 التصنيفات: <strong>${cats.length}</strong></div>
+    <div class="sb-pill">🛎️ إجمالي الخدمات: <strong>${totalSvcs}</strong></div>
+  </div>
+
+  ${filtered.length === 0 ? `
+    <div class="sb-empty">
+      <div class="sb-empty-ic">📭</div>
+      <div style="font-size:16px;font-weight:700;margin-bottom:8px">${q?'لا توجد نتائج':'لا توجد تصنيفات بعد'}</div>
+      ${!q?`<button class="btn btn-primary" onclick="showAddCatModalWithSection('${section}')">➕ أضف أول تصنيف</button>`:''}
+    </div>` : `<div class="sb-grid">${grid}</div>`}
+  `;
+}
+
+function _renderSysServices(section, catId, titles, secIcons) {
+  const cat = (AppData.cats||[]).find(c=>c.id===catId);
+  if (!cat) { State._sysBrowse[section]=null; return window.renderAdminSystem(section); }
+  const allSvcs = AppData.services||[];
+  const q = (State.adminSearch||'').toLowerCase();
+  const svcs = allSvcs.filter(s=>s.catId===catId);
+  const filtered = q ? svcs.filter(s=>(s.name||'').toLowerCase().includes(q)) : svcs;
+
+  const cards = filtered.map(s => {
+    const isActive = s.status === 'active' || !s.status;
+    const priceLabel = s.price ? `${Number(s.price).toLocaleString('ar-SA')} ريال` : (section==='professions' ? 'بعد المعاينة' : '—');
+    return `
+    <div class="usys-svc-card">
+      <div class="usys-svc-card-top">
+        <div class="usys-svc-icon">${s.icon || '🔷'}</div>
+        <span class="badge ${isActive ? 'badge-teal' : 'badge-gold'}" style="font-size:11px">${isActive ? '✅ نشط' : '⏸️ متوقف'}</span>
+      </div>
+      <div class="usys-svc-name">${escHtml(s.name || '')}</div>
+      ${s.description ? `<div class="usys-svc-desc">${escHtml(s.description).slice(0,70)}${s.description.length>70?'...':''}</div>` : ''}
+      <div class="usys-svc-footer">
+        <span class="usys-svc-price">${priceLabel}</span>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-sm btn-secondary" onclick="showEditSvcModal('${s.id}')">✏️</button>
+          <button class="btn btn-sm btn-danger"    onclick="deleteSvc('${s.id}')">🗑️</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  const emptyState = `
+    <div class="empty-state" style="grid-column:1/-1">
+      <div class="empty-icon">🔷</div>
+      <div class="empty-title">${q ? 'لا توجد نتائج للبحث' : 'لا توجد خدمات بعد'}</div>
+      <div class="empty-sub">${q ? 'جرّب كلمة بحث مختلفة' : 'اضغط ➕ خدمة جديدة لإضافة أول خدمة'}</div>
+    </div>`;
+
+  return `
+  <div class="sb-header">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-sm btn-secondary" onclick="sysNavBack('${section}')">← رجوع</button>
+      <span style="color:var(--text-muted);font-size:13px">${secIcons[section]} ${titles[section]||section}</span>
+      <span style="color:var(--text-muted)">›</span>
+      <span style="font-size:20px">${cat.icon||'📂'}</span>
+      <span style="font-weight:800;font-size:16px">${cat.name}</span>
+      <span class="badge badge-purple" style="font-size:11px">${svcs.length} خدمة</span>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <input type="text" class="form-control" id="admin-sys-services-search-${section}-${catId}" placeholder="🔍 بحث..." value="${State.adminSearch||''}"
+        oninput="State.adminSearch=this.value;render();" style="width:180px">
+      <button class="btn btn-sm btn-secondary" onclick="showEditCatModal('${catId}','${section}')">✏️ تعديل التصنيف</button>
+      <button class="btn btn-primary btn-sm" onclick="showAddSvcInCat('${catId}','${section}')">➕ خدمة جديدة</button>
+    </div>
+  </div>
+
+  <div class="usys-svc-grid">
+    ${filtered.length === 0 ? emptyState : cards}
+  </div>`;
+}
+
+window.sysNavInto = function(section, catId) {
+  if (!State._sysBrowse) State._sysBrowse = {};
+  State.adminSearch = '';
+  const cat = (AppData.cats||[]).find(c=>c.id===catId);
+  if (cat && cat.catType==='rental') { ph_openRentalAdmin(catId); return; }
+  State._sysBrowse[section] = catId;
+  render();
+}
+
+window.sysNavBack = function(section) {
+  if (!State._sysBrowse) State._sysBrowse = {};
+  State._sysBrowse[section] = null;
+  State.adminSearch = '';
+  render();
+}
+
+window.showAddSvcInCat = function(catId, section) {
+  if (State.currentUser && State.currentUser.role === 'admin') {
+    window.ph46_showAdminAddSvcModal(catId, section);
+  } else {
+    toast('غير مسموح لمزودي الخدمة بالإضافة المباشرة للحجوزات والأقسام. يرجى إرسال طلب إضافة خدمة للمراجعة.', 'warning');
+  }
+}
+
+window.showAddCatModalWithSection = function(section) {
+  openModal(`
+    <div class="modal-header"><h2 class="modal-title">➕ إضافة تصنيف جديد</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div class="form-group"><label class="form-label">الاسم</label><input class="form-control" id="cat-name" placeholder="مثال: سباكة"></div>
+    <div class="form-group"><label class="form-label">الأيقونة</label><input class="form-control" id="cat-icon" placeholder="مثال: 🛠️"></div>
+    <div class="form-group"><label class="form-label">ترتيب الظهور</label><input class="form-control" id="cat-order" type="number" value="0"></div>
+    <div class="form-group"><label class="form-label">الوصف (اختياري)</label><textarea class="form-control" id="cat-desc" rows="3" placeholder="وصف يظهر للمستخدم..."></textarea></div>
+    <div class="form-group" style="display: none;"><label class="form-label">القسم</label>
+      <select class="form-control" id="cat-section">
+        ${['professions', 'services'].includes(section) ? `
+          <option value="services" ${section==='services'?'selected':''}>🔧 الخدمات العامة</option>
+          <option value="professions" ${section==='professions'?'selected':''}>🛠️ نظام المهن</option>
+        ` : (section === 'bookings' ? `
+          <option value="bookings" selected>📅 الحجوزات</option>
+        ` : `
+          <option value="stores" selected>🏪 المتاجر</option>
+        `)}
+      </select>
+    </div>
+    ${section === 'bookings' ? `
+    <div class="form-group"><label class="form-label">نوع التصنيف</label>
+      <select class="form-control" id="cat-type">
+        <option value="booking">📅 حجز عادي (خدمات)</option>
+        <option value="rental">🏷️ متجر تأجير (منتجات)</option>
+      </select>
+    </div>
+    ` : ''}
+    <button class="btn btn-primary btn-block" onclick="saveNewCat()">حفظ</button>`);
+}
+
+window.showAddSvcModalWithCatSelection = function(section) {
+  const cats = (AppData.cats || []).filter(c => c.section === section && (section === 'bookings' ? c.catType !== 'rental' : true));
+  openModal(`
+    <div class="modal-header"><h2 class="modal-title">➕ إضافة خدمة جديدة</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div id="svc-section-wrapper"></div>
+    ${typeof _svcModalBody === 'function' ? _svcModalBody({}, section) : ''}
+    <button class="btn btn-primary btn-block" onclick="saveNewSvc()">💾 حفظ</button>`);
+}
+
+function renderAdminUsers() {
+  const me = State.currentUser;
+  const isAdmin = me?.role === 'admin';
+  const canCreate = isAdmin || (typeof userHasPerm === 'function' && userHasPerm(me, 'create_users'));
+  const canAdjust = isAdmin || (typeof userHasPerm === 'function' && userHasPerm(me, 'adjust_wallets'));
+  const canViewWallets = isAdmin || (typeof userHasPerm === 'function' && userHasPerm(me, 'view_wallets'));
+  const allUsers = (AppData.users || []).filter(u=> isAdmin ? true : u.role!=='admin');
+  const roleLabel = { admin:'مدير', staff:'موظف', vendor:'مزود خدمة', driver:'مندوب', customer:'عميل', guest:'زائر', cs:'موظف', provider:'مزود خدمة' };
+  const roleBadge = { admin:'badge-rose', staff:'badge-purple', vendor:'badge-teal', driver:'badge-gold', customer:'badge-teal', guest:'badge-teal', cs:'badge-purple', provider:'badge-teal' };
+  const roleIcon  = { staff:'👨‍💼', vendor:'🏪', driver:'🚗', customer:'👤', provider:'🔧', guest:'👁️', cs:'🎧' };
+
+  // Role filter sidebar state
+  if (!State.adminUsersRoleFilter) State.adminUsersRoleFilter = 'all';
+  const activeFilter = State.adminUsersRoleFilter;
+
+  // Counts per role
+  const roleCounts = {};
+  allUsers.forEach(u => { roleCounts[u.role] = (roleCounts[u.role]||0)+1; });
+
+  const sidebarRoles = [
+    { key:'all',      icon:'', label:'جميع المستخدمين' },
+    { key:'admin',    icon:'', label:'المدراء' },
+    { key:'staff',    icon:'', label:'الموظفون' },
+    { key:'driver',   icon:'', label:'المندوبون' },
+    { key:'vendor',   icon:'', label:'مزودو الخدمات' },
+    { key:'customer', icon:'', label:'العملاء' },
+    { key:'guest',    icon:'', label:'الزوار' },
+  ];
+
+  const searchQuery = (State.adminSearch || '').toLowerCase();
+  let users = activeFilter === 'all' ? allUsers : allUsers.filter(u => {
+    if (activeFilter === 'vendor') return u.role === 'vendor' || u.role === 'provider';
+    return u.role === activeFilter;
+  });
+  const filteredUsers = users.filter(u =>
+    (u.name || '').toLowerCase().includes(searchQuery) ||
+    (u.email || '').toLowerCase().includes(searchQuery) ||
+    (u.phone || '').toLowerCase().includes(searchQuery)
+  );
+
+  return `
+  <style>
+    .au-layout{display:flex;gap:20px;align-items:flex-start}
+    .au-sidebar{width:200px;flex-shrink:0;display:flex;flex-direction:column;gap:6px}
+    .au-sidebar-btn{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:12px;border:1.5px solid transparent;background:var(--bg-card);cursor:pointer;transition:all 0.15s;font-size:14px;width:100%;text-align:right}
+    .au-sidebar-btn:hover{background:var(--bg-secondary);border-color:var(--primary)}
+    .au-sidebar-btn.active{background:rgba(139,92,246,0.1);border-color:var(--primary);font-weight:700;color:var(--primary)}
+    .au-sidebar-count{margin-inline-start:auto;font-size:11px;background:var(--bg-secondary);border-radius:20px;padding:2px 8px;font-weight:600;color:var(--text-muted)}
+    .au-sidebar-btn.active .au-sidebar-count{background:var(--primary);color:#fff}
+    .au-main{flex:1;min-width:0}
+    @media(max-width:640px){.au-layout{flex-direction:column}.au-sidebar{width:100%;flex-direction:row;flex-wrap:wrap}}
+  </style>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+    <h2>👥 إدارة المستخدمين (${filteredUsers.length})</h2>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+      <input type="text" class="form-control" id="admin-users-search"
+             placeholder="🔍 ابحث بالاسم أو البريد أو الجوال..."
+             value="${State.adminSearch || ''}"
+             oninput="State.adminSearch=this.value;render();"
+             style="width:260px">
+      ${canCreate ? `<button class="btn btn-primary" onclick="typeof showAddUserModal === 'function' ? showAddUserModal() : (typeof ph17_openCreateUser === 'function' ? ph17_openCreateUser() : null)">➕ إضافة مستخدم</button>` : ''}
+    </div>
+  </div>
+  <div class="au-layout">
+    <div class="au-sidebar">
+      ${sidebarRoles.map(r => {
+        let cnt = r.key === 'all' ? allUsers.length : (roleCounts[r.key]||0);
+        if (r.key === 'vendor') cnt += (roleCounts['provider']||0);
+        return `<button class="au-sidebar-btn${activeFilter===r.key?' active':''}"
+          onclick="State.adminUsersRoleFilter='${r.key}';State.adminSearch='';render()">
+          <span style="flex:1">${r.label}</span>
+          <span class="au-sidebar-count">${cnt}</span>
+        </button>`;
+      }).join('')}
+    </div>
+    <div class="au-main">
+      <div class="usys-svc-grid" style="margin-top:10px">
+        ${filteredUsers.length === 0 ? `<div class="empty-state" style="grid-column:1/-1;background:var(--bg-card);border:1px dashed var(--border);border-radius:14px;padding:30px;text-align:center;color:var(--text-muted)"><div style="font-size:30px;margin-bottom:10px">🔍</div>لا يوجد مستخدمون في هذه الفئة</div>` :
+        filteredUsers.map(u=>{
+          const sus = !!u.suspended;
+          return `
+          <div class="usys-svc-card" style="${sus?'opacity:0.6;filter:grayscale(0.5)':''}">
+            <div class="usys-svc-card-top" style="margin-bottom:12px">
+              <div style="display:flex;align-items:center;gap:10px">
+                ${u.photoBase64 ? `<img src="${u.photoBase64}" style="width:38px;height:38px;border-radius:50%;object-fit:cover;box-shadow:0 2px 8px rgba(0,0,0,0.1)">` : `<div style="display:flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--primary),#a389f4);color:#fff;font-size:16px;font-weight:800;box-shadow:0 2px 8px rgba(139,92,246,0.3)">${(u.name||'؟').charAt(0)}</div>`}
+                <div>
+                  <div class="usys-svc-name" style="font-size:15px;margin-bottom:2px">${escHtml(u.name||'—')}</div>
+                  <div style="font-size:11px;color:var(--text-muted);display:flex;align-items:center;gap:4px">
+                    ${sus?'<span style="color:#ef4444;font-weight:700">⏸️ معلّق</span>':'<span style="color:#10b981;font-weight:700">✅ نشط</span>'}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div style="margin-bottom:12px">
+              <span class="badge ${roleBadge[u.role]||'badge-purple'}" style="font-size:11px;padding:4px 8px">${roleIcon[u.role]||''} ${roleLabel[u.role]||u.role||'—'}</span>
+            </div>
+            <div class="usys-svc-desc" style="font-size:12px;display:flex;flex-direction:column;gap:4px;margin-bottom:16px;flex:1">
+              <div style="display:flex;align-items:center;gap:6px;color:var(--text-secondary)"><span style="font-size:14px">📧</span> <span style="direction:ltr;font-family:monospace">${u.email||'—'}</span></div>
+              ${u.phone ? `<div style="display:flex;align-items:center;gap:6px;color:var(--text-secondary)"><span style="font-size:14px">📞</span> <span style="direction:ltr;font-family:monospace">${u.phone}</span></div>` : ''}
+            </div>
+            <div class="usys-svc-footer" style="border-top:1px solid var(--border);padding-top:12px;margin-top:auto">
+              ${canViewWallets ? `<div style="text-align:center;font-weight:700;margin-bottom:8px;color:#10b981;font-size:14px">${AppData.wallets ? (AppData.wallets[u.id || u.uid]?.balance || 0) : 0} ر</div>` : ''}
+              <div style="display:flex;gap:6px">
+                <button class="btn btn-sm btn-secondary" style="flex:1" onclick="showUserDetails('${u.id}')">👁️ عرض</button>
+                ${isAdmin ? `<button class="btn btn-sm btn-secondary" onclick="showPermsModal('${u.id}')" title="صلاحيات">🔑</button>` : ''}
+                ${canAdjust ? `<button class="btn btn-sm btn-secondary" onclick="showAdjustWalletModal('${u.id}')" title="تعديل رصيد">💰</button>` : ''}
+                ${isAdmin ? `<button class="btn btn-sm" style="background:rgba(239,68,68,0.1);color:#ef4444;border:1px solid rgba(239,68,68,0.2)" onclick="deleteUser('${u.id}')">🗑️</button>` : ''}
+              </div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div style="margin-top:12px;font-size:13px;color:var(--text-muted)">
+        إجمالي: <strong>${filteredUsers.length}</strong> مستخدم
+        ${activeFilter!=='all'?` من فئة <strong>${roleLabel[activeFilter]||activeFilter}</strong>`:''}
+      </div>
+    </div>
+  </div>`;
+}
+async function deleteUser(userId) {
+  if (!confirm('حذف هذا المستخدم؟')) return;
+  await fsDelete('users', userId);
+  toast('تم حذف المستخدم','success'); await render();
+}
+function showUserDetails(userId) {
+  const u = AppData.users.find(x=>x.id===userId);
+  if (!u) return;
+  openModal(`
+    <div class="modal-header"><h2 class="modal-title">معلومات المستخدم</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div class="form-group"><label>الاسم</label><div class="form-value">${u.name}</div></div>
+    <div class="form-group"><label>البريع</label><div class="form-value">${u.email}</div></div>
+    <div class="form-group"><label>الجوال</label><div class="form-value">${u.phone||'—'}</div></div>
+    <div class="form-group"><label>النوع</label><div class="form-value"><span class="badge badge-teal">${u.role}</span></div></div>
+    <div class="form-group"><label>تاريخ التسجيل</label><div class="form-value">${fmtDate(u.createdAt)}</div></div>`);
+}
+
+function renderAdminCats() {
+  const searchQuery = (State.adminSearch || '').toLowerCase();
+  const filteredCats = AppData.cats.filter(c => 
+    (c.name || '').toLowerCase().includes(searchQuery) ||
+    (c.section || '').toLowerCase().includes(searchQuery)
+  );
+  return `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
+      <h2>📂 التصنيفات</h2>
+      <div style="display:flex;gap:12px">
+        <input type="text" class="form-control" id="admin-cats-search" placeholder="🔍 ابحث بالاسم أو القسم..." value="${State.adminSearch || ''}" oninput="State.adminSearch = this.value; render();" style="width:300px">
+        <button class="btn btn-primary" onclick="showAddCatModal()">➕ إضافة</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="admin-table">
+        <thead><tr><th>الأيقونة</th><th>الاسم</th><th>القسم</th><th>الخدمات</th><th>إجراءات</th></tr></thead>
+        <tbody>
+          ${filteredCats.map(c=>`
+            <tr>
+              <td style="font-size:24px">${c.icon||'📌'}</td>
+              <td>
+                <div style="font-weight:600">${c.name}</div>
+                ${c.catType === 'rental' ? `<div style="font-size:11px;color:var(--text-secondary)">🏷️ تأجير</div>` : ''}
+              </td>
+              <td><span class="badge badge-purple">${c.section}</span></td>
+              <td>${c.catType === 'rental' ? (AppData.rentalStores||[]).filter(s=>s.catId===c.id).length + ' متجر' : AppData.services.filter(s=>s.catId===c.id).length + ' خدمة'}</td>
+              <td style="display:flex;gap:4px;align-items:center;">
+                ${c.catType === 'rental' ? `<button class="btn btn-sm btn-primary" onclick="ph_openRentalAdmin('${c.id}')">المتاجر 🏪</button>` : ''}
+                <button class="btn btn-sm btn-secondary" onclick="showEditCatModal('${c.id}')">✏️</button>
+                <button class="btn btn-sm btn-danger" onclick="deleteCat('${c.id}')">🗑️</button>
+              </td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+window.showAddCatModal = function() {
+  openModal(`
+    <div class="modal-header"><h2 class="modal-title">➕ إضافة تصنيف</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div class="form-group"><label class="form-label">الاسم</label><input class="form-control" id="cat-name" placeholder="مثال: فنادق"></div>
+    <div class="form-group"><label class="form-label">أيقونة</label><input class="form-control" id="cat-icon" placeholder="مثال: 🏨"></div>
+    <div class="form-group"><label class="form-label">ترتيب الظهور</label><input class="form-control" id="cat-order" type="number" value="0"></div>
+    <div class="form-group"><label class="form-label">الوصف (اختياري)</label><textarea class="form-control" id="cat-desc" rows="3" placeholder="وصف يظهر للمستخدم..."></textarea></div>
+    <div class="form-group"><label class="form-label">القسم</label>
+      <select class="form-control" id="cat-section" onchange="document.getElementById('cat-type-group').style.display = this.value === 'bookings' ? 'block' : 'none'">
+        <option value="bookings">📅 الحجوزات</option>
+        <option value="services">🔧 الخدمات المهنية</option>
+        <option value="professions">🛠️ نظام المهن</option>
+        <option value="stores">🏪 المتاجر</option>
+      </select>
+    </div>
+    <div class="form-group" id="cat-type-group"><label class="form-label">نوع التصنيف</label>
+      <select class="form-control" id="cat-type">
+        <option value="booking">📅 حجز عادي (خدمات)</option>
+        <option value="rental">🏷️ متجر تأجير (منتجات)</option>
+      </select>
+    </div>
+    <button class="btn btn-primary btn-block" onclick="saveNewCat()">حفظ</button>`);
+}
+window.saveNewCat = async function() {
+  const name = document.getElementById('cat-name').value.trim();
+  const icon = document.getElementById('cat-icon').value.trim();
+  const section = document.getElementById('cat-section').value;
+  const catType = document.getElementById('cat-type')?.value || 'booking';
+  const order = parseInt(document.getElementById('cat-order').value) || 0;
+  const description = document.getElementById('cat-desc')?.value.trim() || '';
+  if (!name) { toast('أدخل اسم التصنيف','error'); return; }
+  
+  showLoader();
+  try {
+    const collectionName = (section === 'bookings') ? 'categories' : 'professions_categories';
+    await fsAdd(collectionName, { name, icon, section, catType, order, description, createdAt: new Date() });
+    closeModal(); toast('تم إضافة التصنيف ✅','success'); await render();
+  } catch (e) {
+    console.error('Save Category Error:', e);
+    toast('❌ فشل الحفظ: قد يكون جهازك محظوراً مؤقتاً من السيرفر', 'error');
+  } finally {
+    hideLoader();
+  }
+}
+window.showEditCatModal = function(catId, contextSection = null) {
+  const c = AppData.cats.find(x=>x.id===catId);
+  if (!c) return;
+  const section = contextSection || c.section;
+  openModal(`
+    <div class="modal-header"><h2 class="modal-title">✏️ تعديل التصنيف</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div class="form-group"><label class="form-label">الاسم</label><input class="form-control" id="cat-name" value="${c.name}"></div>
+    <div class="form-group"><label class="form-label">أيقونة</label><input class="form-control" id="cat-icon" value="${c.icon||''}"></div>
+    <div class="form-group"><label class="form-label">ترتيب الظهور</label><input class="form-control" id="cat-order" type="number" value="${c.order||0}"></div>
+    <div class="form-group"><label class="form-label">الوصف (اختياري)</label><textarea class="form-control" id="cat-desc" rows="3">${c.description||''}</textarea></div>
+    <div class="form-group" style="display: none;"><label class="form-label">القسم</label>
+    	<select class="form-control" id="cat-section">
+        ${['professions', 'services'].includes(section) ? `
+          <option value="services" ${c.section==='services'?'selected':''}>🔧 الخدمات العامة</option>
+          <option value="professions" ${c.section==='professions'?'selected':''}>🛠️ نظام المهن</option>
+        ` : (section === 'bookings' ? `
+          <option value="bookings" selected>📅 الحجوزات</option>
+        ` : `
+          <option value="stores" selected>🏪 المتاجر</option>
+        `)}
+      </select>
+    </div>
+    ${section === 'bookings' ? `
+    <div class="form-group"><label class="form-label">نوع التصنيف</label>
+    	<select class="form-control" id="cat-type">
+        <option value="booking" ${c.catType !== 'rental' ? 'selected' : ''}>📅 حجز عادي (خدمات)</option>
+        <option value="rental" ${c.catType === 'rental' ? 'selected' : ''}>🏷️ متجر تأجير (منتجات)</option>
+      </select>
+    </div>
+    ` : ''}
+    <button class="btn btn-primary btn-block" onclick="updateCat('${catId}')">حفظ</button>`);
+}
+window.updateCat = async function(catId) {
+  const originalCat = AppData.cats.find(x => x.id === catId);
+  const newSection = document.getElementById('cat-section').value;
+  const catType = document.getElementById('cat-type')?.value;
+  
+  const updateData = {
+    name: document.getElementById('cat-name').value.trim(),
+    icon: document.getElementById('cat-icon').value.trim(),
+    order: parseInt(document.getElementById('cat-order').value) || 0,
+    description: document.getElementById('cat-desc')?.value.trim() || '',
+    section: newSection,
+  };
+  if (catType && newSection === 'bookings') {
+    updateData.catType = catType;
+  }
+  
+  showLoader();
+  try {
+    if (originalCat) {
+      const originalCollection = (originalCat.section === 'bookings') ? 'categories' : 'professions_categories';
+      const newCollection = (newSection === 'bookings') ? 'categories' : 'professions_categories';
+      
+      if (originalCollection !== newCollection) {
+        await fsDelete(originalCollection, catId);
+        await fsSet(newCollection, catId, { ...updateData, createdAt: originalCat.createdAt || new Date() });
+      } else {
+        await fsUpdate(originalCollection, catId, updateData);
+      }
+    } else {
+      const collectionName = (newSection === 'bookings') ? 'categories' : 'professions_categories';
+      await fsUpdate(collectionName, catId, updateData);
+    }
+    closeModal(); toast('تم التعديل ✅','success'); await render();
+  } catch (e) {
+    console.error('Update Category Error:', e);
+    toast('❌ فشل تحديث التصنيف', 'error');
+  } finally {
+    hideLoader();
+  }
+}
+window.deleteCat = async function(catId) {
+  if (!confirm('حذف هذا التصنيف وجميع خدماته؟')) return;
+  showLoader();
+  try {
+    const cat = AppData.cats.find(c => c.id === catId);
+    const collectionName = (cat && cat.section === 'bookings') ? 'categories' : 'professions_categories';
+    await fsDelete(collectionName, catId);
+    const svcs = AppData.services.filter(s=>s.catId===catId);
+    await Promise.all(svcs.map(s=>fsDelete('services',s.id)));
+    toast('تم الحذف','success'); await render();
+  } catch (e) {
+    console.error('Delete Category Error:', e);
+    toast('❌ فشل حذف التصنيف', 'error');
+  } finally {
+    hideLoader();
+  }
+}
+
+function renderAdminServices() {
+  const searchQuery = (State.adminSearch || '').toLowerCase();
+  const filteredServices = AppData.services.filter(s => {
+    const cat = AppData.cats.find(c=>c.id===s.catId);
+    return (s.name || '').toLowerCase().includes(searchQuery) ||
+           (s.provider || '').toLowerCase().includes(searchQuery) ||
+           (cat?.name || '').toLowerCase().includes(searchQuery);
+  });
+  return `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
+      <h2>🛎️ الخدمات</h2>
+      <div style="display:flex;gap:12px">
+        <input type="text" class="form-control" id="admin-services-search" placeholder="🔍 ابحث بالاسم أو المقدم أو التصنيف..." value="${State.adminSearch || ''}" oninput="State.adminSearch = this.value; render();" style="width:300px">
+        <button class="btn btn-primary" onclick="showAddSvcModal()">➕ إضافة</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="admin-table">
+        <thead><tr><th>الخدمة</th><th>التصنيف</th><th>السعر</th><th>الحالة</th><th>إجراءات</th></tr></thead>
+        <tbody>
+          ${filteredServices.map(s=>{
+            const cat = AppData.cats.find(c=>c.id===s.catId);
+            return `<tr>
+              <td style="font-weight:600">${s.icon||'🔷'} ${s.name}</td>
+              <td><span class="badge badge-teal">${cat?.name||'—'}</span></td>
+              <td>${s.price?s.price+' ريال':'عند الطلب'}</td>
+              <td><span class="badge badge-gold">✅ نشطة</span></td>
+              <td>
+                <button class="btn btn-sm btn-secondary" onclick="showEditSvcModal('${s.id}')">✏️</button>
+                <button class="btn btn-sm btn-danger" onclick="deleteSvc('${s.id}')">🗑️</button>
+              </td>
+            </tr>`;}).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+// --- Service Sections (Sub-categories) Management ---
+window.showManageSvcSectionsModal = function(catId) {
+  const cat = (AppData.cats || []).find(c=>c.id===catId);
+  if (!cat) return;
+  
+  const renderList = () => {
+    const sections = (AppData.svcSections || []).filter(s => s.catId === catId).sort((a,b)=>(a.order||0)-(b.order||0));
+    return sections.length ? sections.map(s => `
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg-secondary);border-radius:12px;margin-bottom:8px;border:1px solid var(--border)">
+        <span style="font-size:20px">${s.icon || '📂'}</span>
+        <span style="flex:1;font-weight:600">${s.name}</span>
+        <button class="btn btn-sm btn-danger" onclick="deleteSvcSection('${s.id}', '${catId}')">🗑️</button>
+      </div>`).join('') : '<p style="text-align:center;padding:20px;color:var(--text-muted)">لا توجد أقسام فرعية لهذا التصنيف</p>';
+  };
+
+  openModal(`
+    <div class="modal-header"><h2 class="modal-title">📂 إدارة أقسام ${cat.name}</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div id="svc-sections-list" style="margin-bottom:20px;max-height:300px;overflow-y:auto">
+      ${renderList()}
+    </div>
+    <div style="background:var(--bg-secondary);border-radius:14px;padding:16px;border:1px solid var(--border)">
+      <div style="font-weight:700;margin-bottom:12px">➕ إضافة قسم فرعي جديد</div>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <input class="form-control" id="new-sec-icon" placeholder="🛠️" style="width:60px;text-align:center">
+        <input class="form-control" id="new-sec-name" placeholder="اسم القسم (مثال: صيانة)">
+      </div>
+      <button class="btn btn-primary btn-block" onclick="saveNewSvcSection('${catId}')">إضافة القسم</button>
+    </div>
+  `);
+};
+
+window.saveNewSvcSection = async function(catId) {
+  const name = document.getElementById('new-sec-name').value.trim();
+  const icon = document.getElementById('new-sec-icon').value.trim() || '📂';
+  if (!name) { toast('أدخل اسم القسم', 'error'); return; }
+  showLoader();
+  try {
+    await fsAdd('service_sections', { catId, name, icon, order: 0, createdAt: new Date() });
+    await loadAllData();
+    showManageSvcSectionsModal(catId);
+    toast('✅ تم إضافة القسم', 'success');
+  } catch(e) { toast('خطأ: ' + e.message, 'error'); } finally { hideLoader(); }
+};
+
+window.deleteSvcSection = async function(secId, catId) {
+  if (!confirm('هل تريد حذف هذا القسم؟')) return;
+  showLoader();
+  try {
+    await fsDelete('service_sections', secId);
+    await loadAllData();
+    showManageSvcSectionsModal(catId);
+    toast('✅ تم الحذف', 'success');
+  } catch(e) { toast('خطأ: ' + e.message, 'error'); } finally { hideLoader(); }
+};
+
+window.ph43_loadSvcSectionsForCat = function(catId) {
+  const wrapper = document.getElementById('svc-section-wrapper');
+  if (!wrapper) return;
+  const sections = (AppData.svcSections || []).filter(s => s.catId === catId);
+  if (sections.length === 0) {
+    wrapper.innerHTML = '';
+    return;
+  }
+  wrapper.innerHTML = `
+    <div class="form-group">
+      <label class="form-label">القسم الفرعي</label>
+      <select class="form-control" id="svc-section-id">
+        <option value="">-- بدون قسم فرعي --</option>
+        ${sections.map(sec => `<option value="${sec.id}">${sec.icon || ''} ${sec.name}</option>`).join('')}
+      </select>
+    </div>`;
+};
+
+window.ph43_toggleVendorPickerMode = function(isMulti) {
+  const cbs = document.querySelectorAll('.svc-vendor-cb');
+  const actions = document.getElementById('multi-vendor-actions');
+  const hint = document.getElementById('picker-hint');
+  
+  cbs.forEach(c => {
+    c.type = isMulti ? 'checkbox' : 'radio';
+  });
+
+  if (actions) actions.style.display = isMulti ? 'flex' : 'none';
+  if (hint) hint.innerText = isMulti ? (isMulti ? 'سيقوم النظام بتوجيه الطلب تلقائياً للأقرب من القائمة المحددة.' : 'يرجى تحديد مزود واحد فقط لهذه الخدمة.') : '';
+  
+  // Refined hint logic
+  if (hint) {
+     hint.innerText = isMulti ? 'سيقوم النظام بتوجيه الطلب تلقائياً للأقرب من القائمة المحددة.' : 'يرجى تحديد مزود واحد فقط لهذه الخدمة.';
+  }
+
+  // If switched to single mode, keep only the first checked one
+  if (!isMulti) {
+    let found = false;
+    cbs.forEach(c => {
+      if (c.checked && !found) found = true;
+      else if (c.checked) c.checked = false;
+    });
+  }
+};
+
+
+// --- Updated _svcModalBody to include Section selection ---
+window.ph21_updateFinalPrice = function() {
+  const p = parseFloat(document.getElementById('svc-price')?.value) || 0;
+  const c = parseFloat(document.getElementById('svc-commission')?.value) || 0;
+  const t = parseFloat(document.getElementById('svc-tax')?.value) || 0;
+  const commAmount = p * (c / 100);
+  const taxAmount = p * (t / 100);
+  const total = p + commAmount + taxAmount;
+  const disp = document.getElementById('ph21-final-price-disp');
+  if (disp) {
+    disp.textContent = total.toFixed(2) + ' ريال';
+    disp.parentElement.style.display = total > 0 ? 'block' : 'none';
+  }
+};
+
+// --- Service Modal Custom Patches Removed & Integrated ---
+
+function showAddSvcModal() {
+  openModal(`
+    <div class="modal-header"><h2 class="modal-title">➕ إضافة خدمة</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
+    ${typeof _svcModalBody === 'function' ? _svcModalBody() : ''}
+    <button class="btn btn-primary btn-block" onclick="saveNewSvc()">حفظ</button>`);
+}
+window.saveNewSvc = async function() {
+  const catId = document.getElementById('svc-cat').value;
+  const name = document.getElementById('svc-name').value.trim();
+  const provider = document.getElementById('svc-provider').value.trim();
+  const desc = document.getElementById('svc-desc').value.trim();
+  const price = parseInt(document.getElementById('svc-price').value) || null;
+  const commission = parseInt(document.getElementById('svc-commission')?.value) || 0;
+  const tax = parseInt(document.getElementById('svc-tax')?.value) || 0;
+  const finalPrice = parseInt(document.getElementById('ph21-final-price-disp')?.textContent?.replace(/\D/g, '') || '0') || price;
+  const sectionId = document.getElementById('svc-section-id')?.value || null;
+  const order = parseInt(document.getElementById('svc-order').value) || 0;
+  const multiVendors = document.getElementById('svc-multi-vendors')?.checked || false;
+  const assignedVendors = Array.from(document.querySelectorAll('.svc-vendor-cb:checked')).map(cb=>cb.value);
+  const issues = document.getElementById('svc-issues') ? document.getElementById('svc-issues').value.trim().split('\n').filter(l=>l.trim()) : [];
+  if (!catId || !name) { toast('اختر التصنيف والخدمة','error'); return; }
+  if (!assignedVendors.length) { toast('يرجى تحديد مزود واحد على الأقل لهذه الخدمة', 'warning'); return; }
+
+  showLoader();
+  try {
+    await fsAdd('services', { catId, sectionId, name, provider, desc, price, commission, tax, finalPrice, order, assignedVendors, multiVendors, icon: '🔷', commonIssues: issues, status: 'active', createdAt: new Date() });
+    closeModal(); toast('تم إضافة الخدمة ✅','success'); await render();
+  } catch (e) {
+    console.error('Save Service Error:', e);
+    toast('❌ فشل الحفظ: السيرفر يرفض الطلب حالياً', 'error');
+  } finally {
+    hideLoader();
+  }
+}
+window.showEditSvcModal = function(svcId) {
+  const s = AppData.services.find(x=>x.id===svcId);
+  if (!s) return;
+  const isMulti = s.multiVendors !== false;
+  const cat = AppData.cats.find(c=>c.id===s.catId);
+  openModal(`
+    <div class="modal-header"><h2 class="modal-title">✏️ تعديل الخدمة</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
+    ${typeof _svcModalBody === 'function' ? _svcModalBody(s, cat?.section) : ''}
+    <button class="btn btn-primary btn-block" onclick="updateSvc('${svcId}')">&#x1F4BE; حفظ</button>`);
+}
+window.updateSvc = async function(svcId) {
+  const assignedVendors = Array.from(document.querySelectorAll('.svc-vendor-cb:checked')).map(cb=>cb.value);
+  if (!assignedVendors.length) { toast('يرجى تحديد مزود واحد على الأقل', 'warning'); return; }
+  await fsUpdate('services', svcId, {
+    catId: document.getElementById('svc-cat').value,
+    name: document.getElementById('svc-name').value.trim(),
+    provider: document.getElementById('svc-provider').value.trim(),
+    desc: document.getElementById('svc-desc').value.trim(),
+    price: parseInt(document.getElementById('svc-price').value) || null,
+    commission: parseInt(document.getElementById('svc-commission')?.value) || 0,
+    tax: parseInt(document.getElementById('svc-tax')?.value) || 0,
+    finalPrice: parseInt(document.getElementById('ph21-final-price-disp')?.textContent?.replace(/\D/g, '') || '0') || (parseInt(document.getElementById('svc-price').value) || null),
+    order: parseInt(document.getElementById('svc-order').value) || 0,
+    multiVendors: document.getElementById('svc-multi-vendors')?.checked !== false,
+    assignedVendors,
+    commonIssues: document.getElementById('svc-issues') ? document.getElementById('svc-issues').value.trim().split('\n').filter(l=>l.trim()) : [],
+  });
+  closeModal(); toast('تم التعديل ✅','success'); await render();
+}
+window.deleteSvc = async function(svcId) {
+  if (!confirm('حذف هذه الخدمة؟')) return;
+  await fsDelete('services', svcId);
+  toast('تم الحذف','success'); await render();
+}
+
+function renderAdminOrders() {
+  const me = State.currentUser;
+  const isAdmin = me?.role === 'admin';
+  const canEdit = isAdmin || (typeof userHasPerm === 'function' && userHasPerm(me, 'edit_orders'));
+  const orders = AppData.orders || [];
+
+  if (!State.adminOrdersTab) State.adminOrdersTab = 'current';
+  const activeOrdersTab = State.adminOrdersTab;
+
+  const statusLabel = {
+    pending_admin:'⏳ بانتظار الإدارة',
+    pending_provider:'🔔 عند المزود',
+    pending_inspection:'🛠️ بانتظار المعاينة',
+    pending_agreement:'📝 بانتظار الاتفاق',
+    awaiting_payment:'💳 بانتظار الدفع',
+    approved:'✅ مقبول',
+    rejected:'❌ مرفوض',
+    completed:'🎉 مكتمل',
+    cancelled:'❌ ملغى',
+    pending:'⏳ معلق',
+    accepted:'✅ مقبول'
+  };
+  const statusBadge = {
+    pending_admin:'badge-gold',
+    pending_provider:'badge-purple',
+    pending_inspection:'badge-gold',
+    pending_agreement:'badge-purple',
+    awaiting_payment:'badge-gold',
+    approved:'badge-teal',
+    rejected:'badge-rose',
+    completed:'badge-teal',
+    cancelled:'badge-rose',
+    pending:'badge-gold',
+    accepted:'badge-teal'
+  };
+
+  // Split into Current vs Past
+  const currentStatuses = ['pending_admin', 'pending_provider', 'pending_inspection', 'pending_agreement', 'awaiting_payment', 'approved', 'pending', 'accepted'];
+  const pastStatuses = ['completed', 'rejected', 'cancelled'];
+
+  const currentOrders = orders.filter(o => currentStatuses.includes(o.status));
+  const pastOrders = orders.filter(o => pastStatuses.includes(o.status));
+
+  const searchQuery = (State.adminSearch || '').toLowerCase();
+  const filterFn = o =>
+    (o.orderId || o.id || '').toLowerCase().includes(searchQuery) ||
+    (o.customerName || '').toLowerCase().includes(searchQuery) ||
+    (o.svcName || '').toLowerCase().includes(searchQuery) ||
+    (o.providerName || o.vendorName || '').toLowerCase().includes(searchQuery);
+
+  const filteredCurrent = currentOrders.filter(filterFn);
+  const filteredPast = pastOrders.filter(filterFn);
+
+  const displayOrders = activeOrdersTab === 'current' ? filteredCurrent : filteredPast;
+
+  // Helper to format createdAt date and time
+  function formatCreatedAt(createdAt) {
+    if (!createdAt) return { date: '—', time: '—' };
+    let dateObj = null;
+    if (typeof createdAt.toDate === 'function') {
+      dateObj = createdAt.toDate();
+    } else if (createdAt.seconds) {
+      dateObj = new Date(createdAt.seconds * 1000);
+    } else {
+      dateObj = new Date(createdAt);
+    }
+    if (!dateObj || isNaN(dateObj.getTime())) return { date: '—', time: '—' };
+
+    const year = dateObj.getFullYear();
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const day = String(dateObj.getDate()).padStart(2, '0');
+    
+    let hours = dateObj.getHours();
+    const minutes = String(dateObj.getMinutes()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'م' : 'ص';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    
+    return {
+      date: `${year}/${month}/${day}`,
+      time: `${hours}:${minutes} ${ampm}`
+    };
+  }
+
+  return `
+    <style>
+      .orders-tab-switcher {
+        display: flex;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 4px;
+        margin-bottom: 24px;
+        max-width: 450px;
+        gap: 4px;
+      }
+      .orders-tab-switcher .tab-btn {
+        flex: 1;
+        border: 0;
+        padding: 10px 16px;
+        border-radius: 8px;
+        font-weight: 700;
+        font-size: 13px;
+        background: none;
+        color: var(--text-secondary);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+      }
+      .orders-tab-switcher .tab-btn.active {
+        background: var(--primary) !important;
+        color: #fff !important;
+        box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25);
+      }
+      .orders-tab-switcher .tab-btn:hover:not(.active) {
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--text-main);
+      }
+      .order-tab-badge {
+        font-size: 11px;
+        background: rgba(255, 255, 255, 0.15);
+        color: inherit;
+        padding: 2px 8px;
+        border-radius: 99px;
+        font-weight: 800;
+      }
+      .orders-tab-switcher .tab-btn.active .order-tab-badge {
+        background: rgba(255, 255, 255, 0.25);
+      }
+      .order-meta-info {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 12px;
+        background: rgba(255,255,255,0.015);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        margin-bottom: 12px;
+      }
+      .order-meta-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 12.5px;
+      }
+      .order-meta-label {
+        color: var(--text-secondary);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .order-meta-value {
+        font-weight: 700;
+        color: var(--text-main);
+      }
+      .order-card-price-tag {
+        font-size: 18px;
+        font-weight: 800;
+        color: #10b981;
+        text-align: center;
+        margin-bottom: 10px;
+        padding: 6px;
+        background: rgba(16, 185, 129, 0.05);
+        border-radius: 8px;
+        border: 1px solid rgba(16, 185, 129, 0.1);
+      }
+    </style>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:15px">
+      <div>
+        <h2>📋 إدارة الطلبات</h2>
+        <p style="color:var(--text-muted);font-size:13px;margin-top:4px">تتبع وتنظيم حجوزات وطلبات العملاء بشكل مباشر</p>
+      </div>
+      <input type="text" class="form-control" id="admin-orders-search" placeholder="🔍 ابحث بالرقم أو العميل أو الخدمة..." value="${State.adminSearch || ''}" oninput="State.adminSearch=this.value;render();" style="width:300px">
+    </div>
+
+    ${!canEdit ? '<p style="color:var(--text-muted);font-size:13px;margin-bottom:12px">🔒 وضع العرض فقط — لا تملك صلاحية تعديل الطلبات</p>' : ''}
+
+    <div class="orders-tab-switcher">
+      <button class="tab-btn ${activeOrdersTab === 'current' ? 'active' : ''}" onclick="window.setAdminOrdersTab('current')">
+        <span>📥 الطلبات الحالية</span>
+        <span class="order-tab-badge">${currentOrders.length}</span>
+      </button>
+      <button class="tab-btn ${activeOrdersTab === 'past' ? 'active' : ''}" onclick="window.setAdminOrdersTab('past')">
+        <span>⏱️ الطلبات السابقة</span>
+        <span class="order-tab-badge">${pastOrders.length}</span>
+      </button>
+    </div>
+
+    <div class="usys-svc-grid" style="margin-top:10px">
+      ${displayOrders.length === 0 ? `<div class="empty-state" style="grid-column:1/-1;background:var(--bg-card);border:1px dashed var(--border);border-radius:14px;padding:30px;text-align:center;color:var(--text-muted)"><div style="font-size:30px;margin-bottom:10px">🔍</div>لا توجد طلبات في هذا القسم</div>` :
+      displayOrders.map(o => {
+        const createdTimeInfo = formatCreatedAt(o.createdAt);
+        return `
+        <div class="usys-svc-card" style="display:flex;flex-direction:column;justify-content:space-between;min-height:350px">
+          <div>
+            <div class="usys-svc-card-top" style="margin-bottom:14px">
+              <div style="display:flex;align-items:center;gap:10px;flex:1">
+                <div style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:10px;background:rgba(139,92,246,0.1);font-size:20px">${o.svcIcon||'📦'}</div>
+                <div>
+                  <div class="usys-svc-name" style="font-size:14.5px;margin-bottom:2px">${escHtml(o.svcName||'—')}</div>
+                  <div style="font-size:11px;color:var(--text-muted);font-weight:600;font-family:monospace">#${o.orderId}</div>
+                </div>
+              </div>
+              <span class="badge ${statusBadge[o.status]||'badge-purple'}" style="font-size:10px;padding:4px 6px">${statusLabel[o.status]||o.status}</span>
+            </div>
+
+            <div class="order-meta-info">
+              <div class="order-meta-row">
+                <span class="order-meta-label">👤 العميل:</span>
+                <span class="order-meta-value">${escHtml(o.customerName||'—')}</span>
+              </div>
+              <div class="order-meta-row">
+                <span class="order-meta-label">🏪 المزود:</span>
+                <span class="order-meta-value">${escHtml(o.providerName||o.vendorName||'—')}</span>
+              </div>
+              <div class="order-meta-row">
+                <span class="order-meta-label">💳 الدفع:</span>
+                <span class="order-meta-value" style="font-size:11.5px">${escHtml(o.paymentMethod === 'wallet' ? 'المحفظة 💰' : o.paymentMethod === 'cod' ? 'عند الاستلام 💵' : o.paymentMethod || '—')}</span>
+              </div>
+            </div>
+
+            <div class="order-meta-info" style="border-color:rgba(139,92,246,0.15)">
+              <div class="order-meta-row">
+                <span class="order-meta-label">📅 تاريخ الطلب:</span>
+                <span class="order-meta-value">${createdTimeInfo.date}</span>
+              </div>
+              <div class="order-meta-row">
+                <span class="order-meta-label">⏰ وقت الطلب:</span>
+                <span class="order-meta-value">${createdTimeInfo.time}</span>
+              </div>
+              ${o.date ? `
+              <div class="order-meta-row" style="border-top:1px dashed var(--border);padding-top:6px;margin-top:4px">
+                <span class="order-meta-label" style="color:var(--primary);font-weight:700">🛎️ موعد الحجز:</span>
+                <span class="order-meta-value" style="color:var(--primary);font-weight:800">${o.date} ${o.time || ''}</span>
+              </div>
+              ` : ''}
+            </div>
+          </div>
+
+          <div>
+            <div class="order-card-price-tag">${o.total||o.finalPrice||0} ريال</div>
+            
+            <div class="usys-svc-footer" style="border-top:1px solid var(--border);padding-top:12px;display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+              <button class="btn btn-sm btn-secondary" style="flex:1;padding:8px;font-size:12px;font-weight:700" onclick="showOrderDetails('${o.id}')">👁️ تفاصيل</button>
+              
+              ${canEdit && o.status==='pending_admin' ? `
+                <button class="btn btn-sm btn-success" style="padding:8px 12px;font-size:12px;font-weight:700" onclick="ph21_adminApprove('${o.id}')">✅ قبول</button>
+                <button class="btn btn-sm" style="background:rgba(239,68,68,0.1);color:#ef4444;border:1px solid rgba(239,68,68,0.2);padding:8px 12px;font-size:12px;font-weight:700" onclick="ph21_adminReject('${o.id}')">❌ رفض</button>
+              ` : ''}
+
+              ${canEdit && o.status==='pending' ? `
+                <button class="btn btn-sm btn-success" style="padding:8px 12px;font-size:12px;font-weight:700" onclick="updateOrderStatus('${o.id}','accepted')">✅ قبول</button>
+                <button class="btn btn-sm" style="background:rgba(239,68,68,0.1);color:#ef4444;border:1px solid rgba(239,68,68,0.2);padding:8px 12px;font-size:12px;font-weight:700" onclick="ph21_adminReject('${o.id}')">❌ رفض</button>
+              ` : ''}
+
+              ${canEdit && isAdmin ? `
+                <button class="btn btn-sm" style="background:rgba(239,68,68,0.05);color:#ef4444;border:1px solid rgba(239,68,68,0.1);padding:8px 10px;font-size:12px" onclick="deleteOrder('${o.id}')" title="حذف الطلب">🗑️</button>
+              ` : ''}
+            </div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+window.setAdminOrdersTab = function(tab) {
+  State.adminOrdersTab = tab;
+  render();
+}
+// ─── View Order Details (Shared Function) ────────────
+function showOrderDetails(orderId) {
+  const o = AppData.orders.find(x=>x.id===orderId);
+  if (!o) return;
+
+  function formatCreatedAt(createdAt) {
+    if (!createdAt) return '—';
+    let dateObj = null;
+    if (typeof createdAt.toDate === 'function') {
+      dateObj = createdAt.toDate();
+    } else if (createdAt.seconds) {
+      dateObj = new Date(createdAt.seconds * 1000);
+    } else {
+      dateObj = new Date(createdAt);
+    }
+    if (!dateObj || isNaN(dateObj.getTime())) return '—';
+
+    const year = dateObj.getFullYear();
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const day = String(dateObj.getDate()).padStart(2, '0');
+    
+    let hours = dateObj.getHours();
+    const minutes = String(dateObj.getMinutes()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'م' : 'ص';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    
+    return `${year}/${month}/${day} - ${hours}:${minutes} ${ampm}`;
+  }
+
+  const creationStr = formatCreatedAt(o.createdAt);
+  const statusLabel = {
+    pending_admin:'⏳ بانتظار الإدارة',
+    pending_provider:'🔔 عند المزود',
+    pending_inspection:'🛠️ بانتظار المعاينة',
+    pending_agreement:'📝 بانتظار الاتفاق',
+    awaiting_payment:'💳 بانتظار الدفع',
+    approved:'✅ مقبول',
+    rejected:'❌ مرفوض',
+    completed:'🎉 مكتمل',
+    cancelled:'❌ ملغى',
+    pending:'⏳ معلق',
+    accepted:'✅ مقبول'
+  };
+
+  openModal(`
+    <div class="modal-header"><h2 class="modal-title">📋 تفاصيل الطلب #${o.orderId}</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-top:10px">
+      <div class="form-group"><label>رقم الطلب</label><div class="form-value">${o.orderId}</div></div>
+      <div class="form-group"><label>الحالة</label><div class="form-value"><span class="badge badge-teal">${statusLabel[o.status] || o.status}</span></div></div>
+      <div class="form-group"><label>العميل</label><div class="form-value">${o.customerName}</div></div>
+      <div class="form-group"><label>المزود</label><div class="form-value">${o.providerName || o.vendorName || '—'}</div></div>
+      <div class="form-group" style="grid-column: 1/-1"><label>الخدمة المطلوبة</label><div class="form-value">${o.svcIcon||'📦'} ${o.svcName}</div></div>
+      <div class="form-group"><label>المبلغ الإجمالي</label><div class="form-value" style="color:#10b981;font-weight:800">${o.total||0} ريال</div></div>
+      <div class="form-group"><label>طريقة الدفع</label><div class="form-value">${o.paymentMethod === 'wallet' ? 'المحفظة 💰' : o.paymentMethod === 'cod' ? 'عند الاستلام 💵' : o.paymentMethod || '—'}</div></div>
+      <div class="form-group"><label>تاريخ تقديم الطلب</label><div class="form-value">${creationStr}</div></div>
+      <div class="form-group"><label>موعد الحجز المحدد</label><div class="form-value" style="color:var(--primary);font-weight:700">${o.date || '—'} ${o.time || ''}</div></div>
+      <div class="form-group" style="grid-column: 1/-1"><label>العنوان</label><div class="form-value">${o.customerAddr||'—'}</div></div>
+    </div>
+    ${o.housePics && o.housePics.length ? `
+      <div class="form-group" style="grid-column: 1/-1; margin-top: 12px;">
+        <label style="font-weight:700;display:block;margin-bottom:8px">📸 صور موقع التوصيل (المنزل/الباب):</label>
+        <div class="signup-pics-preview-grid">
+          ${o.housePics.map((pic, idx) => `
+            <div class="su-pic-thumb" style="width:90px; height:90px; cursor:pointer;" onclick="window.ph8_openLightbox(${JSON.stringify(o.housePics)}, ${idx})">
+              <img src="${pic}">
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    ` : ''}
+  `);
+}
+async function updateOrderStatus(orderId, status) {
+  await fsUpdate('orders', orderId, { status });
+  toast('تم تحديث حالة الطلب','success'); await render();
+}
+async function deleteOrder(orderId) {
+  if (!confirm('حذف هذا الطلب؟')) return;
+  await fsDelete('orders', orderId);
+  toast('تم الحذف','success'); await render();
+}
+
+function renderAdminAds() {
+  const searchQuery = (State.adminSearch || '').toLowerCase();
+  const filteredAds = AppData.ads.filter(a => 
+    (a.title || '').toLowerCase().includes(searchQuery) ||
+    (a.type || '').toLowerCase().includes(searchQuery)
+  );
+  return `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
+      <h2>📢 الإعلانات المميزة</h2>
+      <div style="display:flex;gap:12px">
+        <input type="text" class="form-control" id="admin-ads-search" placeholder="🔍 ابحث بالعنوان أو النوع..." value="${State.adminSearch || ''}" oninput="State.adminSearch = this.value; render();" style="width:300px">
+        <button class="btn btn-primary" onclick="showAddAdModal()">➕ إضافة إعلان</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="admin-table">
+        <thead><tr><th>العنوان</th><th>النوع</th><th>السعر</th><th>الحالة</th><th>الانتهاء</th><th>إجراءات</th></tr></thead>
+        <tbody>
+          ${filteredAds.map(a=>`
+            <tr>
+              <td style="font-weight:600">${a.title}</td>
+              <td><span class="badge badge-purple">${a.type}</span></td>
+              <td>${a.price||'مجاني'}</td>
+              <td><span class="badge ${a.active?'badge-teal':'badge-rose'}">${a.active?'🔴 نشط':'⚪ معطل'}</span></td>
+              <td>${a.expiresAt?fmtDate(a.expiresAt):'بدون'}</td>
+              <td>
+                <button class="btn btn-sm btn-secondary" onclick="showEditAdModal('${a.id}')">✏️</button>
+                <button class="btn btn-sm btn-danger" onclick="deleteAd('${a.id}')">🗑️</button>
+              </td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+function showAddAdModal() {
+  openModal(`
+    <div class="modal-header"><h2 class="modal-title">➕ إضافة إعلان</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div class="form-group"><label class="form-label">العنوان</label><input class="form-control" id="ad-title" placeholder="عنوان الإعلان"></div>
+    <div class="form-group"><label class="form-label">الوصف</label><textarea class="form-control" id="ad-desc" placeholder="وصف الإعلان..."></textarea></div>
+    <div class="form-group"><label class="form-label">نوع الإعلان</label>
+      <select class="form-control" id="ad-type">
+        <option value="direct_order">طلب مباشر</option>
+        <option value="redirect">إعادة توجيه</option>
+        <option value="both">كلاهما</option>
+      </select>
+    </div>
+    <div class="form-group"><label class="form-label">الخدمة (إن وجدت)</label>
+      <select class="form-control" id="ad-service">
+        <option value="">-- لا توجد --</option>
+        ${AppData.services.map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-group"><label class="form-label">رابط التوجيه (اختياري)</label><input class="form-control" id="ad-url" type="url" placeholder="https://..."></div>
+    <div class="form-group"><label class="form-label">السعر (ريال)</label><input class="form-control" id="ad-price" type="number" placeholder="اترك فارغاً إن كان مجاني"></div>
+    <div class="form-group"><label class="form-label">صية الصورة</label><input class="form-control" id="ad-img" type="file" accept="image/*"></div>
+    <button class="btn btn-primary btn-block" onclick="saveNewAd()">إضافة</button>`);
+}
+async function saveNewAd() {
+  const title = document.getElementById('ad-title').value.trim();
+  const desc = document.getElementById('ad-desc').value.trim();
+  const type = document.getElementById('ad-type').value;
+  const serviceId = document.getElementById('ad-service').value;
+  const targetUrl = document.getElementById('ad-url').value.trim();
+  const price = parseInt(document.getElementById('ad-price').value) || 0;
+  if (!title) { toast('أدخل العنوان','error'); return; }
+  let imageBase64 = null;
+  const file = document.getElementById('ad-img').files[0];
+  if (file) {
+    imageBase64 = await new Promise(res => {
+      const r = new FileReader();
+      r.onload = e => res(e.target.result);
+      r.readAsDataURL(file);
+    });
+  }
+  await fsAdd('ads', { title, description: desc, type, serviceId, targetUrl, imageBase64, price, active: true });
+  closeModal(); toast('تم إضافة الإعلان ✅','success'); await render();
+}
+async function deleteAd(adId) {
+  if (!confirm('حذف هذا الإعلان؟')) return;
+  await fsDelete('ads', adId);
+  toast('تم الحذف','success'); await render();
+}
+function showEditAdModal(adId) {
+  const a = AppData.ads.find(x=>x.id===adId);
+  if (!a) return;
+  openModal(`
+    <div class="modal-header"><h2 class="modal-title">✏️ تعديل الإعلان</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div class="form-group"><label class="form-label">الحالة</label>
+      <select class="form-control" id="ad-active">
+        <option value="true"${a.active?'selected':''}>🔴 نشط</option>
+        <option value="false"${!a.active?'selected':''}>⚪ معطل</option>
+      </select>
+    </div>
+    <button class="btn btn-primary btn-block" onclick="updateAd('${adId}')">حفظ</button>`);
+}
+async function updateAd(adId) {
+  await fsUpdate('ads', adId, { active: document.getElementById('ad-active').value === 'true' });
+  closeModal(); toast('تم التعديل ✅','success'); await render();
+}
+
+function renderAdminWallet() {
+  const pending = AppData.rechargeReqs.filter(r=>r.status==='pending');
+  const approved = AppData.rechargeReqs.filter(r=>r.status==='approved');
+  const searchQuery = (State.adminSearch || '').toLowerCase();
+  const filteredPending = pending.filter(r => (r.userName || '').toLowerCase().includes(searchQuery));
+  const filteredApproved = approved.filter(r => (r.userName || '').toLowerCase().includes(searchQuery));
+  return `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
+      <h2>💰 إدارة المحافظ</h2>
+      <input type="text" class="form-control" id="admin-wallet-search" placeholder="🔍 ابحث بالاسم..." value="${State.adminSearch || ''}" oninput="State.adminSearch = this.value; render();" style="width:300px">
+    </div>
+    <div style="background:rgba(124,58,237,0.08);border:1px solid rgba(124,58,237,0.2);border-radius:var(--radius);padding:16px;margin-bottom:24px">
+      <h3 style="margin-bottom:8px">⏳ طلبات الشحن المعلقة: ${filteredPending.length}</h3>
+      ${filteredPending.length ? `
+      <div class="table-wrap">
+        <table class="admin-table">
+          <thead><tr><th>المستخدم</th><th>المبلغ</th><th>الإثبات</th><th>الإجراءات</th></tr></thead>
+          <tbody>
+            ${filteredPending.map(r=>`
+              <tr>
+                <td>${r.userName}</td>
+                <td style="font-weight:700">${r.amount} ريال</td>
+                <td>${r.proofBase64?`<button class="btn btn-sm btn-secondary" onclick="viewProof('${r.proofBase64}')">📸</button>`:'—'}</td>
+                <td>
+                  <button class="btn btn-sm btn-success" onclick="approveRecharge('${r.id}','${r.userId}','${r.amount}')">✅</button>
+                  <button class="btn btn-sm btn-danger" onclick="rejectRecharge('${r.id}')">❌</button>
+                </td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>` : '<p style="color:var(--text-muted)">لا توجد طلبات معلقة</p>'}
+    </div>
+    <h3>✅ الطلبات الموافق عليها: ${filteredApproved.length}</h3>
+    ${filteredApproved.length?`<div class="table-wrap">
+      <table class="admin-table">
+        <thead><tr><th>المستخدم</th><th>المبلغ</th><th>التاريخ</th></tr></thead>
+        <tbody>
+          ${filteredApproved.map(r=>`
+            <tr>
+              <td>${r.userName}</td>
+              <td>${r.amount} ريال</td>
+              <td>${fmtDate(r.createdAt)}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`:''}`
+}
+function viewProof(base64) {
+  openModal(`<div style="text-align:center"><img src="${base64}" style="max-width:100%;max-height:500px;border-radius:8px"></div>`);
+}
+async function approveRecharge(reqId, userId, amount) {
+  if (!confirm('الموافقة على هذا الطلب وإضافة الرصيد؟')) return;
+  await creditWallet(userId, parseInt(amount), 'شحن محفظة - موافقة إدارية');
+  await fsUpdate('recharge_requests', reqId, { status: 'approved' });
+  toast('تم إضافة الرصيد ✅','success'); await render();
+}
+async function rejectRecharge(reqId) {
+  if (!confirm('رفض هذا الطلب؟')) return;
+  await fsUpdate('recharge_requests', reqId, { status: 'rejected' });
+  toast('تم رفض الطلب','success'); await render();
+}
+
+function renderAdminReports() {
+  return `
+    <h2>📈 التقارير</h2>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;margin:24px 0">
+      <div class="stat-card">
+        <div class="stat-num">${AppData.orders.filter(o=>o.status==='completed').length}</div>
+        <div class="stat-label">الطلبات المكتملة</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">${AppData.ratings.length}</div>
+        <div class="stat-label">التقييمات</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">${AppData.transactions.filter(t=>t.type==='debit').reduce((a,t)=>a+t.amount,0)}</div>
+        <div class="stat-label">إجمالي المبيعات</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">${(AppData.transactions.filter(t=>t.type==='debit').reduce((a,t)=>a+t.amount,0)*0.1).toFixed(0)}</div>
+        <div class="stat-label">عمولة المنصة (10%)</div>
+      </div>
+    </div>`;
+}
+
+// ─── Vendor Dashboard ──────────────────────────────
+function renderVendor() {
+  if (State.currentUser?.role !== 'vendor' && State.currentUser?.role !== 'provider') { navigate('home'); return ''; }
+  const u = State.currentUser;
+  const vendorTab = State.vendorTab || 'orders';
+  const initial = (u.name || u.email || 'V')[0].toUpperCase();
+  const displayName = u.name || u.email || 'المزود';
+  const tabs = [['orders','📋','الطلبات'],['earnings','💰','الأرباح'],['services','🛎️','خدماتي'],['profile','👤','الملف']];
+  let content = '';
+  if (vendorTab==='orders')    content = renderVendorOrders();
+  else if (vendorTab==='earnings') content = renderVendorEarnings();
+  else if (vendorTab==='services') content = renderVendorServices();
+  else if (vendorTab==='profile') content = renderVendorProfile();
+  return `
+  <div id="app-content">
+    <div class="admin-sidebar-overlay" id="adminSidebarOverlay" onclick="closeAdminSidebar()"></div>
+    <div class="admin-layout">
+      <aside class="admin-sidebar" id="adminSidebar">
+        <!-- ══ رأس الدرج ══ -->
+        <div class="admin-sidebar-header">
+          <div class="sidebar-header-row">
+            <div class="sidebar-user-block">
+              <div class="sidebar-avatar-lg">${initial}</div>
+              <div class="sidebar-user-meta">
+                <div class="sidebar-user-name">${displayName}</div>
+                <div class="sidebar-user-role">صاحب الخدمة / المزود</div>
+              </div>
+            </div>
+            <button class="admin-sidebar-close" onclick="closeAdminSidebar()">✕</button>
+          </div>
+        </div>
+        <nav class="admin-nav" style="padding: 12px 10px;">
+          ${tabs.map(([t,ic,l])=>`
+            <button class="admin-nav-item${vendorTab===t?' active':''}" onclick="setVendorTab('${t}');closeAdminSidebar()">
+              <span>${ic}</span><span>${l}</span>
+            </button>`).join('')}
+        </nav>
+      </aside>
+      <main class="admin-main">${content}</main>
+    </div>
+  </div>`;
+}
+async function setVendorTab(tab) {
+  State.vendorTab = tab; await render();
+}
+
+function renderVendorOrders() {
+  const u = State.currentUser;
+  const orders = AppData.orders.filter(o=>o.vendorId===u.uid || o.providerUid===u.uid).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
+  const isProfUser = orders.some(o => o.isProfession);
+  const sLabel = {
+    pending:'⏳ جديد',
+    pending_inspection:'🛠️ معاينة',
+    pending_agreement:'📝 اتفاق',
+    awaiting_payment:'💳 بانتظار الدفع',
+    accepted:'✅ مقبول',
+    with_driver:'🚗 مع المندوب',
+    delivered:'📦 وصل',
+    completed:'🎉 مكتمل',
+    cancelled:'❌ ملغى'
+  };
+  return `
+    <h2>📋 ${isProfUser ? 'طلبات المهن والخدمات' : 'الطلبات الواردة'}</h2>
+    ${orders.length ? `
+    <div class="table-wrap">
+      <table class="admin-table">
+        <thead><tr><th>رقم الطلب</th><th>العميل</th><th>التاريخ</th><th>المبلغ</th><th>الحالة</th><th>إجراءات</th></tr></thead>
+        <tbody>
+          ${orders.map(o=>`
+            <tr>
+              <td style="font-weight:700;color:#7c3aed">${o.orderId}</td>
+              <td>${o.customerName}</td>
+              <td>${o.date}</td>
+              <td>${o.total} ريال</td>
+              <td><span class="badge badge-gold">${sLabel[o.status]||o.status}</span></td>
+              <td>
+                ${o.status==='pending'?`
+                  <button class="btn btn-sm btn-success" onclick="vendorAcceptOrder('${o.id}')">✅ قبول</button>
+                  <button class="btn btn-sm btn-danger" onclick="vendorRejectOrder('${o.id}')">❌ رفض</button>
+                `:''}
+                ${(o.status==='pending_inspection' || o.status==='pending_agreement') ? `
+                  <button class="btn btn-sm btn-primary" onclick="ph_openProfessionAgreement('${o.id}')">📝 اتمام الاتفاق</button>
+                `:''}
+                <button class="btn btn-sm btn-secondary" onclick="viewOrderDetails('${o.id}')">👁️</button>
+              </td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>` : `
+    <div class="empty-state" style="padding:60px 20px;text-align:center;background:var(--bg-card);border:1px solid var(--glass-border);border-radius:var(--radius);margin-top:20px">
+      <div class="empty-icon" style="font-size:48px;margin-bottom:16px;opacity:0.7">📋</div>
+      <div class="empty-title" style="font-size:18px;font-weight:700;margin-bottom:8px">لا توجد طلبات واردة حالياً</div>
+      <p style="color:var(--text-muted);font-size:14px;margin:0">عندما يقوم العملاء بطلب خدماتك، ستظهر طلباتهم هنا للموافقة عليها أو معالجتها.</p>
+    </div>`}`;
+}
+async function vendorAcceptOrder(orderId) {
+  await fsUpdate('orders', orderId, { status: 'accepted' });
+  toast('تم قبول الطلب ✅','success'); await render();
+}
+async function vendorRejectOrder(orderId) {
+  await fsUpdate('orders', orderId, { status: 'cancelled' });
+  toast('تم رفض الطلب','success'); await render();
+}
+
+function renderVendorEarnings() {
+  const u = State.currentUser;
+  const completed = AppData.orders.filter(o=>(o.vendorId===u.uid || o.providerUid===u.uid) && o.status==='completed');
+  const earnings = completed.reduce((a,o)=>a+(o.servicePrice||0),0);
+  return `
+    <h2>💰 الأرباح والمحفظة</h2>
+    <div class="stat-card">
+      <div class="stat-num">${earnings}</div>
+      <div class="stat-label">إجمالي الأرباح</div>
+    </div>
+    <div class="stat-card" style="margin-top:16px">
+      <div class="stat-num">${completed.length}</div>
+      <div class="stat-label">طلبات مكتملة</div>
+    </div>
+    <button class="btn btn-primary" style="margin-top:24px" onclick="showWithdrawModal()">💳 طلب سحب</button>`;
+}
+function showWithdrawModal() {
+  openModal(`
+    <div class="modal-header"><h2 class="modal-title">💳 طلب سحب الأرباح</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div class="form-group"><label class="form-label">المبلغ (ريال)</label><input class="form-control" id="wd-amount" type="number" min="50" placeholder="الحد الأدنى: 50 ريال"></div>
+    <div class="form-group"><label class="form-label">طريقة التحويل</label>
+      <select class="form-control" id="wd-method">
+        <option value="bank">🏦 تحويل بنكي</option>
+        <option value="cash">💵 كاش</option>
+      </select>
+    </div>
+    <div class="form-group"><label class="form-label">بيانات البنك (في حالة التحويل)</label><textarea class="form-control" id="wd-bank" placeholder="رقم الحساب، رقم الايبان..."></textarea></div>
+    <button class="btn btn-primary btn-block" onclick="submitWithdrawRequest()">إرسال الطلب</button>`);
+}
+async function submitWithdrawRequest() {
+  const amount = parseFloat(document.getElementById('wd-amount').value);
+  const method = document.getElementById('wd-method').value;
+  const bank = document.getElementById('wd-bank').value.trim();
+  if (!amount || amount < 50) { toast('أدخل مبلغاً صحيحاً (50 ريال على الأقل)','error'); return; }
+  const u = State.currentUser;
+  await fsAdd('withdrawal_requests', { userId: u.uid, userName: u.name, amount, method, bankDetails: bank, status: 'pending' });
+  closeModal(); toast('تم إرسال طلب السحب ✅','success'); await render();
+}
+
+function renderVendorServices() {
+  const u = State.currentUser;
+  const svcs = (AppData.services || []).filter(s => s.providerUid === u.uid || (s.assignedVendors && s.assignedVendors.includes(u.uid)) || s.vendorId === u.uid);
+  return `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
+      <h2>🛎️ خدماتي</h2>
+      <button class="btn btn-primary" onclick="ph21_showProviderAddSvc()">➕ إضافة خدمة جديدة</button>
+    </div>
+    ${svcs.length ? `<div class="table-wrap"><table class="admin-table">
+      <thead><tr><th>الخدمة</th><th>السعر</th><th>الحالة</th></tr></thead>
+      <tbody>${svcs.map(s => `<tr>
+        <td>${s.name}</td>
+        <td>${s.price ? s.price + ' ريال' : 'بعد المعاينة'}</td>
+        <td><span class="badge ${s.status==='active'?'badge-teal':'badge-gold'}">${s.status==='active'?'نشطة':'بانتظار الموافقة'}</span></td>
+      </tr>`).join('')}</tbody>
+    </table></div>` : '<div class="empty-state"><div class="empty-icon">🛎️</div><div class="empty-title">لم تقم بإضافة أي خدمات بعد</div></div>'}`;
+}
+
+function renderVendorProfile() {
+  const u = State.currentUser;
+  const accTypeLabel = u.role === 'provider'
+    ? '💼 صاحب مهنة (مهن حرة)'
+    : (u.vendorType === 'store' ? '🏪 مزود خدمة (متاجر / إيجار)' : '🛎️ مزود خدمة (خدمات)');
+  return `
+    <h2>👤 ملفي الشخصي</h2>
+    <div style="background:var(--bg-card);border:1px solid var(--glass-border);border-radius:var(--radius);padding:24px">
+      <div class="form-group"><label>الاسم</label><div class="form-value">${u.name}</div></div>
+      <div class="form-group"><label>البريد</label><div class="form-value">${u.email}</div></div>
+      <div class="form-group"><label>الجوال</label><div class="form-value">${u.phone||'—'}</div></div>
+      <div class="form-group"><label>نوع الحساب</label><div class="form-value" style="font-weight:700;color:var(--primary)">${accTypeLabel}</div></div>
+      <button class="btn btn-secondary" style="margin-top:20px" onclick="logoutConfirm()">تسجيل الخروج</button>
+    </div>`;
+}
+
+// ─── Driver Dashboard ──────────────────────────────
+function renderDriver() {
+  if (State.currentUser?.role !== 'driver') { navigate('home'); return ''; }
+  const u = State.currentUser;
+  const driverTab = State.driverTab || 'orders';
+  const initial = (u.name || u.email || 'D')[0].toUpperCase();
+  const displayName = u.name || u.email || 'المندوب';
+  const tabs = [['orders','📋','طلباتي'],['earnings','💰','أرباحي'],['profile','👤','الملف']];
+  let content = '';
+  if (driverTab==='orders')    content = renderDriverOrders();
+  else if (driverTab==='earnings') content = renderDriverEarnings();
+  else if (driverTab==='profile') content = renderDriverProfile();
+  return `
+  <div id="app-content">
+    <div class="admin-sidebar-overlay" id="adminSidebarOverlay" onclick="closeAdminSidebar()"></div>
+    <div class="admin-layout">
+      <aside class="admin-sidebar" id="adminSidebar">
+        <!-- ══ رأس الدرج ══ -->
+        <div class="admin-sidebar-header">
+          <div class="sidebar-header-row">
+            <div class="sidebar-user-block">
+              <div class="sidebar-avatar-lg">${initial}</div>
+              <div class="sidebar-user-meta">
+                <div class="sidebar-user-name">${displayName}</div>
+                <div class="sidebar-user-role">مندوب التوصيل</div>
+              </div>
+            </div>
+            <button class="admin-sidebar-close" onclick="closeAdminSidebar()">✕</button>
+          </div>
+        </div>
+        <nav class="admin-nav" style="padding: 12px 10px;">
+          ${tabs.map(([t,ic,l])=>`
+            <button class="admin-nav-item${driverTab===t?' active':''}" onclick="setDriverTab('${t}');closeAdminSidebar()">
+              <span>${ic}</span><span>${l}</span>
+            </button>`).join('')}
+        </nav>
+      </aside>
+      <main class="admin-main">${content}</main>
+    </div>
+  </div>`;
+}
+async function setDriverTab(tab) {
+  State.driverTab = tab; await render();
+}
+
+function renderDriverOrders() {
+  const u = State.currentUser;
+  const orders = AppData.orders.filter(o=>o.driverId===u.uid).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
+  
+  if (orders.length === 0) {
+    return `
+      <h2>📋 طلبات التوصيل</h2>
+      <div class="empty-state" style="padding: 48px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); text-align: center; margin-top: 16px;">
+        <div class="empty-icon" style="font-size: 48px; margin-bottom: 16px;">🚚</div>
+        <div class="empty-title" style="font-size: 18px; font-weight: 700; color: var(--text-main); margin-bottom: 8px;">لا توجد طلبات توصيل مسندة إليك</div>
+        <p style="color: var(--text-muted); font-size: 14px; margin: 0; line-height: 1.6;">سيتم إشعارك وتحديث الصفحة فور تعيين طلب توصيل جديد لك من قِبل إدارة النظام</p>
+      </div>`;
+  }
+  
+  return `
+    <h2>📋 طلبات التوصيل</h2>
+    <div class="table-wrap">
+      <table class="admin-table">
+        <thead><tr><th>رقم الطلب</th><th>العميل</th><th>العنوان</th><th>الحالة</th><th>إجراءات</th></tr></thead>
+        <tbody>
+          ${orders.map(o=>`
+            <tr>
+              <td style="font-weight:700">${o.orderId}</td>
+              <td>${o.customerName}</td>
+              <td style="color:var(--text-secondary);font-size:13px">${o.customerAddr}</td>
+              <td><span class="badge badge-teal">${o.status}</span></td>
+              <td>
+                <button class="btn btn-sm btn-secondary" onclick="showDeliveryMap('${o.id}')">🗺️ الموقع</button>
+                ${o.status==='accepted'?`<button class="btn btn-sm btn-primary" onclick="startDriverDelivery('${o.id}')">🚗 بدء التوصيل وتتبع الـ GPS</button>`:''}
+                ${o.status==='with_driver'?`<button class="btn btn-sm btn-success" onclick="stopDriverDelivery('${o.id}')">📦 تم التوصيل</button>`:''}
+              </td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+function showDeliveryMap(orderId) {
+  openModal(`<div style="text-align:center"><div style="width:100%;height:300px;background:linear-gradient(135deg,#0d9488 0%,#0f766e 100%);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px">🗺️ خريطة التوصيل (يتم الربط لاحقاً مع Google Maps)</div></div>`);
+}
+async function updateDeliveryStatus(orderId, status) {
+  await fsUpdate('orders', orderId, { status });
+  if (status === 'delivered') {
+    await fsUpdate('orders', orderId, { status: 'completed' });
+    toast('تم تسليم الطلب بنجاح ✅','success');
+  } else {
+    toast('تم تحديث الحالة','success');
+  }
+  await render();
+}
+
+function renderDriverEarnings() {
+  const u = State.currentUser;
+  const delivered = AppData.orders.filter(o=>o.driverId===u.uid && o.status==='completed');
+  const deliveryFee = delivered.reduce((a)=>a+15,0);
+  return `
+    <h2>💰 أرباح التوصيل</h2>
+    <div class="stat-card">
+      <div class="stat-num">${deliveryFee}</div>
+      <div class="stat-label">إجمالي الأرباح</div>
+    </div>
+    <div class="stat-card" style="margin-top:16px">
+      <div class="stat-num">${delivered.length}</div>
+      <div class="stat-label">عمليات مكتملة</div>
+    </div>`;
+}
+
+function renderDriverProfile() {
+  const u = State.currentUser;
+  return `
+    <h2>👤 ملفي الشخصي</h2>
+    <div style="background:var(--bg-card);border:1px solid var(--glass-border);border-radius:var(--radius);padding:24px">
+      <div class="form-group"><label>الاسم</label><div class="form-value">${u.name}</div></div>
+      <div class="form-group"><label>البريد</label><div class="form-value">${u.email}</div></div>
+      <div class="form-group"><label>الجوال</label><div class="form-value">${u.phone||'—'}</div></div>
+      <button class="btn btn-secondary" style="margin-top:20px" onclick="logoutConfirm()">تسجيل الخروج</button>
+    </div>`;
+}
+
+// ─── Staff Dashboard ───────────────────────────────
+window.renderStaff = function() {
+  if (State.currentUser?.role !== 'staff') { navigate('home'); return ''; }
+  const u = State.currentUser;
+  const staffTab = State.staffTab || 'support';
+  const initial = (u.name || u.email || 'S')[0].toUpperCase();
+  const displayName = u.name || u.email || 'الموظف';
+  const tabs = [
+    ['support','💬','الدعم والمحادثات'],
+    ['payments','💳','توثيق المدفوعات'],
+    ['cats','📂','إدارة التصنيفات'],
+    ['services','🛠️','إدارة الخدمات']
+  ];
+  
+  let content = '';
+  if (staffTab==='support') content = `
+    <div class="dashboard-header">
+      <h2>💬 مركز الدعم الفني</h2>
+      <p>إدارة استفسارات المستخدمين والمحادثات المباشرة</p>
+    </div>
+    <div class="empty-state">
+      <div class="empty-icon">💬</div>
+      <div class="empty-title">لا توجد محادثات نشطة حالياً</div>
+      <p>سيتم تنبيهك فور وصول استفسار جديد من العملاء</p>
+    </div>`;
+  else if (staffTab==='payments') content = renderStaffPayments();
+  else if (staffTab==='cats') content = renderStaffCats();
+  else if (staffTab==='services') content = renderStaffServices();
+
+  return `
+  <div id="app-content">
+    <div class="admin-sidebar-overlay" id="adminSidebarOverlay" onclick="closeAdminSidebar()"></div>
+    <div class="admin-layout">
+      <aside class="admin-sidebar" id="adminSidebar">
+        <!-- ══ رأس الدرج ══ -->
+        <div class="admin-sidebar-header">
+          <div class="sidebar-header-row">
+            <div class="sidebar-user-block">
+              <div class="sidebar-avatar-lg">${initial}</div>
+              <div class="sidebar-user-meta">
+                <div class="sidebar-user-name">${displayName}</div>
+                <div class="sidebar-user-role">موظف العمليات</div>
+              </div>
+            </div>
+            <button class="admin-sidebar-close" onclick="closeAdminSidebar()">✕</button>
+          </div>
+        </div>
+        <nav class="admin-nav" style="padding: 12px 10px;">
+          ${tabs.map(([t,ic,l])=>`
+            <button class="admin-nav-item${staffTab===t?' active':''}" onclick="setStaffTab('${t}');closeAdminSidebar()">
+              <span>${ic}</span><span class="nav-label">${l}</span>
+            </button>`).join('')}
+        </nav>
+      </aside>
+      <main class="admin-main">
+        <div class="admin-content-card">
+          ${content}
+        </div>
+      </main>
+    </div>
+  </div>`;
+}
+
+function renderStaffPayments() {
+  const pending = AppData.rechargeReqs.filter(r=>r.status==='pending');
+  return `
+    <div class="dashboard-header">
+      <h2>💳 توثيق عمليات الدفع</h2>
+      <p>مراجعة طلبات شحن الرصيد والتحقق من إيصالات التحويل</p>
+    </div>
+    ${pending.length?`
+    <div class="table-wrap">
+      <table class="admin-table">
+        <thead><tr><th>المستخدم</th><th>المبلغ</th><th>الإثبات</th><th>الملاحظة</th><th>إجراء</th></tr></thead>
+        <tbody>
+          ${pending.map(r=>`
+            <tr>
+              <td><div style="font-weight:600">${r.userName}</div></td>
+              <td><span class="price-tag">${r.amount} ريال</span></td>
+              <td>${r.proofBase64?`<button class="btn btn-sm btn-secondary" onclick="viewProof('${r.id}')">🖼️ عرض الإيصال</button>`:'—'}</td>
+              <td style="color:var(--text-secondary);font-size:13px">${r.note||'—'}</td>
+              <td>
+                <div style="display:flex;gap:4px">
+                  <button class="btn btn-sm btn-success" onclick="approvePayment('${r.id}')">✅ قبول</button>
+                  <button class="btn btn-sm btn-danger" onclick="rejectPayment('${r.id}')">❌ رفض</button>
+                </div>
+              </td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`:'<div class="empty-state"><div class="empty-icon">💳</div><p>لا توجد طلبات دفع معلقة للمراجعة</p></div>'}`;
+}
+
+function renderStaffCats() {
+  return `
+    <div class="dashboard-header dashboard-header-row">
+      <div>
+        <h2>📂 إدارة التصنيفات</h2>
+        <p>إدارة وتحديث تصنيفات المهن، الخدمات والمتاجر</p>
+      </div>
+      <button class="btn btn-primary" onclick="window.showAddCatModal()">➕ إضافة تصنيف جديد</button>
+    </div>
+    ${AppData.cats.length ? `
+    <div class="table-wrap">
+      <table class="admin-table">
+        <thead><tr><th>أيقونة</th><th>الاسم</th><th>القسم</th><th>الترتيب</th><th>إجراءات</th></tr></thead>
+        <tbody>
+          ${AppData.cats.sort((a,b)=> (a.order||0)-(b.order||0)).map(c=>`
+            <tr>
+              <td style="font-size:24px">${c.icon||'📁'}</td>
+              <td>
+                <div style="font-weight:700">${c.name}</div>
+                <div style="font-size:11px;color:var(--text-muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.description||'لا يوجد وصف'}</div>
+              </td>
+              <td><span class="badge badge-secondary">${c.section}</span></td>
+              <td><span class="badge badge-teal">${c.order||0}</span></td>
+              <td>
+                <button class="btn btn-sm btn-secondary" onclick="window.showEditCatModal('${c.id}')">✏️</button>
+                <button class="btn btn-sm btn-danger" onclick="window.deleteCat('${c.id}')">🗑️</button>
+              </td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>` : `
+    <div class="empty-state" style="padding:60px 20px;text-align:center;background:var(--bg-card);border:1px solid var(--glass-border);border-radius:var(--radius);margin-top:20px">
+      <div class="empty-icon" style="font-size:48px;margin-bottom:16px;opacity:0.7">📂</div>
+      <div class="empty-title" style="font-size:18px;font-weight:700;margin-bottom:8px">لا توجد تصنيفات حالياً</div>
+      <p style="color:var(--text-muted);font-size:14px;margin:0">قم بإضافة تصنيفات جديدة لتظهر للعملاء في التطبيق.</p>
+    </div>`}`;
+}
+
+function renderStaffServices() {
+  return `
+    <div class="dashboard-header dashboard-header-row">
+      <div>
+        <h2>🛠️ إدارة الخدمات</h2>
+        <p>إدارة كافة الخدمات المهنية المضافة في النظام</p>
+      </div>
+      <button class="btn btn-primary" onclick="window.showAddSvcModal()">➕ إضافة خدمة جديدة</button>
+    </div>
+    ${AppData.services.length ? `
+    <div class="table-wrap">
+      <table class="admin-table">
+        <thead><tr><th>الخدمة</th><th>المزود</th><th>السعر</th><th>المنطقة</th><th>إجراءات</th></tr></thead>
+        <tbody>
+          ${AppData.services.map(s=>`
+            <tr>
+              <td>
+                <div style="display:flex;align-items:center;gap:8px">
+                  ${s.images?.[0]?`<img src="${s.images[0]}" style="width:32px;height:32px;border-radius:4px;object-fit:cover">`:'<div style="width:32px;height:32px;background:#eee;border-radius:4px;display:flex;align-items:center;justify-content:center">🛠️</div>'}
+                  <div style="font-weight:600">${s.name}</div>
+                </div>
+              </td>
+              <td style="color:var(--text-secondary)">${s.provider||'—'}</td>
+              <td><span class="price-tag">${s.price?s.price+' ريال':'بعد المعاينة'}</span></td>
+              <td>${AppData.regions.find(r=>r.id===s.regionId)?.name||'—'}</td>
+              <td>
+                <button class="btn btn-sm btn-secondary" onclick="window.showEditSvcModal('${s.id}')">✏️</button>
+                <button class="btn btn-sm btn-danger" onclick="window.deleteSvc('${s.id}')">🗑️</button>
+              </td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>` : `
+    <div class="empty-state" style="padding:60px 20px;text-align:center;background:var(--bg-card);border:1px solid var(--glass-border);border-radius:var(--radius);margin-top:20px">
+      <div class="empty-icon" style="font-size:48px;margin-bottom:16px;opacity:0.7">🛠️</div>
+      <div class="empty-title" style="font-size:18px;font-weight:700;margin-bottom:8px">لا توجد خدمات حالياً</div>
+      <p style="color:var(--text-muted);font-size:14px;margin:0">قم بإضافة خدمات مهنية جديدة أو اربطها بمزودين في النظام.</p>
+    </div>`}`;
+}
+
+async function setStaffTab(tab) {
+  State.staffTab = tab; await render();
+}
+
+// ─── ADMIN: Service Management (Rich Version) ─────────
+let _svcImagesBuf = { main: null, extras: [], existing: [] };
+let _modalStateStack = [];
+
+window.showAddSvcModal = function() {
+  if (State.currentUser && State.currentUser.role === 'admin') {
+    window.ph46_showAdminAddSvcModal(null, 'bookings');
+  } else {
+    toast('غير مسموح لمزودي الخدمة بالإضافة المباشرة للحجوزات والأقسام. يرجى إرسال طلب إضافة خدمة للمراجعة.', 'warning');
+  }
+};
+
+window.saveNewSvc = async function() {
+  const data = _collectSvcForm([]);
+  if (!data.catId || !data.name) { toast('\u0627\u062e\u062a\u0631 \u0627\u0644\u062a\u0635\u0646\u064a\u0641 \u0648\u0627\u062f\u062e\u0644 \u0627\u0633\u0645 \u0627\u0644\u062e\u062f\u0645\u0629', 'error'); return; }
+  if (!data.assignedVendors || !data.assignedVendors.length) { toast('\u064a\u0631\u062c\u0649 \u062a\u062d\u062f\u064a\u062f \u0645\u0632\u0648\u062f \u0648\u0627\u062d\u062f \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644', 'warning'); return; }
+
+  showLoader();
+  try {
+    await fsAdd('services', { ...data, status: 'active', icon: '\ud83d\udd37', createdAt: new Date() });
+    closeModal(); toast('\u062a\u0645 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u062e\u062f\u0645\u0629 \u2705', 'success'); await render();
+  } catch (e) {
+    console.error('Save Service Error:', e);
+    toast('\u274c \u0641\u0634\u0644 \u0627\u0644\u062d\u0641\u0638: ' + e.message, 'error');
+  } finally {
+    hideLoader();
+  }
+}
+
+window.showEditSvcModal = function(svcId) {
+  const s = AppData.services.find(x=>x.id===svcId);
+  if (!s) return;
+  _svcImagesBuf = { main:null, extras:[], existing: s.images||[] };
+  openModal(`
+    <div class="modal-header"><h2 class="modal-title">✏️ تعديل الخدمة</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
+    ${_svcModalBody(s)}
+    <button class="btn btn-primary btn-block" onclick="updateSvc('${svcId}')">حفظ</button>`);
+}
+
+window.updateSvc = async function(svcId) {
+  const s = AppData.services.find(x=>x.id===svcId);
+  const data = _collectSvcForm(s?.images||[]);
+  if (!data.assignedVendors || !data.assignedVendors.length) { toast('يرجى تحديد مزود واحد على الأقل لهذه الخدمة', 'warning'); return; }
+  
+  showLoader();
+  try {
+    await fsUpdate('services', svcId, data);
+    closeModal(); toast('تم التعديل ✅','success'); await render();
+  } catch (e) {
+    console.error('Update Service Error:', e);
+    toast('❌ فشل التعديل', 'error');
+  } finally {
+    hideLoader();
+  }
+}
+
+window.deleteSvc = async function(svcId) {
+  if (!confirm('حذف هذه الخدمة؟')) return;
+  await fsDelete('services', svcId);
+  toast('تم الحذف','success'); await render();
+}
+
+window._svcOnCatChange = function(catId) {
+  const sections = (AppData.svcSections || []).filter(sec => sec.catId === catId);
+  const container = document.getElementById('svc-section-container');
+  if (!container) return;
+
+  if (sections.length > 0) {
+    container.innerHTML = `
+      <label class="form-label">القسم الفرعي (اختياري)</label>
+      <select class="form-control" id="svc-section-id">
+        <option value="">-- اختر القسم الفرعي --</option>
+        ${sections.map(sec => `<option value="${sec.id}">${sec.icon || ''} ${sec.name}</option>`).join('')}
+      </select>`;
+  } else {
+    container.innerHTML = `
+      <label class="form-label">ترتيب الظهور</label>
+      <input class="form-control" id="svc-order" type="number" value="0" placeholder="0">`;
+  }
+};
+
+window._svcModalBody = function(s = {}, section = null) {
+  const regions = AppData.regions || [];
+  const oh = s.openingHours || { open:'09:00', close:'22:00', days:['sat','sun','mon','tue','wed','thu'] };
+  const categories = AppData.cats || [];
+  const cat = categories.find(c => c.id === s.catId);
+  
+  // Determine active section to filter categories dropdown properly
+  const activeSec = section || cat?.section || 'bookings';
+  let filteredCats = [];
+  if (activeSec === 'bookings') {
+    filteredCats = categories.filter(c => c.section === 'bookings' && c.catType !== 'rental');
+  } else if (activeSec === 'professions' || activeSec === 'services') {
+    filteredCats = categories.filter(c => c.section === 'professions' || c.section === 'services');
+  } else if (activeSec === 'stores') {
+    filteredCats = categories.filter(c => c.section === 'stores');
+  } else {
+    filteredCats = categories.filter(c => c.section === activeSec);
+  }
+
+  const isProfessions = cat ? (cat.section === 'professions' || cat.section === 'services') : (activeSec !== 'bookings' && activeSec !== 'stores');
+  const sections = (AppData.svcSections || []).filter(sec => sec.catId === s.catId);
+
+  return `
+    <style>
+      .admin-modal-card {
+        background: var(--bg-card, #1e1e2d);
+        border: 1px solid var(--border, rgba(255,255,255,0.08));
+        border-radius: 16px;
+        padding: 18px;
+        margin-bottom: 18px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      }
+      .admin-modal-card-title {
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--primary, #8b5cf6);
+        margin-bottom: 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border-bottom: 1px solid var(--border, rgba(255,255,255,0.08));
+        padding-bottom: 8px;
+      }
+      .grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+    </style>
+
+    <!-- 1. البيانات الأساسية للخدمة -->
+    <div class="admin-modal-card">
+      <div class="admin-modal-card-title">📝 البيانات الأساسية للخدمة</div>
+      
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">التصنيف</label>
+          <select class="form-control" id="svc-cat" onchange="window._svcOnCatChange(this.value)">
+            <option value="">-- اختر التصنيف --</option>
+            ${filteredCats.map(c=>`<option value="${c.id}"${s.catId===c.id?' selected':''}>${c.icon||''} ${c.name}</option>`).join('')}
+          </select>
+        </div>
+        
+        <div class="form-group" id="svc-section-container">
+          ${sections.length > 0 ? `
+            <label class="form-label">القسم الفرعي (اختياري)</label>
+            <select class="form-control" id="svc-section-id">
+              <option value="">-- اختر القسم الفرعي --</option>
+              ${sections.map(sec => `<option value="${sec.id}" ${s.sectionId === sec.id ? 'selected' : ''}>${sec.icon || ''} ${sec.name}</option>`).join('')}
+            </select>
+          ` : `
+            <label class="form-label">ترتيب الظهور</label>
+            <input class="form-control" id="svc-order" type="number" value="${s.order||0}" placeholder="0">
+          `}
+        </div>
+      </div>
+
+      <div class="grid-2" style="margin-top: 12px;">
+        <div class="form-group">
+          <label class="form-label">اسم الخدمة</label>
+          <input class="form-control" id="svc-name" value="${s.name||''}" placeholder="مثال: حجز فندق">
+        </div>
+        <div class="form-group">
+          <label class="form-label">مقدم الخدمة (يظهر للادارة فقط)</label>
+          <input class="form-control" id="svc-provider" value="${s.provider||''}" placeholder="الفندق الذهبي">
+        </div>
+      </div>
+
+      ${sections.length > 0 ? `
+        <div class="form-group" style="margin-top: 12px;">
+          <label class="form-label">ترتيب الظهور</label>
+          <input class="form-control" id="svc-order" type="number" value="${s.order||0}" placeholder="0">
+        </div>
+      ` : ''}
+
+      <div class="form-group" style="margin-top: 12px;">
+        <label class="form-label">الوصف</label>
+        <textarea class="form-control" id="svc-desc" rows="3" placeholder="اكتب وصفاً مختصراً ومميزاً للخدمة...">${s.desc||''}</textarea>
+      </div>
+    </div>
+
+    <!-- 2. التسعير والرسوم والعمولات -->
+    <div class="admin-modal-card">
+      <div class="admin-modal-card-title">💰 التسعير والرسوم والعمولات</div>
+      
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">السعر الأساسي (ريال)</label>
+          <input class="form-control" id="svc-price" type="number" value="${s.price||''}" placeholder="فارغ = عند الطلب" oninput="ph21_updateFinalPrice()">
+        </div>
+        <div class="form-group">
+          <label class="form-label">نسبة العربون (%)</label>
+          <input class="form-control" id="svc-deposit" type="number" value="${s.depositPercent||0}" placeholder="0" oninput="ph21_updateFinalPrice()">
+        </div>
+      </div>
+
+      <div class="grid-2" style="margin-top: 12px;">
+        <div class="form-group">
+          <label class="form-label">العمولة (%)</label>
+          <input class="form-control" id="svc-commission" type="number" value="${s.commission||0}" placeholder="مثال: 10" oninput="ph21_updateFinalPrice()">
+        </div>
+        <div class="form-group">
+          <label class="form-label">الضريبة (%)</label>
+          <input class="form-control" id="svc-tax" type="number" value="${s.tax||0}" placeholder="مثال: 15" oninput="ph21_updateFinalPrice()">
+        </div>
+      </div>
+
+      <div class="form-group" style="background:rgba(var(--primary-rgb),0.08);padding:12px;border-radius:12px;margin-top:12px;border:1px solid rgba(var(--primary-rgb),0.2);display:${(s.finalPrice||0)>0?'block':'none'}">
+        <label class="form-label" style="margin-bottom:2px;color:var(--primary);font-weight:800">السعر النهائي للعميل:</label>
+        <div id="ph21-final-price-disp" style="font-size:20px;font-weight:900;color:var(--text-main)">${s.finalPrice||0} ريال</div>
+      </div>
+    </div>
+
+    <!-- 3. تفاصيل الموقع والتوصيل -->
+    <div class="admin-modal-card">
+      <div class="admin-modal-card-title">📍 تفاصيل الموقع والتوصيل</div>
+      
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">المنطقة</label>
+          <select class="form-control" id="svc-region">
+            <option value="">-- اختر المنطقة --</option>
+            ${regions.filter(r=>r.active!==false).map(r=>`<option value="${r.id}"${s.regionId===r.id?' selected':''}>${r.name}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">العنوان داخل المنطقة</label>
+          <input class="form-control" id="svc-address" value="${s.address||''}" placeholder="مثال: شارع الأربعين بجانب جامع النور">
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-top: 12px;">
+        <label class="form-label">الموقع على الخريطة</label>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input class="form-control" id="svc-lat" value="${s.lat||''}" placeholder="خط العرض (Latitude)" style="flex:1;min-width:120px">
+          <input class="form-control" id="svc-lng" value="${s.lng||''}" placeholder="خط الطول (Longitude)" style="flex:1;min-width:120px">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="svcUseMyLocation()" title="حدد موقعي">📍 موقعي</button>
+          <button type="button" class="btn btn-primary btn-sm" onclick="openServiceMapPicker()" title="افتح الخريطة">🗺️ الخريطة</button>
+        </div>
+        <div id="svc-loc-hint" style="font-size:12px;color:var(--text-muted);margin-top:6px">${s.lat?'✅ موقع محفوظ':''}</div>
+      </div>
+
+      <div class="form-group" style="margin-top:16px;">
+        <label class="form-label" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+          <input type="checkbox" id="svc-delivery" ${s.requiresDelivery !== false ? 'checked' : ''} style="width:20px;height:20px;">
+          <span>تتطلب مندوب توصيل (مثل: توصيل معدات للعميل)</span>
+        </label>
+      </div>
+
+      ${isProfessions ? `
+        <div class="form-group" style="margin-top: 12px;">
+          <label class="form-label">الأعطال الشائعة (واحد في كل سطر - للمهن فقط)</label>
+          <textarea class="form-control" id="svc-issues" rows="3" placeholder="مثال:&#10;تسريب مياه&#10;كسر في الانبوب">${(s.commonIssues||[]).join('\n')}</textarea>
+        </div>
+      ` : ''}
+    </div>
+
+    <!-- 4. مواعيد العمل -->
+    <div class="admin-modal-card">
+      <div class="admin-modal-card-title">🕒 مواعيد العمل</div>
+      
+      <div class="grid-2">
+        <div><label style="font-size:12px;color:var(--text-secondary)">يفتح</label><input class="form-control" id="svc-open" type="time" value="${oh.open||'09:00'}"></div>
+        <div><label style="font-size:12px;color:var(--text-secondary)">يغلق</label><input class="form-control" id="svc-close" type="time" value="${oh.close||'22:00'}"></div>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px" id="svc-days">
+        ${_DB_DAYS.map(d => `<label class="day-chip${(oh.days||[]).includes(d.k)?' on':''}"><input type="checkbox" value="${d.k}" ${(oh.days||[]).includes(d.k)?'checked':''} onchange="this.parentElement.classList.toggle('on',this.checked)" hidden>${d.n}</label>`).join('')}
+      </div>
+    </div>
+
+    <!-- 5. صور الخدمة -->
+    <div class="admin-modal-card">
+      <div class="admin-modal-card-title">🖼️ صور الخدمة</div>
+      
+      <div class="form-group">
+        <label class="form-label">الصورة الرئيسية</label>
+        <input class="form-control" id="svc-img-main" type="file" accept="image/*" onchange="svcPreviewMain(this)">
+        <div id="svc-main-preview" style="margin-top:8px">${s.images?.[0]?`<img src="${s.images[0]}" style="max-width:200px;max-height:140px;border-radius:8px;object-fit:cover">`:''}</div>
+      </div>
+      <div class="form-group" style="margin-top:12px;">
+        <label class="form-label">صور إضافية</label>
+        <input class="form-control" id="svc-img-extra" type="file" accept="image/*" multiple onchange="svcPreviewExtras(this)">
+        <div id="svc-extra-preview" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+          ${(s.images||[]).slice(1).map(b=>`<img src="${b}" style="width:80px;height:80px;border-radius:8px;object-fit:cover">`).join('')}
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. إعدادات التوجيه التلقائي للمزودين -->
+    <div class="admin-modal-card">
+      <div class="admin-modal-card-title">⚙️ إعدادات التوجيه التلقائي للمزودين</div>
+      
+      <div class="form-group" style="background:rgba(var(--primary-rgb),0.05);padding:16px;border-radius:14px;margin-bottom:16px;border:1px dashed var(--primary)">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div>
+            <div style="font-weight:700;font-size:15px;margin-bottom:4px">🔄 إتاحة الطلب من عدة مزودين</div>
+            <div style="font-size:11px;color:var(--text-secondary)">تفعيل هذا الخيار يحول الخدمة إلى "نظام توجيه تلقائي" للأقرب.</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="svc-multi-vendors" ${s.multiVendors!==false?'checked':''} onchange="ph43_toggleVendorPickerMode(this.checked)">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      ${_renderVendorPicker(s.assignedVendors||[], s.multiVendors!==false)}
+    </div>`;
+}
+
+function _collectSvcForm(existingImages = []) {
+  const days = Array.from(document.querySelectorAll('#svc-days input:checked')).map(i=>i.value);
+  const main = (_svcImagesBuf||{}).main || existingImages[0] || null;
+  const extras = (_svcImagesBuf||{}).extras?.length ? _svcImagesBuf.extras : existingImages.slice(1);
+  const images = [main, ...extras].filter(Boolean);
+  const depositPercent = parseInt(document.getElementById('svc-deposit')?.value) || 0;
+  return {
+    catId: document.getElementById('svc-cat')?.value || '',
+    name: document.getElementById('svc-name')?.value.trim() || '',
+    provider: document.getElementById('svc-provider')?.value.trim() || '',
+    desc: document.getElementById('svc-desc')?.value.trim() || '',
+    price: parseInt(document.getElementById('svc-price')?.value) || null,
+    depositPercent: depositPercent,
+    hasDeposit: depositPercent > 0,
+    requiresDelivery: document.getElementById('svc-delivery') ? document.getElementById('svc-delivery').checked : true,
+    regionId: document.getElementById('svc-region')?.value || null,
+    address: document.getElementById('svc-address')?.value.trim() || '',
+    phone: document.getElementById('svc-phone')?.value.trim() || '',
+    whatsapp: document.getElementById('svc-whatsapp')?.value.trim() || '',
+    commonIssues: document.getElementById('svc-issues') ? document.getElementById('svc-issues').value.trim().split('\n').filter(l=>l.trim()) : [],
+    lat: parseFloat(document.getElementById('svc-lat')?.value) || null,
+    lng: parseFloat(document.getElementById('svc-lng')?.value) || null,
+    openingHours: {
+      open: document.getElementById('svc-open')?.value || '09:00',
+      close: document.getElementById('svc-close')?.value || '22:00',
+      days,
+    },
+    order: parseInt(document.getElementById('svc-order')?.value) || 0,
+    multiVendors: document.getElementById('svc-multi-vendors')?.checked !== false,
+    assignedVendors: Array.from(document.querySelectorAll('.svc-vendor-cb:checked')).map(cb=>cb.value),
+    sectionId: document.getElementById('svc-section-id')?.value || null,
+    images,
+
+  };
+}
+
+function _renderVendorPicker(assignedIds = [], isMulti = true) {
+  const vendors = (AppData.users || []).filter(u => ['vendor', 'provider'].includes(u.role));
+  const type = isMulti ? 'checkbox' : 'radio';
+  return `
+    <div class="vendor-picker-container" style="background:rgba(255,255,255,0.03); border:1px solid var(--glass-border); border-radius:16px; padding:16px; margin-top:8px">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px">
+        <label class="form-label" style="margin:0; font-weight:700; color:var(--primary)">💎 المزودين المعتمدين (إلزامي)</label>
+        <div id="multi-vendor-actions" style="display:${isMulti?'flex':'none'}; gap:8px">
+          <button type="button" class="btn btn-sm" style="font-size:11px; padding:4px 8px; background:rgba(139,92,246,0.1); color:var(--primary)" onclick="ph43_selectAllVendors(true)">تحديد الكل</button>
+          <button type="button" class="btn btn-sm" style="font-size:11px; padding:4px 8px; background:rgba(244,63,94,0.1); color:var(--rose)" onclick="ph43_selectAllVendors(false)">إلغاء الكل</button>
+        </div>
+      </div>
+      <input type="text" class="form-control form-control-sm" placeholder="🔍 ابحث عن مزود..." oninput="ph43_filterVendors(this.value)" style="margin-bottom:12px; height:36px; border-radius:10px; background:rgba(0,0,0,0.2)">
+      <div style="max-height:200px; overflow-y:auto; padding-right:4px" id="svc-vendors-pool" class="custom-scrollbar">
+        ${vendors.map(v => `
+          <label class="vendor-item" data-name="${v.name.toLowerCase()}" style="display:flex; align-items:center; gap:12px; margin-bottom:8px; cursor:pointer; padding:10px; border-radius:12px; background:rgba(255,255,255,0.02); transition:all 0.2s; border:1px solid transparent">
+            <input type="${type}" name="svc-vendor" class="svc-vendor-cb" value="${v.id}" ${assignedIds.includes(v.id) ? 'checked' : ''} style="width:20px; height:20px; accent-color:var(--primary)"> 
+            <div style="flex:1">
+              <div style="font-weight:600; font-size:14px">${v.name}</div>
+              <div style="font-size:11px; color:var(--text-muted)">${v.email || v.phone || ''}</div>
+            </div>
+            ${assignedIds.includes(v.id) ? '<span style="font-size:16px">✅</span>' : ''}
+          </label>
+        `).join('')}
+      </div>
+      <div id="picker-hint" style="font-size:11px; color:var(--text-muted); margin-top:10px; display:flex; align-items:center; gap:6px">
+        <span style="font-size:14px">ℹ️</span> ${isMulti ? 'سيقوم النظام بتوجيه الطلب تلقائياً للأقرب من القائمة المحددة.' : 'يرجى تحديد مزود واحد فقط لهذه الخدمة.'}
+      </div>
+    </div>
+    <style>
+      .vendor-item:hover { background:rgba(139,92,246,0.08) !important; border-color:var(--primary) !important; }
+      .vendor-item:has(input:checked) { background:rgba(139,92,246,0.1) !important; border-color:var(--primary) !important; }
+    </style>
+  `;
+}
+
+window.ph43_selectAllVendors = function(val) {
+  document.querySelectorAll('.svc-vendor-cb').forEach(cb => cb.checked = val);
+};
+
+window.ph43_filterVendors = function(q) {
+  const query = q.toLowerCase();
+  document.querySelectorAll('.vendor-item').forEach(item => {
+    const name = item.dataset.name;
+    item.style.display = name.includes(query) ? 'flex' : 'none';
+  });
+};
+const _DB_DAYS = [
+  {k:'sat',n:'السبت'}, {k:'sun',n:'الأحد'}, {k:'mon',n:'الاثنين'},
+  {k:'tue',n:'الثلاثاء'}, {k:'wed',n:'الأربعاء'}, {k:'thu',n:'الخميس'}, {k:'fri',n:'الجمعة'}
+];
+
+async function svcPreviewMain(input) {
+  if (!input.files[0]) return;
+  const b = await fileToResizedBase64(input.files[0], 1200, 0.8);
+  _svcImagesBuf.main = b;
+  document.getElementById('svc-main-preview').innerHTML = `<img src="${b}" style="max-width:200px;max-height:140px;border-radius:8px;object-fit:cover">`;
+}
+async function svcPreviewExtras(input) {
+  const files = Array.from(input.files).slice(0,4);
+  _svcImagesBuf.extras = [];
+  const out = document.getElementById('svc-extra-preview');
+  out.innerHTML = '';
+  for (const f of files) {
+    const b = await fileToResizedBase64(f, 900, 0.75);
+    _svcImagesBuf.extras.push(b);
+    out.insertAdjacentHTML('beforeend', `<img src="${b}" style="width:80px;height:80px;border-radius:8px;object-fit:cover">`);
+  }
+}
+async function svcUseMyLocation() {
+  const c = await new Promise(res => {
+    if (!navigator.geolocation) return res(null);
+    navigator.geolocation.getCurrentPosition(p => res({lat:p.coords.latitude,lng:p.coords.longitude}), () => res(null), {timeout:8000});
+  });
+  if (!c) { toast('تعذّر الحصول على الموقع','error'); return; }
+  document.getElementById('svc-lat').value = c.lat.toFixed(6);
+  document.getElementById('svc-lng').value = c.lng.toFixed(6);
+  document.getElementById('svc-loc-hint').textContent = '✅ تم تحديد موقعك';
+}
+
+function fileToResizedBase64(file, maxW = 900, quality = 0.78) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const ratio = Math.min(1, maxW / img.width);
+        const w = Math.round(img.width * ratio);
+        const h = Math.round(img.height * ratio);
+        const c = document.createElement('canvas');
+        c.width = w; c.height = h;
+        c.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(c.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// ─── ADMIN: Modal State Management ────────────────────
+function ph_pushModalState() {
+  const body = document.getElementById('modal-body');
+  if (!body) return;
+  const state = { html: body.innerHTML, values: {} };
+  body.querySelectorAll('input, select, textarea').forEach(el => {
+    if (el.id) {
+      if (el.type === 'checkbox') state.values[el.id] = el.checked;
+      else state.values[el.id] = el.value;
+    }
+  });
+  _modalStateStack.push(state);
+}
+function ph_popModalState() {
+  const state = _modalStateStack.pop();
+  if (!state) return false;
+  const body = document.getElementById('modal-body');
+  if (!body) return false;
+  body.innerHTML = state.html;
+  Object.entries(state.values).forEach(([id, val]) => {
+    const el = document.getElementById(id);
+    if (el) {
+      if (el.type === 'checkbox') el.checked = val;
+      else el.value = val;
+    }
+  });
+  return true;
+}
+
+// ─── ADMIN: Map Picker ───────────────────────────────
+let _pickerMap, _pickerMarker;
+window.openServiceMapPicker = function() {
+  const latEl = document.getElementById('svc-lat');
+  const lngEl = document.getElementById('svc-lng');
+  const currentLat = latEl ? (parseFloat(latEl.value) || 15.3694) : 15.3694;
+  const currentLng = lngEl ? (parseFloat(lngEl.value) || 44.1817) : 44.1817;
+  ph_pushModalState();
+  openModal(`
+    <div class="modal-header"><h2 class="modal-title">🗺️ تحديد موقع الخدمة</h2><button class="modal-close" onclick="ph_popModalState() || closeModal()">✕</button></div>
+    <div style="padding:20px">
+      <div id="map-picker-canvas" style="height:320px; background:#f0f0f0; border-radius:12px; margin-bottom:16px; border:1px solid var(--border); overflow:hidden;"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group"><label class="form-label">📍 Latitude</label><input class="form-control" id="map-lat-input" type="number" step="0.000001" value="${currentLat}"></div>
+        <div class="form-group"><label class="form-label">📍 Longitude</label><input class="form-control" id="map-lng-input" type="number" step="0.000001" value="${currentLng}"></div>
+      </div>
+      <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="saveServiceLocation()">✅ تأكيد الموقع</button>
+    </div>`);
+  
+  if (typeof google !== 'undefined' && google.maps) {
+    setTimeout(() => {
+      const mapOptions = {
+        center: { lat: currentLat, lng: currentLng },
+        zoom: 13,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: false
+      };
+      _pickerMap = new google.maps.Map(document.getElementById('map-picker-canvas'), mapOptions);
+      _pickerMarker = new google.maps.Marker({
+        position: { lat: currentLat, lng: currentLng },
+        map: _pickerMap,
+        draggable: true,
+        title: 'حدد الموقع'
+      });
+      _pickerMarker.addListener('dragend', () => {
+        const pos = _pickerMarker.getPosition();
+        document.getElementById('map-lat-input').value = pos.lat().toFixed(6);
+        document.getElementById('map-lng-input').value = pos.lng().toFixed(6);
+      });
+      _pickerMap.addListener('click', (e) => {
+        _pickerMarker.setPosition(e.latLng);
+        document.getElementById('map-lat-input').value = e.latLng.lat().toFixed(6);
+        document.getElementById('map-lng-input').value = e.latLng.lng().toFixed(6);
+      });
+    }, 200);
+  }
+};
+
+window.saveServiceLocation = function() {
+  const lat = document.getElementById('map-lat-input').value;
+  const lng = document.getElementById('map-lng-input').value;
+  if (ph_popModalState()) {
+    document.getElementById('svc-lat').value = lat;
+    document.getElementById('svc-lng').value = lng;
+    document.getElementById('svc-loc-hint').textContent = '✅ تم تحديد الموقع';
+  }
+};
+
+window.ph46_showAdminAddSvcModal = function(targetCatId = null, targetSection = 'bookings') {
+  const sectionId = (targetSection === 'professions' || targetSection === 'services') ? 'professions' : 'bookings';
+  const activeItems = (AppData.catalogItems || []).filter(item => item.status === 'active' && item.sectionId === sectionId);
+  const providers = (AppData.users || []).filter(u => ['vendor', 'provider'].includes(u.role));
+  const localCats = (AppData.cats || []).filter(c => c.section === 'bookings' ? c.catType !== 'rental' : (c.section === 'professions' || c.section === 'services'));
+
+  let selectedCatId = targetCatId || (localCats[0]?.id || '');
+
+  const modalHtml = `
+    <div class="modal-header">
+      <h2 class="modal-title">🔗 ربط وإضافة خدمات من الكتالوج الموحد</h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="ph46-modal-body-scroll" style="max-height: 75vh; overflow-y: auto; padding: 12px; direction: rtl; text-align: right; color: #ffffff;">
+      
+      <!-- اختيار القسم المحلي للتنزيل فيه -->
+      <div class="form-group" style="margin-bottom: 16px;">
+        <label class="form-label" style="font-weight: 700;">📂 اختر فئة الحجز المحلية المستهدفة *</label>
+        <select class="form-control" id="ph46-local-cat-select" onchange="window.__ph46_selectedLocalCatId = this.value;">
+          <option value="">-- اختر الفئة المحلية --</option>
+          ${localCats.map(c => `<option value="${c.id}" ${c.id === selectedCatId ? 'selected' : ''}>${c.icon || ''} ${c.name} (${c.section === 'bookings' ? 'حجوزات' : 'مهن/خدمات'})</option>`).join('')}
+        </select>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 16px; margin-top: 16px;">
+        <!-- العمود الأيسر: قائمة الخدمات والمنتجات في الكتالوج -->
+        <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border, rgba(255,255,255,0.08)); border-radius: 12px; padding: 16px;">
+          <h4 style="margin-top:0; margin-bottom:12px; color:var(--primary); font-size:14px; border-bottom:1px solid var(--border, rgba(255,255,255,0.08)); padding-bottom:6px;">📋 1. اختر الخدمات/المنتجات من الكتالوج (يمكن اختيار متعدد)</h4>
+          
+          <div class="search-input-wrap" style="margin-bottom:12px;">
+            <input type="text" class="form-control" placeholder="🔍 بحث بالاسم..." oninput="window.ph46_filterCatalogList(this.value)">
+          </div>
+
+          <div id="ph46-catalog-items-list" style="max-height: 300px; overflow-y: auto; border: 1px solid var(--border, rgba(255,255,255,0.08)); border-radius: 8px; padding: 8px; display:flex; flex-direction:column; gap:8px;">
+            ${activeItems.length === 0 ? `
+              <div style="text-align:center; padding:20px; color:var(--text-muted);">لا توجد خدمات نشطة في الكتالوج لهذا القسم</div>
+            ` : activeItems.map(item => `
+              <label class="ph46-catalog-item-row" data-name="${item.name.toLowerCase()}" style="display:flex; align-items:center; gap:10px; padding:8px; border-radius:8px; background:rgba(255,255,255,0.01); border:1px solid transparent; transition:all 0.2s; cursor:pointer;">
+                <input type="checkbox" class="ph46-catalog-cb" value="${item.id}" style="width:18px; height:18px;">
+                ${item.mainImage ? `<img src="${item.mainImage}" style="width:36px; height:36px; border-radius:6px; object-fit:cover;">` : `<div style="width:36px; height:36px; border-radius:6px; background:rgba(255,255,255,0.05); display:flex; align-items:center; justify-content:center;">🔷</div>`}
+                <div style="flex:1;">
+                  <div style="font-weight:700; font-size:13px;">${item.name}</div>
+                  <div style="font-size:11px; color:var(--text-muted);">${item.price ? item.price + ' ريال' : 'حسب الاتفاق'}</div>
+                </div>
+              </label>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- العمود الأيمن: قائمة مزودي الخدمة المتاحين للربط -->
+        <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border, rgba(255,255,255,0.08)); border-radius: 12px; padding: 16px;">
+          <h4 style="margin-top:0; margin-bottom:12px; color:var(--primary); font-size:14px; border-bottom:1px solid var(--border, rgba(255,255,255,0.08)); padding-bottom:6px;">👤 2. اختر مزودي الخدمة</h4>
+          
+          <div id="ph46-providers-list" style="max-height: 350px; overflow-y: auto; border: 1px solid var(--border, rgba(255,255,255,0.08)); border-radius: 8px; padding: 8px; display:flex; flex-direction:column; gap:8px;">
+            ${providers.length === 0 ? `
+              <div style="text-align:center; padding:20px; color:var(--text-muted);">لا يوجد مزودو خدمة مسجلون</div>
+            ` : providers.map(p => `
+              <label style="display:flex; align-items:center; gap:10px; padding:8px; border-radius:8px; background:rgba(255,255,255,0.01); cursor:pointer;">
+                <input type="checkbox" class="ph46-provider-cb" value="${p.uid}" data-name="${p.name}" style="width:18px; height:18px;">
+                <div style="flex:1;">
+                  <div style="font-weight:700; font-size:13px;">${p.name}</div>
+                  <div style="font-size:11px; color:var(--text-muted);">${p.phone || ''}</div>
+                </div>
+              </label>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:20px; display:flex; justify-content:flex-end; gap:10px;">
+        <button class="btn btn-secondary" onclick="closeModal()">إلغاء</button>
+        <button class="btn btn-primary" onclick="window.ph46_saveAdminLocalSvcs()">💾 حفظ وربط الخدمات</button>
+      </div>
+    </div>
+  `;
+
+  openModal(modalHtml);
+  window.__ph46_selectedLocalCatId = selectedCatId;
+};
+
+window.ph46_filterCatalogList = function(q) {
+  const lowercase = q.toLowerCase().trim();
+  const rows = document.querySelectorAll('.ph46-catalog-item-row');
+  rows.forEach(r => {
+    const name = r.getAttribute('data-name') || '';
+    r.style.display = name.includes(lowercase) ? 'flex' : 'none';
+  });
+};
+
+window.ph46_saveAdminLocalSvcs = async function() {
+  const catId = window.__ph46_selectedLocalCatId;
+  if (!catId) { toast('يرجى تحديد الفئة المحلية المستهدفة', 'error'); return; }
+
+  const checkedItems = Array.from(document.querySelectorAll('.ph46-catalog-cb:checked')).map(cb => cb.value);
+  const checkedProviders = Array.from(document.querySelectorAll('.ph46-provider-cb:checked')).map(cb => ({
+    uid: cb.value,
+    name: cb.getAttribute('data-name')
+  }));
+
+  if (checkedItems.length === 0) { toast('يرجى اختيار خدمة واحدة على الأقل من الكتالوج', 'warning'); return; }
+  if (checkedProviders.length === 0) { toast('يرجى اختيار مزود خدمة واحد على الأقل', 'warning'); return; }
+
+  showLoader();
+  try {
+    let addCount = 0;
+    for (const itemId of checkedItems) {
+      const item = (AppData.catalogItems || []).find(i => i.id === itemId);
+      if (!item) continue;
+
+      for (const provider of checkedProviders) {
+        const svcData = {
+          catId: catId,
+          name: item.name,
+          desc: item.desc || '',
+          price: item.priceType === 'agreement' ? 0 : (item.price || 0),
+          commission: item.commission || 0,
+          tax: item.tax || 0,
+          requiresDelivery: item.requiresDriver || false,
+          providerUid: provider.uid,
+          providerName: provider.name,
+          images: item.images || [],
+          icon: item.mainImage || '🔷',
+          status: 'active',
+          sku: item.sku || null,
+          commonIssues: typeof item.commonProblems === 'string' ? item.commonProblems.split('\n').filter(l => l.trim()) : (item.commonProblems || []),
+          createdAt: new Date()
+        };
+
+        await fsAdd('services', svcData);
+        addCount++;
+      }
+    }
+
+    if (typeof ph46_reloadData === 'function') await ph46_reloadData();
+    closeModal();
+    toast(`تمت إضافة وربط ${addCount} خدمة بنجاح 🎉`, 'success');
+    await render();
+  } catch(e) {
+    toast('حدث خطأ أثناء الحفظ: ' + e.message, 'error');
+  } finally {
+    hideLoader();
+  }
+};

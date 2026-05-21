@@ -1,0 +1,9 @@
+/* 2FA & Settings Styles */
+.form-group label { display: block; margin-bottom: 8px; font-weight: 600; color: var(--text-main); font-size: 14px; }
+.form-group input, .form-group textarea { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-main); color: var(--text-main); font-family: inherit; }
+.form-group input:focus, .form-group textarea:focus { border-color: var(--primary); outline: none; }
+.otp-input-group { display: flex; gap: 8px; justify-content: center; margin-bottom: 20px; }
+.otp-input { width: 50px; height: 50px; font-size: 24px; text-align: center; border: 2px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-main); color: var(--text-main); font-weight: 700; }
+.otp-input:focus { border-color: var(--primary); outline: none; }
+.otp-timer { text-align: center; color: var(--text-muted); font-size: 14px; margin-bottom: 16px; }
+.otp-timer.warning { color: var(--warning); font-weight: 600; }

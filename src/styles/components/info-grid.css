@@ -1,0 +1,12 @@
+/* Info grid */
+.ph10-trk-info {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+}
+@media (max-width: 540px) { .ph10-trk-info { grid-template-columns: repeat(2, 1fr); } }
+.ph10-info-cell {
+  background: rgba(124,58,237,0.08);
+  border: 1px solid rgba(168,85,247,0.18);
+  border-radius: 10px; padding: 10px 12px; min-width: 0;
+}
+.ph10-info-k { font-size: 11px; color: var(--text-muted, #aaa); margin-bottom: 4px; }
+.ph10-info-v { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

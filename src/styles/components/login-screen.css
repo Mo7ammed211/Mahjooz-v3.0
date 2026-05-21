@@ -1,0 +1,66 @@
+  /* Login screen */
+  .login-container { margin: 24px auto; padding: 0 14px; max-width: 100%; }
+  .login-form { padding: 22px 18px; border-radius: 16px; }
+  .login-tabs { padding: 4px; }
+  .login-tab { padding: 8px; font-size: 13px; }
+  .login-topbar { position: static; padding: 14px 14px 0; justify-content: flex-end; }
+  .login-choose-title { font-size: 18px; margin: 0 0 16px; }
+  .login-cards { gap: 10px; margin-bottom: 18px; }
+  .entry-card { padding: 14px 14px; column-gap: 12px; }
+  .entry-icon { width: 46px; height: 46px; font-size: 28px; }
+  .entry-title { font-size: 15px; }
+  .entry-desc { font-size: 12.5px; }
+  .quick-demo-grid { grid-template-columns: 1fr; }
+
+  /* OTP inputs — fit even tiny screens */
+  .otp-input-group { gap: 6px; }
+  .otp-input { width: 40px; height: 46px; font-size: 20px; }
+
+  /* Bank cards / service detail */
+  .bank-grid { grid-template-columns: 1fr; }
+  .svc-detail { gap: 16px; }
+  .svc-price-big { font-size: 26px; }
+  .svc-section { padding: 14px; }
+  .gal-thumbs img { width: 60px; height: 60px; }
+
+  /* Chat support page — stack panels vertically */
+  .chat-page { height: auto; min-height: calc(100vh - 100px); }
+  .chat-container { flex-direction: column; }
+  .tickets-panel {
+    width: 100%;
+    max-height: 38vh;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .chat-panel { min-height: 50vh; }
+  .message-bubble { max-width: 88%; }
+  .messages-container { padding: 14px; }
+  .message-input-area { padding: 12px; gap: 8px; }
+  .message-input-area button { padding: 10px 16px; }
+
+  /* Floating chat assistant — keep clear of bottom edge & nav */
+  #chat-widget { bottom: 16px; left: 16px; }
+  #chat-button { width: 52px; height: 52px; font-size: 24px; }
+  #chat-window {
+    position: fixed;
+    bottom: 84px; left: 12px; right: 12px;
+    width: auto; height: 70vh;
+    transform-origin: bottom center;
+  }
+  [dir="rtl"] #chat-widget { left: auto; right: 16px; }
+  [dir="rtl"] #chat-window { left: 12px; right: 12px; }
+
+  /* Reports header → stack date range below title */
+  .reports-header { flex-direction: column; align-items: stretch; gap: 12px; }
+  .date-range-selector { flex-wrap: wrap; }
+  .date-range-selector input { flex: 1; min-width: 130px; }
+  .reports-tabs, .support-tabs { gap: 6px; overflow-x: auto; flex-wrap: nowrap; }
+  .reports-tabs::-webkit-scrollbar, .support-tabs::-webkit-scrollbar { display: none; }
+  .report-tab-btn, .tab-btn { padding: 10px 14px; font-size: 13px; white-space: nowrap; flex-shrink: 0; }
+
+  /* Notification panel — full width below bell */
+  .notif-panel { width: calc(100vw - 28px); max-width: calc(100vw - 28px); }
+
+  /* Toast container — keep clear of phone notch */
+  #toast-container { top: 14px; width: calc(100% - 28px); }
+  .toast { font-size: 13px; padding: 10px 16px; width: 100%; justify-content: center; }

@@ -1,0 +1,33 @@
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# Build outputs
+dist/
+tmp/
+out/
+
+# Firebase cache and logs
+.firebase/
+firebase-debug.log
+ui-debug.log
+firestore-debug.log
+
+# Large archived files
+*.zip
+*.tar.gz
+*.rar
+zipFile.zip
+
+# IDEs and editors
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# OS generated files
+.DS_Store
+Thumbs.db

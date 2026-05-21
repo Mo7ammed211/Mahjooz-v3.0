@@ -1,0 +1,3 @@
+/* Toasts */
+#toast-container { position: fixed; top: 24px; left: 50%; transform: translateX(-50%); z-index: 999999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+.toast { background: var(--bg-card); color: var(--text-main); padding: 12px 24px; border-radius: 30px; box-shadow: var(--shadow-lg); border: 1px solid var(--border); display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 14px; animation: fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1); transition: opacity 0.3s; }

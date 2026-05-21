@@ -1,0 +1,11 @@
+/* Empty States */
+.empty-state { text-align: center; padding: 60px 20px; background: var(--bg-card); border-radius: var(--radius); border: 1px dashed var(--border); }
+.empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.8; }
+.empty-title { font-size: 18px; font-weight: 700; color: var(--text-main); margin-bottom: 8px; }
+.empty-sub { font-size: 14px; color: var(--text-muted); }
+
+/* Empty states */
+.empty-state {
+  background: var(--bg-card); border: 1px dashed var(--glass-border);
+  border-radius: var(--radius); padding: 60px 20px; text-align: center;
+}

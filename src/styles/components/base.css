@@ -1,0 +1,55 @@
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap');
+
+:root {
+  /* Vibrant Midnight Purple (Dark Theme Default) */
+  --bg-main: #0f0c20;
+  --bg-card: #1a1631;
+  --bg-hover: #262147;
+  --text-main: #ffffff;
+  --text-primary: #ffffff;
+  --text-secondary: #a7a5b8;
+  --text-muted: #a7a5b8;
+  --border: #322b54;
+  --glass-border: #322b54;
+  --primary: #8b5cf6;
+  --primary-hover: #7c3aed;
+  --secondary: #262147;
+  --danger: #f43f5e;
+  --success: #10b981;
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.3);
+  --shadow-lg: 0 10px 24px rgba(139,92,246,0.15);
+  --radius: 14px;
+  --radius-sm: 8px;
+  --font: 'Tajawal', sans-serif;
+  --transition: all 0.25s ease;
+  --gradient-main: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  --gradient-card: rgba(139,92,246,0.05);
+}
+
+body.light-theme {
+  /* Crisp Pearl & Purple (Light Theme) */
+  --bg-main: #fbfbfe;
+  --bg-card: #ffffff;
+  --bg-hover: #f1eefa;
+  --text-main: #181528;
+  --text-primary: #181528;
+  --text-secondary: #6b687f;
+  --text-muted: #6b687f;
+  --border: #e9e5f2;
+  --glass-border: #e9e5f2;
+  --secondary: #f1eefa;
+  --shadow-md: 0 4px 12px rgba(139,92,246,0.06);
+  --shadow-lg: 0 12px 24px rgba(139,92,246,0.10);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font);
+  background: var(--bg-main);
+  color: var(--text-main);
+  direction: rtl;
+  min-height: 100vh;
+  line-height: 1.6;
+  transition: background-color var(--transition), color var(--transition);
+}

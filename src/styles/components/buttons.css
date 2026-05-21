@@ -1,0 +1,18 @@
+/* Buttons */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 10px 20px; border-radius: var(--radius-sm); border: none;
+  font-family: var(--font); font-size: 15px; font-weight: 700;
+  cursor: pointer; transition: var(--transition);
+}
+.btn-primary { background: var(--primary); color: #ffffff; box-shadow: var(--shadow-md); }
+.btn-primary:hover { background: var(--primary-hover); transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+.btn-secondary { background: var(--secondary); color: var(--text-main); }
+.btn-secondary:hover { background: var(--border); transform: translateY(-2px); }
+.btn-danger { background: rgba(239, 68, 68, 0.1); color: var(--danger); border:1px solid rgba(239, 68, 68, 0.2); }
+.btn-danger:hover { background: var(--danger); color: #ffffff; }
+.btn-success { background: rgba(16, 185, 129, 0.1); color: var(--success); border:1px solid rgba(16, 185, 129, 0.2); }
+.btn-success:hover { background: var(--success); color: #ffffff; }
+.btn-block { width: 100%; }
+.btn-sm { padding: 6px 12px; font-size: 13px; }
+.btn-lg { padding: 14px 28px; font-size: 16px; }

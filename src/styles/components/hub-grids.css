@@ -1,0 +1,13 @@
+/* Hub & Grids */
+.section-title { font-size: 22px; font-weight: 800; border-bottom: 2px solid var(--border); padding-bottom: 10px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; }
+.hub-grid, .cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 24px; margin-bottom: 40px; }
+.hub-card, .cat-card {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 24px; text-align: center; cursor: pointer; transition: var(--transition);
+  box-shadow: var(--shadow-sm); position: relative; overflow: hidden;
+}
+.hub-card:hover, .cat-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-lg); border-color: var(--primary); }
+.hub-icon, .cat-icon { font-size: 44px; margin-bottom: 16px; display: inline-block; transition: var(--transition); }
+.hub-card:hover .hub-icon { transform: scale(1.1); }
+.hub-title, .cat-name { font-size: 18px; font-weight: 700; margin-bottom: 8px; color: var(--text-main); }
+.hub-desc { font-size: 14px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5; }

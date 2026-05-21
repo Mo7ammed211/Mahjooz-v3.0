@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-i18n-managed="true">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5">
+  <meta name="description" content="محجوز — منصة الحجوزات والخدمات الشاملة. فنادق، سيارات، خدمات مهنية، صيدليات ومزيد في مكان واحد.">
+  <meta name="keywords" content="محجوز, حجوزات, خدمات, فنادق, سيارات, صيدليات, توصيل, اليمن, السعودية">
+  <meta name="theme-color" content="#7c3aed">
+  <meta name="author" content="Mahjooz Team">
+
+  <!-- Open Graph (social share) -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="محجوز | منصة الحجوزات والخدمات">
+  <meta property="og:description" content="فنادق، سيارات، خدمات مهنية، صيدليات وتوصيل ذكي — كل ما تحتاج في تطبيق واحد.">
+  <meta property="og:locale" content="ar_AR">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="محجوز">
+
+  <title>محجوز | منصة الحجوزات والخدمات</title>
+  
+  <!-- Premium Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@300;400;500;600;700;800;900&family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="src/styles/index.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📅</text></svg>">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📅</text></svg>">
+
+  <!-- Firebase SDK v8 (Compat — works with current app.js) -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-analytics.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js"></script>
+
+  <!-- Chart.js for advanced statistics dashboard (Phase 4) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+
+  <!-- PDF report export (Phase 6) — html2canvas + jsPDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <!-- Google Maps JavaScript API (Premium replacement for Leaflet) -->
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA2BB7KHjEv4H8wQnnoeN88ZjHvAoMKaWc&libraries=places"></script>
+</head>
+<body>
+
+  <!-- Premium Unified Loader / Splash Screen -->
+  <div id="global-loader">
+    <div class="loader-spinner"></div>
+    <div class="loader-text">جاري إعداد محجوز...</div>
+  </div>
+
+  <!-- Navbar -->
+  <div id="navbar-wrap"></div>
+
+  <!-- Main App -->
+  <div id="app"></div>
+
+  <!-- Footer -->
+  <div id="footer-wrap"></div>
+
+  <!-- Global Modal -->
+  <div class="modal-overlay" id="modal-overlay" onclick="handleOverlayClick(event)">
+    <div class="modal" id="modal-body"></div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast-container"></div>
+
+  <!-- Smart Assistant Widget -->
+  <div id="chat-widget" style="display: none;">
+    <div id="chat-button" onclick="toggleChat()" title="المساعد الذكي لمحجوز">
+      <span style="font-size:28px;">👋</span>
+    </div>
+    <div id="chat-window">
+      <div class="chat-header">
+        <div>🤖 مساعد محجوز</div>
+        <button class="chat-close" onclick="toggleChat()">✕</button>
+      </div>
+      <div id="chat-messages"></div>
+      <div class="chat-input-area">
+        <input type="text" id="chat-input" placeholder="اكتب رسالتك هنا..." onkeypress="if(event.key==='Enter') sendChatMessage()">
+        <button onclick="sendChatMessage()">➤</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       CORE — أساسيات التطبيق (يجب تحميلها بهذا الترتيب)
+       ═══════════════════════════════════════════════════════════ -->
+  <script src="src/js/core/firebase-config.js"></script>  <!-- إعداد Firebase -->
+  <script src="src/js/core/i18n.js"></script>             <!-- الترجمة عربي/إنجليزي -->
+  <script src="src/js/features/notifications.js"></script><!-- نظام الإشعارات -->
+  <script src="src/js/core/core.js?v=2.8.0"></script>             <!-- المنطق الأساسي + Router + State -->
+
+  <!-- ═══════════════════════════════════════════════════════════
+       FEATURES — الصفحات والواجهات الرئيسية
+       ═══════════════════════════════════════════════════════════ -->
+  <script src="src/js/features/pages.js?v=2.6.3"></script>        <!-- صفحات: الرئيسية، الحجوزات، الخدمات، المتاجر -->
+  <script src="src/js/features/dashboards.js?v=2.8.0"></script>   <!-- لوحات: المدير، المزود، المندوب، الموظف -->
+  <script src="src/js/features/chat.js"></script>         <!-- المساعد الذكي / الدردشة -->
+  <script src="src/js/features/reports.js"></script>      <!-- التقارير والإحصائيات -->
+  <script src="src/js/features/sample-data.js?v=2.5.1"></script>  <!-- بيانات تجريبية (اختياري) -->
+  <script src="src/js/features/extras.js?v=2.6.5"></script>       <!-- تسجيل دخول/اشتراك، المناطق، الحسابات البنكية -->
+
+  <!-- ═══════════════════════════════════════════════════════════
+       MODULES / services — الخدمات والتقييمات والمشاركة
+       ═══════════════════════════════════════════════════════════ -->
+  <script src="src/js/modules/services/gallery.js"></script>       <!-- معرض الصور + البحث الذكي -->
+  <script src="src/js/modules/services/ratings.js"></script>       <!-- نظام التقييمات -->
+  <script src="src/js/modules/services/wishlist.js"></script>      <!-- المفضلة (Wishlist) -->
+  <script src="src/js/modules/services/share.js"></script>         <!-- مشاركة الخدمة -->
+
+  <!-- ═══════════════════════════════════════════════════════════
+       MODULES / admin — أدوات لوحة المدير
+       ═══════════════════════════════════════════════════════════ -->
+  <script src="src/js/modules/admin/stats.js?v=2.6.1"></script>            <!-- إحصائيات تفصيلية + إنشاء حسابات يدوي -->
+  <script src="src/js/modules/admin/charts.js"></script>           <!-- مخططات Chart.js المتقدمة -->
+  <script src="src/js/modules/admin/roles-permissions.js"></script><!-- الأدوار + العملات + الصلاحيات -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="src/js/modules/admin/bulk-import.js?v=2.5.1"></script>      <!-- استيراد CSV/Excel للتصنيفات والخدمات -->
+  <script src="src/js/modules/admin/cms.js"></script>              <!-- إدارة المحتوى (نصوص، أيقونات، صفحات) -->
+  <script src="src/js/modules/admin/signup-form.js"></script>      <!-- منشئ نموذج التسجيل الديناميكي -->
+  <script src="src/js/modules/admin/ads.js"></script>              <!-- نظام الإعلانات الاحترافية -->
+  <script src="src/js/modules/admin/products-catalog.js?v=1.0.2"></script> <!-- Phase 46: قاعدة بيانات المنتجات والخدمات الموحدة -->
+
+  <!-- ═══════════════════════════════════════════════════════════
+       MODULES / reports — التقارير وإرسال الفواتير
+       ═══════════════════════════════════════════════════════════ -->
+  <script src="src/js/modules/reports/pdf-export.js"></script>     <!-- تصدير PDF (فواتير + كشوف حساب) -->
+  <script src="src/js/modules/reports/invoice-send.js"></script>   <!-- إرسال الفاتورة (واتساب/إيميل) -->
+
+  <!-- ═══════════════════════════════════════════════════════════
+       MODULES / account — إعدادات الحساب والملف الشخصي
+       ═══════════════════════════════════════════════════════════ -->
+  <script src="src/js/modules/account/settings.js"></script>       <!-- إعدادات الحساب + الصورة الشخصية -->
+  <script src="src/js/modules/account/activity-log.js"></script>   <!-- سجل نشاط الحساب -->
+  <script src="src/js/modules/account/data-export.js"></script>    <!-- تصدير بيانات المستخدم -->
+  <script src="src/js/modules/account/verification.js"></script>   <!-- التحقق من الهاتف والبريد -->
+  <script src="src/js/modules/account/approval.js"></script>       <!-- تفعيل الحسابات والموافقة عليها -->
+
+  <!-- ═══════════════════════════════════════════════════════════
+       MODULES / tracking — تتبع الطلبات والخرائط
+       ═══════════════════════════════════════════════════════════ -->
+  <script src="src/js/modules/tracking/live-tracking.js"></script> <!-- تتبع لحظي للمندوب (Leaflet) -->
+  <script src="src/js/modules/tracking/order-tracking.js"></script><!-- تتبع مسار الطلب + الخريطة -->
+  <script src="src/js/modules/orders/routing-engine.js"></script><!-- محرك التوجيه وتوزيع الطلبات -->
+
+  <!-- ═══════════════════════════════════════════════════════════
+       MODULES / loyalty — الولاء والنقاط
+       ═══════════════════════════════════════════════════════════ -->
+  <script src="src/js/modules/loyalty/rewards.js"></script>        <!-- نظام المكافآت والمستويات -->
+  <script src="src/js/modules/loyalty/points.js"></script>         <!-- نقاط الولاء (تحويل إلى رصيد) -->
+
+  <!-- ═══════════════════════════════════════════════════════════
+       MODULES / vendor — لوحة صاحب الخدمة
+       ═══════════════════════════════════════════════════════════ -->
+  <script src="src/js/modules/vendor/analytics.js?v=2.7.0"></script>       <!-- تحليلات المزود (إيرادات، طلبات، تقييم) -->
+  <script src="src/js/modules/vendor/workflow.js?v=2.7.0"></script>        <!-- سير عمل المزود + التسعير الديناميكي -->
+
+  <!-- ═══════════════════════════════════════════════════════════
+       MODULES / delivery — نظام أسعار التوصيل الذكي
+       ═══════════════════════════════════════════════════════════ -->
+  <script src="src/js/modules/delivery/delivery-pricing.js"></script><!-- أسعار التوصيل بين المناطق -->
+
+  <!-- ═══════════════════════════════════════════════════════════
+       MODULES / payments — المدفوعات والكوبونات
+       ═══════════════════════════════════════════════════════════ -->
+  <script src="src/js/modules/payments/payment-options.js"></script><!-- خيارات الدفع + رسوم التوصيل -->
+  <script src="src/js/modules/payments/coupons-admin.js"></script> <!-- إدارة الكوبونات (لوحة المدير) -->
+  <script src="src/js/modules/payments/coupon-system.js"></script> <!-- نظام الكوبونات للمستخدمين -->
+  <script src="src/js/modules/payments/deposit.js"></script>       <!-- نظام العربون -->
+  <script src="src/js/modules/payments/cancel-refund.js"></script> <!-- إلغاء الحجز والاسترداد -->
+
+  <!-- ═══════════════════════════════════════════════════════════
+       MODULES / notifications — التنبيهات اللحظية
+       ═══════════════════════════════════════════════════════════ -->
+  <script src="src/js/modules/notifications/smart-alerts.js"></script>   <!-- تنبيهات المدير الذكية -->
+  <script src="src/js/modules/notifications/realtime-alerts.js?v=2.6.5"></script><!-- تنبيهات لحظية (Firestore) -->
+
+  <!-- ═══════════════════════════════════════════════════════════
+       MODULES / ui — واجهة المستخدم العامة
+       ═══════════════════════════════════════════════════════════ -->
+  <script src="src/js/modules/ui/lightbox.js"></script>            <!-- معرض الصور + البحث الفوري + الفاتورة -->
+  <script src="src/js/modules/ui/favorites-routing.js"></script>   <!-- المفضلة + دفتر العناوين + خريطة التوصيل + onboarding -->
+  <script src="src/js/modules/ui/language.js"></script>            <!-- مبدّل اللغة (عربي/إنجليزي) -->
+
+  <!-- ═══════════════════════════════════════════════════════════
+       PHASE 40-42 — فئات الحجز | دفتر العناوين | تحليلات متقدمة
+       ═══════════════════════════════════════════════════════════ -->
+  <!-- booking-tiers.js محذوف — نظام الباقات تم إيقافه -->
+  <script src="src/js/modules/account/address-book.js"></script>       <!-- دفتر عناوين العميل -->
+  <script src="src/js/modules/admin/advanced-analytics.js"></script>   <!-- تحليلات متقدمة + صلاحيات الموظفين -->
+  <script src="src/js/modules/stores/store-system.js?v=2.6.1"></script>        <!-- نظام المتاجر والصيدليات + سلة التسوق -->
+  <script src="src/js/modules/digital/digital-store-system.js"></script> <!-- نظام المنتجات الرقمية المستقل -->
+  <script src="src/js/modules/rental/rental-system.js?v=2.6.2"></script>         <!-- نظام التأجير (جديد) -->
+
+  <script>
+    function handleOverlayClick(e) {
+      if (e.target === document.getElementById('modal-overlay')) closeModal();
+    }
+    document.addEventListener('keydown', function(e) {
+      if (e.key !== 'Enter') return;
+      
+      // منع تكرار الضغط أثناء عمليات الحفظ والتحميل (Double Submission Prevention)
+      const loader = document.getElementById('global-loader');
+      if (loader && !loader.classList.contains('hidden')) {
+        e.preventDefault();
+        return;
+      }
+      
+      const activeEl = document.activeElement;
+      if (activeEl) {
+        // 1. الدخول الموحد (Unified Login Page)
+        if (document.getElementById('unified-login-page') && 
+            (activeEl.id === 'u-login-id' || activeEl.id === 'u-login-pass')) {
+          e.preventDefault();
+          if (typeof unifiedLogin === 'function') unifiedLogin();
+          return;
+        }
+        
+        // 2. النوافذ المنبثقة العامة (Modals & Dialogs)
+        const modalBody = document.getElementById('modal-body');
+        if (modalBody && modalBody.contains(activeEl)) {
+          const primaryBtn = modalBody.querySelector('.btn-primary');
+          if (primaryBtn) {
+            e.preventDefault();
+            primaryBtn.click();
+            return;
+          }
+        }
+
+        // 3. النماذج العامة والصفحات ذات زر الحفظ الرئيسي
+        if (activeEl.tagName === 'INPUT' || activeEl.tagName === 'SELECT' || activeEl.tagName === 'TEXTAREA') {
+          const container = activeEl.closest('.form-group, .signup-form-scroll, .form-grid-2, .signup-step-container');
+          if (container) {
+            const primaryBtn = container.querySelector('.btn-primary') || container.querySelector('.login-submit-btn');
+            if (primaryBtn) {
+              e.preventDefault();
+              primaryBtn.click();
+              return;
+            }
+          }
+        }
+      }
+
+      // الرجوع للطرق القديمة احتياطياً
+      const loginPage = document.getElementById('login-page');
+      if (loginPage) {
+        const activeTab = document.querySelector('.login-tab.active');
+        try {
+          if (activeTab?.id === 'tab-admin' && typeof loginAdmin === 'function') loginAdmin();
+          else if (typeof loginUser === 'function') loginUser();
+        } catch (err) { console.warn('Enter handler:', err); }
+      }
+    });
+
+    // Hide Splash Screen on load is now handled by core.js (hideLoader)
+  </script>
+</body>
+</html>

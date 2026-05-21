@@ -1,0 +1,10 @@
+  /* Forms */
+  .form-control, .search-input { font-size: 14px; padding: 11px 14px; }
+  .search-wrap { margin: 0 0 22px; }
+  .search-icon { font-size: 18px; right: 12px; }
+  .search-input { padding-right: 40px; }
+  .search-hero { padding: 12px 14px 6px; }
+  .search-input-big { padding: 12px 14px; font-size: 14px; }
+  .search-results-pop { left: 14px; right: 14px; }
+  .listing-toolbar { padding: 0 14px 10px; gap: 8px; }
+  .form-grid-2 { grid-template-columns: 1fr; gap: 10px; }

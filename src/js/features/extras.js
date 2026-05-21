@@ -1,0 +1,1173 @@
+// ═══════════════════════════════════════════════════════
+//  محجوز v2.1 — Extras (Phase 1)
+//  - New login landing (3 cards) + full signup
+//  - Regions admin
+//  - Bank accounts admin
+//  - Language switcher integration
+// ═══════════════════════════════════════════════════════
+'use strict';
+
+// ───────────────────────────────────────────────────────
+//  STATE — Signup wizard temporary data
+// ───────────────────────────────────────────────────────
+const SignupState = {
+  geo: null,           // { lat, lng } when user picks on map
+  phoneVerified: false,
+  pendingOTP: null,    // 6-digit code we generated
+  pendingPhone: null,
+  role: null,          // selected role: customer | driver | vendor
+};
+
+// ───────────────────────────────────────────────────────
+//  LOGIN — Modern Unified Landing Page
+// ───────────────────────────────────────────────────────
+function renderLoginPage() {
+  // Reset Google Sign-in status if navigating back to login page
+  SignupState.isGoogle = false;
+  SignupState.googleUid = null;
+  SignupState.email = null;
+  SignupState.name = null;
+
+  return `
+  <div id="unified-login-page">
+    <div class="login-bg-circle circle-1"></div>
+    <div class="login-bg-circle circle-2"></div>
+
+    <div class="login-topbar-absolute">${languageToggleHTML()}</div>
+
+    <div class="unified-login-wrapper">
+
+      <!-- Right Side: Info & Features (Hidden on mobile via CSS) -->
+      <div class="login-info-side">
+        <div class="login-info-content">
+          <div class="login-brand-badge">✨ ${t('app_name')}</div>
+          <h1 class="info-title">مرحباً بك في <span>${t('app_name')}</span></h1>
+          <p class="info-desc">المنصة الشاملة التي تجمع كل ما تحتاجه في مكان واحد. احجز، تسوّق، واطلب الخدمات بطريقة عصرية وسهلة.</p>
+
+          <div class="info-features">
+            <div class="info-feature-item">
+              <div class="feature-icon glass-icon">📅</div>
+              <div>
+                <h4>حجوزات سلسة</h4>
+                <p>فنادق، مواعيد وفعاليات بضغطة زر</p>
+              </div>
+            </div>
+            <div class="info-feature-item">
+              <div class="feature-icon glass-icon">🏪</div>
+              <div>
+                <h4>متاجر متكاملة</h4>
+                <p>آلاف المنتجات توصل لبابك</p>
+              </div>
+            </div>
+            <div class="info-feature-item">
+              <div class="feature-icon glass-icon">🔧</div>
+              <div>
+                <h4>خدمات مهنية</h4>
+                <p>أفضل المهنيين الموثوقين</p>
+              </div>
+            </div>
+            <div class="info-feature-item">
+              <div class="feature-icon glass-icon">🚗</div>
+              <div>
+                <h4>توصيل سريع</h4>
+                <p>توصيل آمن في أي وقت</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Left Side: Login Form (Fully responsive) -->
+      <div class="login-form-side">
+        <div class="login-form-container">
+          <div class="form-header-area">
+            <div class="login-logo-mini">🔐 تسجيل الدخول الآمن</div>
+            <h2 class="form-title">أهلاً بك مجدداً</h2>
+            <p class="form-subtitle">أدخل بياناتك للمتابعة أو استخدم الدخول بـ Google</p>
+          </div>
+
+          ${typeof renderBanners === 'function' ? renderBanners('login') : ''}
+
+          <div class="form-group" style="margin-top:20px">
+            <label class="form-label">البريد الإلكتروني أو رقم الجوال</label>
+            <div class="input-with-icon">
+              <span class="input-icon">👤</span>
+              <input class="form-control" id="u-login-id" type="text" placeholder="البريد الإلكتروني أو الجوال..." autocomplete="username">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">كلمة المرور</label>
+            <div class="input-with-icon">
+              <span class="input-icon">🔒</span>
+              <input class="form-control" id="u-login-pass" type="password" placeholder="••••••••" autocomplete="current-password">
+              <button type="button" class="pass-toggle-btn" onclick="togglePasswordVisibility('u-login-pass', this)">👁️</button>
+            </div>
+          </div>
+
+          <button class="btn btn-primary btn-block btn-lg login-submit-btn" onclick="unifiedLogin()">
+            دخول آمن للمنصة <span style="margin-inline-start:6px">🚀</span>
+          </button>
+
+          <button class="google-signin-btn" onclick="continueWithGoogle()">
+            <svg class="google-icon-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
+              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
+            </svg>
+            <span>المتابعة باستخدام Google</span>
+          </button>
+
+          <div class="login-links">
+            <p>ليس لديك حساب؟ <a href="javascript:;" class="create-acc-link" onclick="navigate('signup')">إنشاء حساب جديد</a></p>
+            <div class="divider"><span>أو</span></div>
+            <a href="javascript:;" class="guest-link" onclick="enterGuest()">
+              <span>👁️</span> الدخول كضيف لتصفح المنصة
+            </a>
+          </div>
+
+          <!-- Drawer for Developer quick login -->
+          <div class="dev-console-drawer">
+            <details>
+              <summary class="dev-console-summary">
+                <span>🛠️ أدوات المطورين: الدخول السريع</span>
+                <span class="dev-console-summary-arrow">▶</span>
+              </summary>
+              <div class="dev-console-content">
+                <div class="dev-console-grid">
+                  <div style="grid-column: span 2;">
+                    ${quickBtn('admin','👑','نايف (المدير العام)','#f59e0b','#d97706')}
+                  </div>
+                  ${quickBtn('staff','🖥️','سعد (الموظف)','#6366f1','#4f46e5')}
+                  ${quickBtn('provider','💼','سلمان (صاحب المهنة)','#8b5cf6','#7c3aed')}
+                  ${quickBtn('vendor_service','🛎️','خالد (مزود الخدمات)','#7c3aed','#6d28d9')}
+                  ${quickBtn('vendor_store','🏪','أحمد (مزود المتاجر)','#10b981','#059669')}
+                  ${quickBtn('driver','🚗','ياسر (المندوب)','#0891b2','#0e7490')}
+                  ${quickBtn('customer','👤','فيصل (العميل)','#0d9488','#0f766e')}
+                </div>
+              </div>
+            </details>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>`;
+}
+
+function quickBtn(role, icon, label, c1, c2) {
+  return `<button class="quick-demo-btn" style="background:linear-gradient(135deg,${c1},${c2})" onclick="quickLogin('${role}')">
+    <span style="font-size:16px">${icon}</span> ${label}</button>`;
+}
+
+// Password toggle helper
+window.togglePasswordVisibility = function(inputId, btn) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  if (input.type === 'password') {
+    input.type = 'text';
+    btn.innerHTML = '🙈';
+  } else {
+    input.type = 'password';
+    btn.innerHTML = '👁️';
+  }
+};
+// Google Sign-In helper
+window.continueWithGoogle = async function() {
+  showLoader('جاري الاتصال بجوجل...');
+  try {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    const result = await auth.signInWithPopup(provider);
+    const user = result.user;
+    if (!user) throw new Error('فشل تسجيل الدخول عبر جوجل.');
+
+    // Check if user profile already exists in Firestore
+    const userDoc = await fsGet('users', user.uid);
+    
+    if (userDoc) {
+      toast('تم تسجيل الدخول بنجاح! ✅', 'success');
+      setTimeout(async () => {
+        closeModal();
+        hideLoader();
+        await render();
+      }, 800);
+    } else {
+      // New user! Store Google profile details
+      SignupState.isGoogle = true;
+      SignupState.googleUid = user.uid;
+      SignupState.email = user.email || '';
+      SignupState.name = user.displayName || '';
+      
+      toast('مرحباً بك! يرجى استكمال بيانات حسابك 👤', 'success');
+      setTimeout(() => {
+        hideLoader();
+        navigate('signup');
+      }, 1000);
+    }
+  } catch (err) {
+    hideLoader();
+    console.error("Google Auth Error:", err);
+    
+    const errMsg = err.message || String(err);
+    const errCode = err.code || '';
+    
+    if (errCode === 'auth/unauthorized-domain' || errMsg.includes('unauthorized-domain') || errMsg.includes('not authorized to run this operation')) {
+      openModal(`
+        <div class="modal-header" style="border-bottom:1px solid var(--border);padding-bottom:12px">
+          <h2 class="modal-title" style="color:#f43f5e;display:flex;align-items:center;gap:8px">⚠️ نطاق غير معتمد (Firebase Auth Error)</h2>
+          <button class="modal-close" onclick="closeModal()">✕</button>
+        </div>
+        <div class="modal-body" style="padding: 20px 0; line-height: 1.8; text-align: right; direction: rtl;">
+          <p style="color: var(--text-main); font-weight: 700; font-size: 16px; margin-bottom: 12px;">نطاق التشغيل الحالي <code>${window.location.hostname}</code> غير مصرح له باستخدام تسجيل الدخول بجوجل.</p>
+          
+          <div style="background: rgba(244, 63, 94, 0.1); border: 1px solid rgba(244, 63, 94, 0.2); border-radius: 12px; padding: 16px; margin-bottom: 24px; color: #f43f5e; font-size: 14px;">
+            تتطلب خدمات Google OAuth استخدام نطاق مصرح به ومسجل مسبقاً في Firebase Console. بشكل افتراضي، تدعم المنصة نطاق <code>localhost</code>.
+          </div>
+
+          <h3 style="font-size: 15px; color: var(--primary); margin-bottom: 8px; font-weight:700">💡 الحل السريع والمباشر (موصى به):</h3>
+          <p style="margin-bottom: 24px; font-size:14px; color: var(--text-secondary)">
+            يرجى فتح وتصفح الموقع عبر الرابط التالي بدلاً من استخدام العنوان الحالي <code>127.0.0.1</code>:<br>
+            <a href="http://localhost:5001/?page=login" style="display: inline-block; background: var(--primary); color: #fff; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: 700; margin-top: 10px; box-shadow: var(--shadow-sm); transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">🌐 فتح عبر localhost:5001</a>
+          </p>
+
+          <h3 style="font-size: 15px; color: var(--primary); margin-bottom: 8px; font-weight:700">🛠️ الحل الآخر (في لوحة تحكم Firebase):</h3>
+          <p style="font-size: 13.5px; color: var(--text-muted); margin: 0; line-height:1.6">
+            إذا كنت بحاجة للعمل على عنوان <code>127.0.0.1</code>، يجب عليك إضافته كـ <strong>Authorized Domain</strong>:<br>
+            توجه إلى: <code>Firebase Console -> Authentication -> Settings -> Authorized Domains</code> ثم اضغط على <strong>Add Domain</strong> وأضف <code>127.0.0.1</code>.
+          </p>
+        </div>
+      `);
+      return;
+    }
+    
+    toast('حدث خطأ أثناء المتابعة باستخدام جوجل: ' + (err.message || err), 'error');
+  }
+};
+
+// ───────────────────────────────────────────────────────
+//  UNIFIED LOGIN LOGIC
+// ───────────────────────────────────────────────────────
+async function unifiedLogin() {
+  const loginId = document.getElementById('u-login-id').value.trim();
+  const pass = document.getElementById('u-login-pass').value;
+
+  if (!loginId || !pass) {
+    toast('يرجى إدخال البريد الإلكتروني/رقم الجوال وكلمة المرور', 'error');
+    return;
+  }
+
+  showLoader('جاري تسجيل الدخول...');
+  
+  try {
+    let emailToUse = loginId;
+
+    // Check if input is a phone number (doesn't contain @ and has numbers)
+    if (!loginId.includes('@')) {
+      const usersRef = db.collection('users');
+      const q = usersRef.where('phone', '==', loginId).limit(1);
+      const snap = await q.get();
+      
+      if (snap.empty) {
+        throw new Error('لم يتم العثور على حساب مرتبط برقم الجوال هذا.');
+      }
+      
+      emailToUse = snap.docs[0].data().email;
+      if (!emailToUse) {
+        throw new Error('هذا الحساب لا يحتوي على بريد إلكتروني صالح.');
+      }
+    }
+
+    // Login with Firebase Auth
+    await auth.signInWithEmailAndPassword(emailToUse, pass);
+    
+    toast('تم تسجيل الدخول بنجاح! ✅', 'success');
+    
+    setTimeout(async () => {
+      closeModal();
+      hideLoader();
+      await render();
+    }, 800);
+    
+  } catch (err) {
+    hideLoader();
+    console.error("Login Error:", err);
+    let msg = 'بيانات الدخول غير صحيحة.';
+    if (err.message) {
+      if (err.message.includes('auth/')) {
+        if (err.code === 'auth/user-not-found') msg = 'المستخدم غير موجود.';
+        else if (err.code === 'auth/wrong-password') msg = 'كلمة المرور خاطئة.';
+      } else {
+        msg = err.message;
+      }
+    }
+    toast(msg, 'error');
+  }
+}
+
+
+// ───────────────────────────────────────────────────────
+//  SIGNUP MODAL — full form
+// ───────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────
+//  SIGNUP — Full Page (Step 1: Role Selection)
+// ────────────────────────────────────────────────────────────
+function renderSignupPage() {
+  SignupState.geo = null;
+  SignupState.phoneVerified = false;
+  SignupState.pendingOTP = null;
+  SignupState.pendingPhone = null;
+  SignupState.role = null;
+
+  return `
+  <div id="unified-login-page">
+    <div class="login-bg-circle circle-1"></div>
+    <div class="login-bg-circle circle-2"></div>
+    <div class="login-topbar-absolute">${languageToggleHTML()}</div>
+
+    <div class="signup-full-wrapper">
+      <div class="signup-full-header">
+        <button class="signup-back-btn" onclick="navigate('login')">← العودة لتسجيل الدخول</button>
+        <div class="signup-logo">✨ ${t('app_name')}</div>
+      </div>
+
+      <div class="signup-step-container">
+        <div class="signup-step-badge">الخطوة 1 من 2</div>
+        <h2 class="signup-step-title">ما هي صفتك في المنصة؟</h2>
+        <p class="signup-step-desc">اختر دورك لنخصص تجربتك ونوجهك بشكل صحيح</p>
+
+        <div class="signup-role-grid">
+          <button class="signup-role-card" onclick="renderSignupFormPage('customer')">
+            <div class="signup-role-emoji">👤</div>
+            <div class="signup-role-name">عميل</div>
+            <div class="signup-role-hint">أبحث عن خدمات وأطلبها</div>
+            <div class="signup-role-arrow">←</div>
+          </button>
+          <button class="signup-role-card" onclick="renderSignupFormPage('driver')">
+            <div class="signup-role-emoji">🚗</div>
+            <div class="signup-role-name">مندوب توصيل</div>
+            <div class="signup-role-hint">أوصّل الطلبات للعملاء</div>
+            <div class="signup-role-arrow">←</div>
+          </button>
+          <button class="signup-role-card" onclick="renderSignupFormPage('vendor')">
+            <div class="signup-role-emoji">🏪</div>
+            <div class="signup-role-name">مزود خدمة</div>
+            <div class="signup-role-hint">أقدّم خدمات أو منتجات</div>
+            <div class="signup-role-arrow">←</div>
+          </button>
+        </div>
+
+        <div class="signup-login-hint">
+          لديك حساب بالفعل؟
+          <a href="javascript:;" onclick="navigate('login')" style="color:var(--primary);font-weight:700">تسجيل الدخول</a>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// Step 2: Registration Form Page
+// Pre-fetch regions into AppData so the form has them ready
+window._prefetchRegions = async function() {
+  try {
+    const allRegions = await fsGetAll('regions');
+    AppData.regions = allRegions;
+  } catch(e) { console.warn('regions prefetch failed (will retry on signup):', e); }
+};
+
+window.openTermsModal = function() {
+  const pages = AppData.pages || [];
+  const termsPage = pages.find(p => p.id === 'terms');
+  const content = termsPage && termsPage.active !== false 
+    ? termsPage.content 
+    : '<p style="color:var(--text-muted);text-align:center;">جاري تحديث سياسة الشروط والأحكام. يرجى مراجعة الإدارة.</p>';
+    
+  openModal(`
+    <div class="modal-header">
+      <h2 class="modal-title">📄 سياسة الشروط والأحكام</h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" style="padding:16px; max-height:60vh; overflow-y:auto; line-height:1.8;">
+      ${content}
+    </div>
+    <button class="btn btn-primary btn-block" onclick="closeModal()" style="margin-top:16px;">إغلاق والمتابعة</button>
+  `);
+};
+
+window.renderSignupFormPage = async function(role) {
+  SignupState.role = role;
+  const labels = { customer: 'عميل 👤', driver: 'مندوب توصيل 🚗', vendor: 'مزود خدمة 🏪' };
+  
+  // 1️⃣ Try AppData (set when user is already authenticated / pre-fetched at startup)
+  let regions = (AppData.regions || []).filter(r => r.active !== false);
+  
+  // 2️⃣ Try fetching fresh from Firestore (works if rules allow public reads)
+  if (regions.length === 0) {
+    try {
+      const allRegions = await fsGetAll('regions');
+      AppData.regions = allRegions;
+      regions = allRegions.filter(r => r.active !== false);
+      if (allRegions.length > 0) {
+        try { localStorage.setItem('mahjooz_regions_cache', JSON.stringify(allRegions)); } catch(e) {}
+      }
+    } catch(e) { 
+      console.warn('Firestore regions fetch failed (may need auth):', e.message);
+    }
+  }
+
+  // 3️⃣ Fallback: read from localStorage cache (set when admin was logged in)
+  if (regions.length === 0) {
+    try {
+      const cached = localStorage.getItem('mahjooz_regions_cache');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        AppData.regions = parsed;
+        regions = parsed.filter(r => r.active !== false);
+        console.log('✅ Loaded regions from localStorage cache:', regions.length);
+      }
+    } catch(e) { console.warn('localStorage regions cache read failed:', e); }
+  }
+  
+  const regionOpts = regions.length
+    ? regions.map(r => `<option value="${escAttr(r.name)}">${escHtml(r.name)}</option>`).join('')
+    : `<option value="" disabled>⚠️ لا توجد مناطق — يرجى تسجيل الدخول أولاً كمدير وإضافة منطقة</option>`;
+
+  document.getElementById('app').innerHTML = `
+  <div id="unified-login-page">
+    <div class="login-bg-circle circle-1"></div>
+    <div class="login-bg-circle circle-2"></div>
+
+    <div class="signup-full-wrapper signup-form-wrapper">
+      <div class="signup-full-header">
+        <button class="signup-back-btn" onclick="navigate('signup')">← تغيير الدور</button>
+        <div class="signup-logo">✨ ${t('app_name')} — ${labels[role]}</div>
+      </div>
+
+      <div class="signup-form-scroll">
+        <div class="signup-step-badge">الخطوة 2 من 2 — بيانات الحساب</div>
+
+        <div class="su-locked-warning">
+          🔒 <strong>تنبيه:</strong> الاسم الرباعي والعمر والجنس لا يمكن تغييرها بعد الإنشاء. تأكد من صحتها.
+        </div>
+
+        <div class="signup-form-grid">
+          ${_generateSignupFieldsHTML(role, regionOpts)}
+        </div>
+
+        <div class="form-group" style="margin-top:20px;">
+          <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-size:14px; background:var(--card-bg); padding:12px; border-radius:12px; border:1px solid var(--border);">
+            <input type="checkbox" id="su-terms-agree" style="width:20px; height:20px; accent-color:var(--primary)">
+            <span>هل قرأت <a href="javascript:;" onclick="openTermsModal(); event.preventDefault();" style="color:var(--primary); font-weight:700;">سياسة الشروط والأحكام</a> ووافقت عليها؟</span>
+          </label>
+        </div>
+
+        <button class="btn btn-primary btn-block btn-lg" onclick="doSignup()" style="margin-top:24px;font-size:17px;padding:16px">
+          🚀 إنشاء الحساب
+        </button>
+        <div class="signup-login-hint" style="margin-top:16px">
+          لديك حساب؟ <a href="javascript:;" onclick="navigate('login')" style="color:var(--primary);font-weight:700">تسجيل الدخول</a>
+        </div>
+      </div>
+    </div>
+  </div>`;
+};
+
+// Keep showSignupModal pointing to the new page for backward compatibility
+function showSignupModal() { navigate('signup'); }
+
+
+window.signupSelectRole = function(role) {
+  SignupState.role = role;
+  const labels = { customer: 'عميل 👤', driver: 'مندوب 🚗', vendor: 'مزود خدمة 🏪' };
+  const regions = (AppData.regions || []).filter(r => r.active !== false);
+  const regionOpts = regions.length
+    ? regions.map(r => `<option value="${escAttr(r.name)}">${escHtml(r.name)}</option>`).join('')
+    : `<option disabled>لا توجد مناطق متاحة</option>`;
+
+  openModal(`
+    <div class="modal-header">
+      <h2 class="modal-title">✨ إنشاء حساب — ${labels[role]}</h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+
+    <!-- Name warning banner -->
+    <div class="su-locked-warning">
+      🔒 <strong>تنبيه مهم:</strong> الاسم الرباعي والعمر والجنس لا يمكن تغييرها بعد إنشاء الحساب. تأكد من صحتها قبل المتابعة.
+    </div>
+
+    <div class="signup-form-grid">
+      ${_generateSignupFieldsHTML(role, regionOpts)}
+    </div>
+
+    <div class="form-group" style="margin-top:16px;">
+      <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13px; background:rgba(255,255,255,0.03); padding:10px; border-radius:10px; border:1px solid var(--border);">
+        <input type="checkbox" id="su-terms-agree" style="width:18px; height:18px; accent-color:var(--primary)">
+        <span>هل قرأت <a href="javascript:;" onclick="openTermsModal(); event.preventDefault();" style="color:var(--primary); font-weight:700;">سياسة الشروط والأحكام</a> ووافقت عليها؟</span>
+      </label>
+    </div>
+
+    <button class="btn btn-primary btn-block btn-lg" onclick="doSignup()" style="margin-top:8px">🚀 إنشاء الحساب</button>
+
+    <div style="text-align:center;margin-top:14px">
+      <button class="btn btn-secondary" onclick="showSignupModal()">← تغيير الدور</button>
+    </div>
+  `);
+  setTimeout(()=>document.getElementById('su-name')?.focus(),100);
+};
+
+// Map picker — uses browser geolocation as a simple, working fallback
+async function signupPickLocation() {
+  const status = document.getElementById('su-map-status');
+  if (!navigator.geolocation) {
+    status.textContent = '❌ المتصفح لا يدعم تحديد الموقع';
+    return;
+  }
+  status.textContent = '⏳ جاري تحديد موقعك...';
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      SignupState.geo = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      status.innerHTML = `${t('map_picked')} — <a href="https://maps.google.com/?q=${pos.coords.latitude},${pos.coords.longitude}" target="_blank" style="color:var(--primary)">عرض على الخريطة</a>`;
+      const btn = document.getElementById('su-map-btn');
+      if (btn) { btn.classList.remove('btn-secondary'); btn.classList.add('btn-success'); btn.textContent = t('map_picked'); }
+    },
+    err => {
+      status.textContent = '❌ تعذّر تحديد الموقع: ' + (err.message || 'مرفوض');
+    },
+    { enableHighAccuracy: true, timeout: 8000 }
+  );
+}
+
+// OTP — generated locally as a development fallback (would be Firebase Phone Auth in production)
+function signupSendOTP() {
+  const phone = document.getElementById('su-phone').value.trim();
+  if (!phone || phone.length < 7) { toast('أدخل رقم هاتف صالح','error'); return; }
+  const code = String(Math.floor(100000 + Math.random()*900000));
+  SignupState.pendingOTP = code;
+  SignupState.pendingPhone = phone;
+  document.getElementById('su-otp-row').style.display = 'block';
+  toast(`${t('otp_sent')} (للاختبار: ${code})`,'info');
+  console.log('🔑 OTP for', phone, '=', code);
+}
+function signupVerifyOTP() {
+  const code = document.getElementById('su-otp').value.trim();
+  const phone = document.getElementById('su-phone').value.trim();
+  const status = document.getElementById('su-otp-status');
+  if (phone !== SignupState.pendingPhone) {
+    status.textContent = '⚠️ تم تغيير رقم الهاتف، أعد إرسال الرمز';
+    return;
+  }
+  if (code === SignupState.pendingOTP) {
+    SignupState.phoneVerified = true;
+    status.textContent = t('otp_verified');
+    status.style.color = '#10b981';
+  } else {
+    status.textContent = '❌ رمز غير صحيح';
+    status.style.color = '#ef4444';
+  }
+}
+
+async function doSignup() {
+  const role = SignupState.role || 'customer';
+  const fields = AppData.signupConfig ? (AppData.signupConfig[role] || []) : [];
+  
+  const data = { role };
+  let hasError = false;
+  
+  for (const f of fields) {
+    if (f.hidden) continue;
+    // Skip password fields requirement for Google signup
+    if (SignupState.isGoogle && (f.type === 'password' || f.id === 'pass')) {
+      continue;
+    }
+    const el = document.getElementById(`su-${f.id}`);
+    if (!el && f.id !== 'pass') continue;
+    
+    let val = el ? el.value.trim() : '';
+    if (f.type === 'number') val = parseInt(val) || 0;
+    
+    if (f.required && !val && val !== 0) {
+      toast(`يرجى تعبئة حقل: ${f.label}`, 'error');
+      hasError = true;
+      break;
+    }
+    data[f.id] = val;
+  }
+  
+  if (hasError) return;
+
+  const termsAgree = document.getElementById('su-terms-agree')?.checked;
+  if (!termsAgree) {
+    toast('يجب قراءة سياسة الشروط والأحكام والموافقة عليها للمتابعة', 'warning');
+    return;
+  }
+  
+  // Only validate password if NOT signing up with Google
+  if (!SignupState.isGoogle) {
+    const pass = data.pass;
+    const pass2El = document.getElementById('su-pass2');
+    if (pass && pass.length < 6) { toast('كلمة المرور قصيرة جداً (6 أحرف على الأقل)', 'error'); return; }
+    if (pass && pass2El && pass !== pass2El.value) { toast('كلمتا المرور غير متطابقتين', 'error'); return; }
+  }
+  
+  if (!SignupState.phoneVerified || data.phone !== SignupState.pendingPhone) {
+    toast('يجب التحقق من رقم الجوال أولاً', 'error'); return;
+  }
+
+  showLoader('جاري إنشاء حسابك...');
+  window.__suppressAuthRedirect = true; // Prevent app.js from redirecting us mid-signup
+
+  try {
+    let uid;
+    if (SignupState.isGoogle) {
+      if (!auth.currentUser) throw new Error('انتهت جلسة تسجيل دخول Google. يرجى المحاولة مجدداً.');
+      uid = auth.currentUser.uid;
+      // Pre-fill email and name from SignupState if not in form fields
+      data.email = data.email || SignupState.email;
+      data.name = data.name || SignupState.name;
+    } else {
+      const cred = await auth.createUserWithEmailAndPassword(data.email, data.pass);
+      uid = cred.user.uid;
+    }
+
+    const roleLabels = { customer: 'عميل', driver: 'مندوب', vendor: 'مزود خدمة' };
+    
+    const userData = {
+      name: data.name || '',
+      email: data.email || '',
+      phone: data.phone || '',
+      phoneVerified: true,
+      role,
+      isActive: false,           // Account requires admin approval
+      isActivePending: true,
+      createdAt: new Date(),
+      firstLogin: false,
+      geoLocation: SignupState.geo || null,
+      housePics: SignupState.housePics || []
+    };
+
+    for (const [k, v] of Object.entries(data)) {
+      if (k !== 'pass' && userData[k] === undefined) {
+        userData[k] = v;
+      }
+    }
+
+    await fsSet('users', uid, userData);
+    await ensureWallet(uid);
+
+    // Notify admin/staff about new pending account
+    try {
+      await fsAdd('notifications', {
+        targetRole: 'admin',
+        type: 'new_account',
+        title: '🆕 حساب جديد بانتظار المراجعة',
+        message: `${userData.name} (${roleLabels[role] || role}) أنشأ حساباً جديداً ويحتاج إلى تفعيل`,
+        userId: uid,
+        userName: userData.name,
+        userRole: role,
+        userEmail: userData.email,
+        userPhone: userData.phone,
+        read: false,
+        createdAt: new Date(),
+      });
+    } catch(notifErr) { console.warn('Notification failed', notifErr); }
+
+    State.currentUser = { uid, ...userData };
+    
+    // Clear Google signup flags
+    SignupState.isGoogle = false;
+    SignupState.googleUid = null;
+
+    closeModal();
+    toast('✅ تم إنشاء حسابك! يرجى الانتظار حتى تفعيله من قبل الإدارة.', 'info');
+    
+    // Clear flag and navigate
+    window.__suppressAuthRedirect = false;
+    await navigate('home');
+  } catch (e) {
+    window.__suppressAuthRedirect = false;
+    hideLoader();
+    const m = {
+      'auth/email-already-in-use': 'هذا البريد مستخدم بالفعل',
+      'auth/invalid-email': 'البريد الإلكتروني غير صالح',
+      'auth/weak-password': 'كلمة المرور ضعيفة جداً',
+      'auth/operation-not-allowed': 'يجب تفعيل Email/Password في Firebase Console',
+    };
+    toast(m[e.code] || e.message, 'error');
+  }
+}
+
+// ───────────────────────────────────────────────────────
+//  ADMIN — Regions tab
+// ───────────────────────────────────────────────────────
+function renderAdminRegions() {
+  const regs = AppData.regions || [];
+  const searchQuery = (State.adminSearch || '').toLowerCase();
+  const filteredRegs = regs.filter(r => (r.name || '').toLowerCase().includes(searchQuery));
+  return `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
+      <h2>📍 ${t('regions_title')}</h2>
+      <div style="display:flex;gap:12px">
+        <input type="text" class="form-control" id="admin-regions-search" placeholder="🔍 ابحث بالاسم..." value="${State.adminSearch || ''}" oninput="State.adminSearch = this.value; render();" style="width:300px">
+        <button class="btn btn-primary" onclick="showAddRegionModal()">➕ ${t('add_region')}</button>
+      </div>
+    </div>
+    ${filteredRegs.length === 0 ? `
+      <div class="empty-state">
+        <div style="font-size:48px;margin-bottom:12px">📍</div>
+        <p style="color:var(--text-muted)">${t('no_regions_yet')}</p>
+      </div>
+    ` : `
+      <div class="table-wrap">
+        <table class="admin-table">
+          <thead><tr><th>#</th><th>${t('region_name')}</th><th>${t('status')}</th><th>${t('actions')}</th></tr></thead>
+          <tbody>
+            ${filteredRegs.map((r,i)=>`
+              <tr>
+                <td>${i+1}</td>
+                <td style="font-weight:600">📍 ${escHtml(r.name)}</td>
+                <td><span class="badge ${r.active!==false?'badge-teal':'badge-rose'}">${r.active!==false?t('active'):t('inactive')}</span></td>
+                <td>
+                  <button class="btn btn-sm btn-secondary" onclick="showEditRegionModal('${r.id}')">✏️</button>
+                  <button class="btn btn-sm ${r.active!==false?'btn-warning':'btn-success'}" onclick="toggleRegion('${r.id}')">${r.active!==false?'⏸️':'▶️'}</button>
+                  <button class="btn btn-sm btn-danger" onclick="deleteRegion('${r.id}')">🗑️</button>
+                </td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    `}
+  `;
+}
+function showAddRegionModal() {
+  openModal(`
+    <div class="modal-header"><h2 class="modal-title">➕ ${t('add_region')}</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div class="form-group">
+      <label class="form-label">${t('region_name')}</label>
+      <input class="form-control" id="reg-name" placeholder="${t('region_name_placeholder')}">
+    </div>
+    <button class="btn btn-primary btn-block" onclick="saveNewRegion()">${t('save')}</button>
+  `);
+  setTimeout(()=>document.getElementById('reg-name')?.focus(),100);
+}
+async function saveNewRegion() {
+  const name = document.getElementById('reg-name').value.trim();
+  if (!name) { toast('أدخل اسم المنطقة','error'); return; }
+  await fsAdd('regions', { name, active: true });
+  closeModal(); toast(t('region_added'),'success'); await render();
+}
+function showEditRegionModal(id) {
+  const r = (AppData.regions||[]).find(x=>x.id===id);
+  if (!r) return;
+  openModal(`
+    <div class="modal-header"><h2 class="modal-title">✏️ ${t('edit_region')}</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div class="form-group">
+      <label class="form-label">${t('region_name')}</label>
+      <input class="form-control" id="reg-name" value="${escAttr(r.name)}">
+    </div>
+    <button class="btn btn-primary btn-block" onclick="updateRegion('${id}')">${t('save')}</button>
+  `);
+}
+async function updateRegion(id) {
+  const name = document.getElementById('reg-name').value.trim();
+  if (!name) { toast('أدخل اسم المنطقة','error'); return; }
+  await fsUpdate('regions', id, { name });
+  closeModal(); toast(t('region_updated'),'success'); await render();
+}
+async function toggleRegion(id) {
+  const r = (AppData.regions||[]).find(x=>x.id===id);
+  if (!r) return;
+  await fsUpdate('regions', id, { active: r.active===false });
+  await render();
+}
+async function deleteRegion(id) {
+  if (!confirm(t('delete_region_confirm'))) return;
+  await fsDelete('regions', id);
+  toast(t('region_deleted'),'success'); await render();
+}
+
+// ───────────────────────────────────────────────────────
+//  ADMIN — Bank accounts tab
+// ───────────────────────────────────────────────────────
+function renderAdminBanks() {
+  const banks = AppData.bankAccounts || [];
+  const searchQuery = (State.adminSearch || '').toLowerCase();
+  const filteredBanks = banks.filter(b => 
+    (b.bankName || '').toLowerCase().includes(searchQuery) ||
+    (b.holder || '').toLowerCase().includes(searchQuery) ||
+    (b.accountNumber || '').toLowerCase().includes(searchQuery)
+  );
+  return `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <h2>🏦 ${t('banks_title')}</h2>
+      <div style="display:flex;gap:12px">
+        <input type="text" class="form-control" id="admin-banks-search" placeholder="🔍 ابحث بالبنك أو الحساب أو المالك..." value="${State.adminSearch || ''}" oninput="State.adminSearch = this.value; render();" style="width:300px">
+        <button class="btn btn-primary" onclick="showAddBankModal()">➕ ${t('add_bank')}</button>
+      </div>
+    </div>
+    <p style="color:var(--text-muted);font-size:14px;margin-bottom:24px">${t('banks_help')}</p>
+    ${filteredBanks.length === 0 ? `
+      <div class="empty-state">
+        <div style="font-size:48px;margin-bottom:12px">🏦</div>
+        <p style="color:var(--text-muted)">${t('no_banks_yet')}</p>
+      </div>
+    ` : `
+      <div class="bank-grid">
+        ${filteredBanks.map(b => `
+          <div class="bank-card">
+            <div class="bank-card-head">
+              <div>
+                <div class="bank-card-name">🏦 ${escHtml(b.bankName)}</div>
+                <div class="bank-card-holder">${escHtml(b.holder||'')}</div>
+              </div>
+              <span class="badge ${b.active!==false?'badge-teal':'badge-rose'}">${b.active!==false?t('active'):t('inactive')}</span>
+            </div>
+            <div class="bank-row"><span>${t('account_number')}:</span> <code>${escHtml(b.accountNumber||'—')}</code></div>
+            <div class="bank-row"><span>${t('iban')}:</span> <code>${escHtml(b.iban||'—')}</code></div>
+            ${b.notes?`<div class="bank-notes">📝 ${escHtml(b.notes)}</div>`:''}
+            <div class="bank-actions">
+              <button class="btn btn-sm btn-secondary" onclick="showEditBankModal('${b.id}')">✏️ ${t('edit')}</button>
+              <button class="btn btn-sm ${b.active!==false?'btn-warning':'btn-success'}" onclick="toggleBank('${b.id}')">${b.active!==false?'⏸️':'▶️'}</button>
+              <button class="btn btn-sm btn-danger" onclick="deleteBank('${b.id}')">🗑️ ${t('delete')}</button>
+            </div>
+          </div>`).join('')}
+      </div>
+    `}
+  `;
+}
+function bankFormFields(b={}) {
+  return `
+    <div class="form-grid-2">
+      <div class="form-group">
+        <label class="form-label">${t('bank_name')}</label>
+        <input class="form-control" id="bk-bankName" placeholder="${t('bank_name_placeholder')}" value="${escAttr(b.bankName||'')}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">${t('account_holder')}</label>
+        <input class="form-control" id="bk-holder" value="${escAttr(b.holder||'')}">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">${t('account_number')}</label>
+      <input class="form-control" id="bk-accountNumber" value="${escAttr(b.accountNumber||'')}">
+    </div>
+    <div class="form-group">
+      <label class="form-label">${t('iban')}</label>
+      <input class="form-control" id="bk-iban" value="${escAttr(b.iban||'')}">
+    </div>
+    <div class="form-group">
+      <label class="form-label">${t('bank_notes')}</label>
+      <textarea class="form-control" id="bk-notes" rows="2">${escHtml(b.notes||'')}</textarea>
+    </div>`;
+}
+function readBankForm() {
+  return {
+    bankName: document.getElementById('bk-bankName').value.trim(),
+    holder: document.getElementById('bk-holder').value.trim(),
+    accountNumber: document.getElementById('bk-accountNumber').value.trim(),
+    iban: document.getElementById('bk-iban').value.trim(),
+    notes: document.getElementById('bk-notes').value.trim(),
+  };
+}
+function showAddBankModal() {
+  openModal(`
+    <div class="modal-header"><h2 class="modal-title">➕ ${t('add_bank')}</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
+    ${bankFormFields()}
+    <button class="btn btn-primary btn-block" onclick="saveNewBank()">${t('save')}</button>
+  `);
+}
+async function saveNewBank() {
+  const data = readBankForm();
+  if (!data.bankName || !data.accountNumber) { toast('اسم البنك ورقم الحساب مطلوبان','error'); return; }
+  await fsAdd('bank_accounts', { ...data, active: true });
+  closeModal(); toast(t('bank_added'),'success'); await render();
+}
+function showEditBankModal(id) {
+  const b = (AppData.bankAccounts||[]).find(x=>x.id===id);
+  if (!b) return;
+  openModal(`
+    <div class="modal-header"><h2 class="modal-title">✏️ ${t('edit_bank')}</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
+    ${bankFormFields(b)}
+    <button class="btn btn-primary btn-block" onclick="updateBank('${id}')">${t('save')}</button>
+  `);
+}
+async function updateBank(id) {
+  await fsUpdate('bank_accounts', id, readBankForm());
+  closeModal(); toast(t('bank_updated'),'success'); await render();
+}
+async function toggleBank(id) {
+  const b = (AppData.bankAccounts||[]).find(x=>x.id===id);
+  if (!b) return;
+  await fsUpdate('bank_accounts', id, { active: b.active===false });
+  await render();
+}
+async function deleteBank(id) {
+  if (!confirm(t('delete_bank_confirm'))) return;
+  await fsDelete('bank_accounts', id);
+  toast(t('bank_deleted'),'success'); await render();
+}
+
+// ─── Override renderAdmin removed to prevent conflicts with dashboards.js hub UI ───
+
+// ───────────────────────────────────────────────────────
+//  SAFE HELPERS
+// ───────────────────────────────────────────────────────
+function escHtml(s) {
+  if (s === null || s === undefined) return '';
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function escAttr(s) { return escHtml(s); }
+
+// ───────────────────────────────────────────────────────
+//  DATA LOADER PATCH — extend loadAllData to include new collections
+//  with per-collection timeout so a slow/blocked Firestore call
+//  cannot hang the entire app.
+// ───────────────────────────────────────────────────────
+const __originalLoadAllData = typeof loadAllData === 'function' ? loadAllData : null;
+async function loadAllData() {
+  const safe = async (col) => {
+    try {
+      return await Promise.race([
+        fsGetAll(col),
+        new Promise(r => setTimeout(()=>r([]), 4500)),
+      ]);
+    } catch(e) { return []; }
+  };
+  const [cats,cities,services,orders,users,ads,ratings,rr,wr,tr,regions,banks,walletsArr,
+         stores,storeCats,storeProducts,banners,pages,svcSections,deliveryZones,deliveryRoutes,digitalCodes,
+         digitalStoreCats,digitalStores,digitalProducts] = await Promise.all([
+    safe('categories'), safe('cities'), safe('services'),
+    safe('orders'), safe('users'), safe('ads'),
+    safe('ratings'), safe('recharge_requests'),
+    safe('withdrawal_requests'), safe('transactions'),
+    safe('regions'), safe('bank_accounts'),
+    safe('wallets'),
+    // ✅ المتاجر — يجب تحميلها هنا لأن هذه النسخة تستبدل loadAllData في core.js
+    safe('stores'), safe('store_cats'), safe('store_products'),
+    safe('banners'), safe('pages'),
+    safe('service_sections'), safe('delivery_zones'), safe('delivery_routes'),
+    safe('digital_codes'),
+    safe('digital_store_cats'), safe('digital_stores'), safe('digital_products')
+  ]);
+
+  // Convert wallets array → { uid: walletDoc } map (each doc id IS the uid).
+  const wallets = {};
+  walletsArr.forEach(w => { if (w && w.id) wallets[w.id] = w; });
+  Object.assign(AppData, {
+    cats, cities, services, orders, users, ads, ratings,
+    rechargeReqs: rr, withdrawReqs: wr, transactions: tr,
+    regions, bankAccounts: banks,
+    wallets,
+    // ✅ بيانات المتاجر
+    stores, storeCats, storeProducts,
+    banners, pages,
+    svcSections, deliveryZones, deliveryRoutes,
+    digitalCodes,
+    digitalStoreCats, digitalStores, digitalProducts
+  });
+  // ✅ Cache regions in localStorage so the signup page can read them without auth
+  if (regions && regions.length > 0) {
+    try { localStorage.setItem('mahjooz_regions_cache', JSON.stringify(regions)); } catch(e) {}
+  }
+}
+// Also seed AppData with the new arrays for any code that reads them before first load
+if (typeof AppData !== 'undefined') {
+  if (!AppData.regions) AppData.regions = [];
+  if (!AppData.bankAccounts) AppData.bankAccounts = [];
+  if (!AppData.wallets) AppData.wallets = {};
+  if (!AppData.orders) AppData.orders = [];
+}
+
+// ───────────────────────────────────────────────────────
+// DYNAMIC SIGNUP FIELDS GENERATOR & HOUSE PICS HANDLER
+// ───────────────────────────────────────────────────────
+window._generateSignupFieldsHTML = function(role, regionOpts) {
+  const fields = AppData.signupConfig ? (AppData.signupConfig[role] || []) : (window.DEFAULT_SIGNUP_CONFIG ? (window.DEFAULT_SIGNUP_CONFIG[role] || []) : []);
+  if (!fields.length) return '';
+  
+  return fields.map((f, i) => {
+    if (f.hidden) return '';
+    
+    // Skip password fields entirely if registered with Google
+    if (SignupState.isGoogle && (f.type === 'password' || f.id === 'pass')) {
+      return '';
+    }
+    
+    let html = `<div class="form-group" style="${f.type === 'textarea' || f.type === 'region' || f.id === 'locText' ? 'grid-column: 1/-1;' : ''}">
+      <label class="form-label">${escHtml(f.label)}${f.required ? ' <span class="req" style="color:var(--rose)">*</span>' : ''}</label>`;
+      
+    if (f.type === 'select') {
+      const opts = (f.options || '').split(',').map(o => {
+        const parts = o.split(':');
+        return `<option value="${escAttr(parts[0])}">${escHtml(parts[1] || parts[0])}</option>`;
+      }).join('');
+      html += `<select class="form-control" id="su-${f.id}" ${f.required ? 'required' : ''}>${opts}</select>`;
+    } else if (f.type === 'region') {
+      html += `<select class="form-control" id="su-${f.id}" ${f.required ? 'required' : ''}>
+        <option value="">— اختر المنطقة —</option>
+        ${regionOpts}
+      </select>`;
+    } else if (f.type === 'tel' || f.id === 'phone') {
+      html += `
+        <div style="display:flex; gap:8px;">
+          <input type="tel" class="form-control" id="su-${f.id}" placeholder="+9677..." style="flex:1;" ${f.required ? 'required' : ''}>
+          <button type="button" class="btn btn-secondary" onclick="signupSendOTP()" style="white-space:nowrap; padding: 0 12px; font-size:13px;">إرسال الرمز</button>
+        </div>
+        <div id="su-otp-row" style="display:none; margin-top:8px;">
+          <div style="display:flex; gap:8px;">
+            <input type="text" class="form-control" id="su-otp" placeholder="رمز التحقق (6 أرقام)" style="flex:1;">
+            <button type="button" class="btn btn-primary" onclick="signupVerifyOTP()" style="white-space:nowrap; padding: 0 16px;">تأكيد</button>
+          </div>
+          <div id="su-otp-status" style="font-size:12px; margin-top:4px; color:var(--text-muted);"></div>
+        </div>
+      `;
+    } else if (f.type === 'textarea') {
+      html += `<textarea class="form-control" id="su-${f.id}" rows="2" style="resize:vertical" ${f.required ? 'required' : ''}></textarea>`;
+    } else if (f.type === 'password' || f.id === 'pass') {
+      html += `
+        <input type="password" class="form-control" id="su-${f.id}" placeholder="••••••••" ${f.required ? 'required' : ''}>
+        </div>
+        <div class="form-group">
+          <label class="form-label">تأكيد كلمة المرور <span class="req" style="color:var(--rose)">*</span></label>
+          <input type="password" class="form-control" id="su-pass2" placeholder="••••••••" ${f.required ? 'required' : ''}>
+      `;
+    } else {
+      let valAttr = '';
+      let disabledAttr = '';
+      if (SignupState.isGoogle) {
+        if (f.id === 'name' && SignupState.name) {
+          valAttr = `value="${escAttr(SignupState.name)}"`;
+          disabledAttr = 'disabled style="background:rgba(255,255,255,0.05); opacity:0.8; cursor:not-allowed;"';
+        } else if (f.id === 'email' && SignupState.email) {
+          valAttr = `value="${escAttr(SignupState.email)}"`;
+          disabledAttr = 'disabled style="background:rgba(255,255,255,0.05); opacity:0.8; cursor:not-allowed;"';
+        }
+      }
+      html += `<input type="${f.type || 'text'}" class="form-control" id="su-${f.id}" ${valAttr} ${disabledAttr} ${f.required ? 'required' : ''}>`;
+    }
+    
+    // Append picture attachment uploader below detailed address for customers
+    if (f.id === 'locText' && role === 'customer') {
+      html += `
+        <div style="margin-top:12px;">
+          <label class="form-label" style="display:flex; align-items:center; gap:8px; font-weight:700;">
+            📸 أرفق صور للمنزل وباب المنزل (اختياري)
+          </label>
+          <div class="signup-pics-upload-zone" onclick="document.getElementById('su-house-pics-input').click()">
+            <span style="font-size: 28px; display: block; margin-bottom: 6px;">📤</span>
+            <span style="font-size: 13px; color: var(--text-secondary);">اضغط لرفع صور المنزل والباب (يمكنك اختيار عدة صور)</span>
+            <input type="file" id="su-house-pics-input" accept="image/*" multiple hidden onchange="su_handleHousePics(this)">
+          </div>
+          <div id="su-house-pics-preview" class="signup-pics-preview-grid"></div>
+        </div>
+      `;
+    }
+    
+    html += `</div>`;
+    return html;
+  }).join('');
+};
+
+window.su_handleHousePics = function(input) {
+  const files = input.files;
+  if (!files.length) return;
+  SignupState.housePics = SignupState.housePics || [];
+  const preview = document.getElementById('su-house-pics-preview');
+  if (!preview) return;
+  
+  for (const file of files) {
+    if (file.size > 5 * 1024 * 1024) {
+      toast('بعض الصور كبيرة جداً (الحد الأقصى 5 ميجابايت)', 'error');
+      continue;
+    }
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const base64 = e.target.result;
+      SignupState.housePics.push(base64);
+      
+      const thumb = document.createElement('div');
+      thumb.className = 'su-pic-thumb';
+      thumb.innerHTML = `
+        <img src="${base64}">
+        <button type="button" class="su-pic-remove" onclick="su_removeHousePic(${SignupState.housePics.length - 1}, this)">✕</button>
+      `;
+      preview.appendChild(thumb);
+    };
+    reader.readAsDataURL(file);
+  }
+};
+
+window.su_removeHousePic = function(idx, btn) {
+  if (SignupState.housePics && SignupState.housePics[idx]) {
+    SignupState.housePics.splice(idx, 1);
+  }
+  btn.closest('.su-pic-thumb').remove();
+  
+  // Re-index remaining remove buttons
+  const preview = document.getElementById('su-house-pics-preview');
+  if (preview) {
+    preview.querySelectorAll('.su-pic-remove').forEach((b, i) => {
+      b.setAttribute('onclick', `su_removeHousePic(${i}, this)`);
+    });
+  }
+};
+
+// Premium Styles injection for the upload zones
+(function() {
+  const css = `
+    .signup-pics-upload-zone {
+      border: 2px dashed var(--glass-border, rgba(255,255,255,0.1));
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease-in-out;
+      background: var(--bg-card, rgba(255,255,255,0.02));
+      margin-top: 6px;
+    }
+    .signup-pics-upload-zone:hover {
+      border-color: var(--primary, #7c3aed);
+      background: rgba(124, 58, 237, 0.05);
+    }
+    .signup-pics-preview-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .su-pic-thumb {
+      position: relative;
+      width: 72px;
+      height: 72px;
+      border-radius: 8px;
+      border: 1px solid var(--glass-border, rgba(255,255,255,0.1));
+      overflow: hidden;
+    }
+    .su-pic-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .su-pic-remove {
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--rose, #ef4444);
+      color: #fff;
+      border: none;
+      font-size: 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+  `;
+  const style = document.createElement('style');
+  style.textContent = css;
+  document.head.appendChild(style);
+})();

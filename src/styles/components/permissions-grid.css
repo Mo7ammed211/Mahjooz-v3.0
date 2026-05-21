@@ -1,0 +1,22 @@
+/* Permissions grid */
+.perms-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+@media (max-width: 600px) { .perms-grid { grid-template-columns: 1fr; } }
+.perm-row {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--gradient-card);
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  cursor: pointer;
+  user-select: none;
+  transition: border-color .2s, background .2s;
+}
+.perm-row:hover { border-color: var(--accent-purple); }
+.perm-row input[type="checkbox"] {
+  width: 18px; height: 18px;
+  accent-color: var(--accent-purple);
+}

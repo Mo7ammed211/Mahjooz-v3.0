@@ -1,0 +1,25 @@
+/* Search hero */
+.search-hero { position: relative; padding: 16px 20px 8px; }
+.search-input-big {
+  width: 100%; padding: 14px 18px; font-size: 15px;
+  background: var(--bg-card); border: 1px solid var(--glass-border);
+  border-radius: 14px; color: var(--text-primary);
+}
+.search-input-big:focus { outline: none; border-color: var(--accent-purple); }
+.search-results-pop {
+  position: absolute; top: 100%; left: 20px; right: 20px;
+  background: var(--bg-card); border: 1px solid var(--glass-border);
+  border-radius: 12px; max-height: 360px; overflow-y: auto;
+  box-shadow: var(--shadow-lg); z-index: 100;
+  display: none;
+}
+.search-results-pop.show { display: block; }
+.search-section-h { padding: 8px 14px; font-size: 12px; font-weight: 700;
+  color: var(--text-muted); text-transform: uppercase;
+  background: rgba(255,255,255,.03); }
+.search-row { display: flex; align-items: center; gap: 12px; padding: 10px 14px;
+  cursor: pointer; transition: background .15s; border-top: 1px solid var(--glass-border); }
+.search-row:hover { background: rgba(124,58,237,.12); }
+.search-empty { padding: 20px; text-align: center; color: var(--text-muted); }
+
+/* ═══ Phase 3: Drill-down stats, perms, notifications bell ═══ */

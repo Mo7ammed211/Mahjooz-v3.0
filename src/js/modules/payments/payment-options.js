@@ -1,0 +1,583 @@
+// ═══════════════════════════════════════════════════════
+//  محجوز v2.2 — Phase 20: Dynamic Payments & Delivery Fees
+// ═══════════════════════════════════════════════════════
+'use strict';
+
+// ─── INIT DATA ─────────────────────────────────────────
+if (typeof AppData !== 'undefined') {
+  if (!AppData.paymentMethods) {
+    AppData.paymentMethods = [
+      { id: 'wallet', name: 'المحفظة', icon: '💰', active: true, type: 'wallet' },
+      { id: 'cod', name: 'دفع عند الاستلام', icon: '💵', active: true, type: 'cod' },
+      { id: 'bank_transfer', name: 'إيداع بنكي', icon: '🏦', active: true, type: 'bank_transfer', note: 'يرجى إرفاق إيصال التحويل لإكمال الطلب' }
+    ];
+  }
+  if (!AppData.bankDeposits) AppData.bankDeposits = [];
+  if (!AppData.platformSettings) AppData.platformSettings = { deliveryFee: 15 };
+}
+
+// ─── DATA LOADER OVERRIDE ──────────────────────────────
+const __ph20_originalLoadAllData = window.loadAllData;
+window.loadAllData = async function() {
+  if (__ph20_originalLoadAllData) await __ph20_originalLoadAllData.apply(this, arguments);
+  
+  const safe = async (col) => {
+    try {
+      return await Promise.race([
+        fsGetAll(col),
+        new Promise(r => setTimeout(()=>r([]), 4500)),
+      ]);
+    } catch(e) { return []; }
+  };
+  
+  const [methods, deposits, settings] = await Promise.all([
+    safe('payment_methods'),
+    safe('bank_deposits'),
+    safe('platform_settings')
+  ]);
+  
+  // Initialize default payment methods if empty
+  if (methods.length === 0) {
+    const defaults = [
+      { id: 'wallet', name: 'المحفظة', icon: '💰', active: true, type: 'wallet', createdAt: new Date() },
+      { id: 'cod', name: 'دفع عند الاستلام', icon: '💵', active: true, type: 'cod', createdAt: new Date() },
+      { id: 'bank_transfer', name: 'إيداع بنكي', icon: '🏦', active: true, type: 'bank_transfer', note: 'يرجى إرفاق الإيصال', createdAt: new Date() }
+    ];
+    for (let d of defaults) {
+      await fsSet('payment_methods', d.id, d);
+      methods.push(d);
+    }
+  }
+  
+  AppData.paymentMethods = methods;
+  AppData.bankDeposits = deposits;
+  
+  // Platform settings are stored as a single document 'main'
+  const mainSetting = settings.find(s => s.id === 'main');
+  if (mainSetting) {
+    AppData.platformSettings = mainSetting;
+  } else {
+    await fsSet('platform_settings', 'main', { deliveryFee: 15 });
+    AppData.platformSettings = { deliveryFee: 15 };
+  }
+};
+
+
+// ── Finance & Settings tabs moved to Master Router (phase26.js) ──
+
+
+
+// ─── ADMIN: PLATFORM SETTINGS ──────────────────────────
+function renderAdminPlatformSettings() {
+  const fee = AppData.platformSettings?.deliveryFee || 15;
+  return `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
+      <h2>⚙️ الإعدادات العامة للمنصة</h2>
+    </div>
+    <div class="settings-card" style="max-width: 600px;">
+      <h3 style="margin-bottom:16px">رسوم التوصيل</h3>
+      <p style="color:var(--text-secondary);font-size:14px;margin-bottom:16px">
+        تعيين رسوم التوصيل الافتراضية التي سيتم إضافتها على طلبات الخدمات والمنتجات.
+      </p>
+      <div class="form-group">
+        <label class="form-label">مبلغ رسوم التوصيل (ريال)</label>
+        <input class="form-control" id="adm-delivery-fee" type="number" min="0" value="${fee}">
+      </div>
+      <button class="btn btn-primary" onclick="savePlatformSettings()">حفظ الإعدادات</button>
+    </div>
+  `;
+}
+window.savePlatformSettings = async function() {
+  const fee = parseFloat(document.getElementById('adm-delivery-fee').value);
+  if (isNaN(fee) || fee < 0) { toast('يرجى إدخال مبلغ صحيح', 'error'); return; }
+  
+  await fsUpdate('platform_settings', 'main', { deliveryFee: fee });
+  AppData.platformSettings.deliveryFee = fee;
+  toast('تم حفظ الإعدادات بنجاح ✅', 'success');
+  await render();
+}
+
+// ─── ADMIN: PAYMENT METHODS ───────────────────────────
+function renderAdminPaymentMethods() {
+  const methods = AppData.paymentMethods || [];
+  return `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
+      <h2>💳 إدارة طرق الدفع</h2>
+      <button class="btn btn-primary" onclick="showAddPaymentMethodModal()">➕ إضافة طريقة دفع</button>
+    </div>
+    <div class="table-wrap">
+      <table class="admin-table">
+        <thead><tr><th>الأيقونة</th><th>الاسم</th><th>النوع</th><th>الحالة</th><th>إجراءات</th></tr></thead>
+        <tbody>
+          ${methods.map(m => `
+            <tr>
+              <td style="font-size:24px">${m.icon||'💳'}</td>
+              <td style="font-weight:600">${m.name}</td>
+              <td><span class="badge badge-purple">${m.type}</span></td>
+              <td><span class="badge ${m.active?'badge-teal':'badge-rose'}">${m.active?'مفعل':'معطل'}</span></td>
+              <td>
+                <button class="btn btn-sm btn-secondary" onclick="showEditPaymentMethodModal('${m.id}')">✏️ تعديل</button>
+                <button class="btn btn-sm ${m.active?'btn-warning':'btn-success'}" onclick="togglePaymentMethod('${m.id}')">${m.active?'⏸️ إيقاف':'▶️ تفعيل'}</button>
+                <button class="btn btn-sm btn-danger" onclick="deletePaymentMethod('${m.id}')">🗑️ حذف</button>
+              </td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+window.showAddPaymentMethodModal = function() {
+  openModal(`
+    <div class="modal-header"><h2 class="modal-title">➕ إضافة طريقة دفع</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div class="form-group">
+      <label class="form-label">اسم طريقة الدفع</label>
+      <input class="form-control" id="pm-name" placeholder="مثال: حوالة كريمي">
+    </div>
+    <div class="form-group">
+      <label class="form-label">الأيقونة (ايموجي)</label>
+      <input class="form-control" id="pm-icon" placeholder="💳" value="💳">
+    </div>
+    <div class="form-group">
+      <label class="form-label">نوع الدفع</label>
+      <select class="form-control" id="pm-type">
+        <option value="bank_transfer">إيداع / حوالة</option>
+        <option value="cod">عند الاستلام</option>
+        <option value="wallet">محفظة رقمية</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">ملاحظات تظهر للعميل (للمدير فقط)</label>
+      <textarea class="form-control" id="pm-note" rows="2" placeholder="اكتب تعليمات للعميل مثل: يرجى التحويل ثم إرفاق السند"></textarea>
+    </div>
+    <button class="btn btn-primary btn-block" onclick="saveNewPaymentMethod()">حفظ</button>
+  `);
+}
+
+window.saveNewPaymentMethod = async function() {
+  const name = document.getElementById('pm-name').value.trim();
+  const icon = document.getElementById('pm-icon').value.trim();
+  const type = document.getElementById('pm-type').value;
+  const note = document.getElementById('pm-note').value.trim();
+  
+  if (!name) { toast('الاسم مطلوب', 'error'); return; }
+  
+  await fsAdd('payment_methods', { name, icon, type, note, active: true, createdAt: new Date() });
+  closeModal(); toast('تم الإضافة بنجاح', 'success'); await loadAllData(); await render();
+}
+
+window.showEditPaymentMethodModal = function(id) {
+  const m = AppData.paymentMethods.find(x => x.id === id);
+  if (!m) return;
+  openModal(`
+    <div class="modal-header"><h2 class="modal-title">✏️ تعديل طريقة الدفع</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div class="form-group">
+      <label class="form-label">الاسم</label>
+      <input class="form-control" id="pm-name" value="${m.name||''}">
+    </div>
+    <div class="form-group">
+      <label class="form-label">الأيقونة</label>
+      <input class="form-control" id="pm-icon" value="${m.icon||''}">
+    </div>
+    <div class="form-group">
+      <label class="form-label">ملاحظات تظهر للعميل</label>
+      <textarea class="form-control" id="pm-note" rows="2">${m.note||''}</textarea>
+    </div>
+    <button class="btn btn-primary btn-block" onclick="updatePaymentMethod('${m.id}')">حفظ التعديلات</button>
+  `);
+}
+
+window.updatePaymentMethod = async function(id) {
+  const name = document.getElementById('pm-name').value.trim();
+  const icon = document.getElementById('pm-icon').value.trim();
+  const note = document.getElementById('pm-note').value.trim();
+  if (!name) return;
+  await fsUpdate('payment_methods', id, { name, icon, note });
+  closeModal(); toast('تم التحديث بنجاح', 'success'); await loadAllData(); await render();
+}
+
+window.togglePaymentMethod = async function(id) {
+  const m = AppData.paymentMethods.find(x => x.id === id);
+  await fsUpdate('payment_methods', id, { active: !m.active });
+  await loadAllData(); await render();
+}
+
+window.deletePaymentMethod = async function(id) {
+  if (!confirm('هل أنت متأكد من حذف طريقة الدفع هذه؟')) return;
+  await fsDelete('payment_methods', id);
+  toast('تم الحذف بنجاح', 'success'); await loadAllData(); await render();
+}
+
+
+// ─── ADMIN: BANK DEPOSITS ─────────────────────────────
+function renderAdminBankDeposits() {
+  const deposits = (AppData.bankDeposits || []).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
+  
+  return `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
+      <h2>🏦 الإيداعات البنكية (طلبات الدفع)</h2>
+    </div>
+    ${deposits.length ? `<div class="table-wrap"><table class="admin-table">
+      <thead><tr><th>رقم الطلب</th><th>العميل</th><th>المبلغ</th><th>الحساب المحول إليه</th><th>التاريخ</th><th>الحالة</th><th>إجراءات</th></tr></thead>
+      <tbody>${deposits.map(d=>`<tr>
+        <td style="font-weight:700">${d.orderId}</td>
+        <td>${d.customerName}</td>
+        <td style="font-weight:700;color:var(--primary)">${d.amount} ريال</td>
+        <td>${d.bankName||'—'}</td>
+        <td>${fmtDate(d.createdAt)}</td>
+        <td>
+          ${d.status==='pending' ? '<span class="badge badge-gold">⏳ بانتظار المراجعة</span>' : 
+            d.status==='approved' ? '<span class="badge badge-teal">✅ تم القبول</span>' : 
+            '<span class="badge badge-rose">❌ مرفوض</span>'}
+        </td>
+        <td>
+          <button class="btn btn-sm btn-secondary" onclick="viewDepositDetails('${d.id}')">👁️ عرض التفاصيل</button>
+        </td>
+      </tr>`).join('')}</tbody>
+    </table></div>` : `<div class="empty-state"><div class="empty-icon">🏦</div><div class="empty-title">لا يوجد إيداعات حالياً</div></div>`}
+  `;
+}
+
+window.viewDepositDetails = function(id) {
+  const d = AppData.bankDeposits.find(x => x.id === id);
+  if (!d) return;
+  
+  openModal(`
+    <div class="modal-header"><h2 class="modal-title">تفاصيل الإيداع</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;margin-bottom:16px">
+      <div class="info-row"><span>رقم الطلب المرتبط</span><strong>${d.orderId}</strong></div>
+      <div class="info-row"><span>المبلغ</span><strong style="color:var(--primary);font-size:18px">${d.amount} ريال</strong></div>
+      <div class="info-row"><span>الحساب البنكي</span><strong>${d.bankName}</strong></div>
+      <div class="info-row"><span>ملاحظات العميل</span><strong>${d.customerNote||'لا يوجد'}</strong></div>
+      <div class="info-row"><span>تاريخ الإرسال</span><strong>${fmtDateTime(d.createdAt)}</strong></div>
+    </div>
+    
+    ${d.receiptBase64 ? `
+      <div style="margin-bottom:16px">
+        <label class="form-label">صورة إيصال التحويل:</label>
+        <img src="${d.receiptBase64}" style="width:100%;border-radius:8px;border:1px solid var(--border)">
+      </div>
+    ` : '<div class="empty-state" style="padding:20px;margin-bottom:16px">لا يوجد إيصال مرفق</div>'}
+    
+    ${d.status === 'pending' ? `
+      <div style="display:flex;gap:12px;margin-top:20px">
+        <button class="btn btn-success" style="flex:1" onclick="approveDeposit('${d.id}', '${d.orderId}')">✅ الموافقة وتأكيد الطلب</button>
+        <button class="btn btn-danger" style="flex:1" onclick="rejectDeposit('${d.id}')">❌ رفض الإيداع</button>
+      </div>
+    ` : ''}
+  `);
+}
+
+window.approveDeposit = async function(depositId, orderId) {
+  if (!confirm('هل أنت متأكد من الموافقة على هذا الإيداع وتأكيد الطلب؟')) return;
+  showLoader('جاري التأكيد...');
+  
+  try {
+    // 1. Update deposit status
+    await fsUpdate('bank_deposits', depositId, { status: 'approved' });
+    
+    // 2. Find order and update its status
+    const orderRef = AppData.orders.find(o => o.orderId === orderId);
+    if (orderRef) {
+      await fsUpdate('orders', orderRef.id, { paymentStatus: 'paid', status: 'accepted' });
+      // Notify user if possible
+      if (typeof notificationManager !== 'undefined') {
+         notificationManager.notifyUser(orderRef.customerId, 'تم تأكيد طلبك واستلام الإيداع بنجاح ✅');
+      }
+    }
+    
+    toast('تم اعتماد الإيداع بنجاح', 'success');
+    closeModal();
+    await loadAllData();
+    await render();
+  } catch(e) {
+    toast('حدث خطأ', 'error');
+  }
+}
+
+window.rejectDeposit = async function(depositId) {
+  if (!confirm('هل أنت متأكد من رفض هذا الإيداع؟')) return;
+  
+  await fsUpdate('bank_deposits', depositId, { status: 'rejected' });
+  toast('تم رفض الإيداع', 'info');
+  closeModal();
+  await loadAllData();
+  await render();
+}
+
+
+// ─── CHECKOUT OVERRIDE ──────────────────────────────────
+// Overriding confirmBooking from pages.js to open Payment Modal
+window.confirmBooking = async function(svcId) {
+  const date = document.getElementById('bk-date').value;
+  const time = document.getElementById('bk-time').value;
+  const addr = document.getElementById('bk-addr').value.trim();
+  const note = document.getElementById('bk-note').value.trim();
+
+  if (!date) { toast('يرجى اختيار التاريخ','error'); return; }
+
+  const s = AppData.services.find(x=>x.id===svcId);
+  const u = State.currentUser;
+
+  // ─── حساب سعر التوصيل من النظام الجديد ─────────────────
+  let deliveryFee = 0;
+  let deliveryRoute = null;
+  const fromArea = s?.location || s?.area || s?.address || '';
+  const toArea   = addr || u?.address || u?.area || '';
+
+  if (fromArea && toArea && typeof dp_calculateFee === 'function') {
+    const result = dp_calculateFee(fromArea, toArea);
+    if (result.found) {
+      deliveryFee = result.fee;
+      deliveryRoute = { from: fromArea, to: toArea, fee: result.fee };
+    } else {
+      // مسار غير مسجل — استخدم السعر الافتراضي وأشعر المدير
+      deliveryFee = AppData.platformSettings?.deliveryFee || 0;
+      toast('⚠️ سعر التوصيل لهذا المسار غير مسجّل — سيتم إشعار المدير', 'warning');
+    }
+  } else {
+    deliveryFee = AppData.platformSettings?.deliveryFee || 0;
+  }
+
+  const total = (s?.price||0) + deliveryFee;
+
+  const orderDetails = {
+    svcId, date, time, addr, note, total, deliveryFee, deliveryRoute, s, u
+  };
+
+  // Close the booking modal and open payment options
+  closeModal();
+  setTimeout(() => showDynamicPaymentModal(orderDetails), 300);
+}
+
+// ─── DYNAMIC PAYMENT MODAL ──────────────────────────────
+window.showDynamicPaymentModal = async function(orderDetails) {
+  const methods = AppData.paymentMethods.filter(m => m.active);
+  const walletBal = await getBalance(orderDetails.u.uid);
+  
+  State.pendingOrder = orderDetails;
+  State.selectedPaymentMethod = methods.length > 0 ? methods[0].id : '';
+
+  openModal(`
+    <div class="modal-header">
+      <h2 class="modal-title">💳 خيارات الدفع</h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    
+    <div style="background:rgba(124,58,237,0.1);border:1px solid rgba(124,58,237,0.2);border-radius:var(--radius-sm);padding:16px;margin-bottom:20px">
+      <div style="text-align:center;margin-bottom:12px">
+        <div style="color:var(--text-secondary);margin-bottom:4px">إجمالي المبلغ المطلوب</div>
+        <div style="font-size:32px;font-weight:800;color:var(--primary)">${orderDetails.total} ريال</div>
+      </div>
+      ${orderDetails.deliveryRoute ? `
+      <div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:8px;padding:10px;font-size:13px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+          <span style="color:var(--text-muted)">سعر الخدمة</span>
+          <strong>${(orderDetails.total - orderDetails.deliveryFee).toLocaleString('ar')} ريال</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+          <span style="color:var(--text-muted)">🚚 التوصيل (${escHtml(orderDetails.deliveryRoute.from)} ← ${escHtml(orderDetails.deliveryRoute.to)})</span>
+          <strong style="color:#10b981">${orderDetails.deliveryFee.toLocaleString('ar')} ريال</strong>
+        </div>
+      </div>` : orderDetails.deliveryFee > 0 ? `
+      <div style="text-align:center;font-size:13px;color:var(--text-muted);margin-top:4px">رسوم التوصيل: ${orderDetails.deliveryFee} ريال</div>` : ''}
+    </div>
+    
+    ${methods.length ? `
+      <div class="payment-methods" style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px">
+        ${methods.map((m, i) => `
+          <button class="payment-method ${i===0?'active':''}" style="display:flex;align-items:center;padding:16px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-card);text-align:right;width:100%;transition:all 0.2s" onclick="selectDynPaymentMethod(this, '${m.id}', '${m.type}')">
+            <div style="font-size:28px;margin-left:16px">${m.icon}</div>
+            <div style="flex:1">
+              <div style="font-weight:700;font-size:16px">${m.name}</div>
+              ${m.type === 'wallet' ? `<div style="font-size:13px;color:${walletBal>=orderDetails.total?'#10b981':'#f43f5e'}">الرصيد المتاح: ${walletBal} ريال</div>` : ''}
+              ${m.note ? `<div style="font-size:12px;color:var(--text-muted);margin-top:4px">${m.note}</div>` : ''}
+            </div>
+            <div class="check-icon" style="font-size:20px;display:${i===0?'block':'none'}">✅</div>
+          </button>
+        `).join('')}
+      </div>
+    ` : '<p style="color:#f43f5e">لا توجد طرق دفع متاحة حالياً</p>'}
+    
+    <!-- Bank Transfer Fields (Hidden by default) -->
+    <div id="bank-transfer-fields" style="display:${methods[0]?.type==='bank_transfer'?'block':'none'};margin-bottom:20px;background:var(--bg-main);padding:16px;border-radius:var(--radius-sm);border:1px dashed var(--border)">
+      ${renderBankSelection()}
+      <div class="form-group" style="margin-top:12px">
+        <label class="form-label">ملاحظات التحويل (اختياري)</label>
+        <textarea class="form-control" id="dyn-pm-note" rows="2" placeholder="رقم الحوالة، اسم المحول..."></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">إرفاق إيصال التحويل <span class="req">*</span></label>
+        <input class="form-control" id="dyn-pm-receipt" type="file" accept="image/*" onchange="previewDynReceipt(this)">
+      </div>
+      <div id="dyn-receipt-preview"></div>
+    </div>
+    
+    <button class="btn btn-primary btn-block btn-lg" onclick="processDynamicPayment()" ${methods.length===0?'disabled':''}>
+      تأكيد الدفع وإرسال الطلب
+    </button>
+  `);
+}
+
+window.renderBankSelection = function() {
+  const banks = AppData.bankAccounts?.filter(b => b.active !== false) || [];
+  if (!banks.length) return '<div class="empty-state" style="padding:10px">لا توجد حسابات بنكية مضافة من الإدارة</div>';
+  return `
+    <label class="form-label">اختر الحساب المحول إليه <span class="req">*</span></label>
+    <select class="form-control" id="dyn-pm-bank">
+      ${banks.map(b => `<option value="${b.bankName} - ${b.accountNumber}">${b.bankName} (${b.accountNumber})</option>`).join('')}
+    </select>
+  `;
+}
+
+window.selectDynPaymentMethod = function(btn, id, type) {
+  document.querySelectorAll('.payment-method').forEach(b => {
+    b.classList.remove('active');
+    b.style.borderColor = 'var(--border)';
+    b.querySelector('.check-icon').style.display = 'none';
+  });
+  
+  btn.classList.add('active');
+  btn.style.borderColor = 'var(--primary)';
+  btn.querySelector('.check-icon').style.display = 'block';
+  
+  State.selectedPaymentMethod = id;
+  State.selectedPaymentType = type;
+  
+  const bankFields = document.getElementById('bank-transfer-fields');
+  if (bankFields) {
+    bankFields.style.display = type === 'bank_transfer' ? 'block' : 'none';
+  }
+}
+
+window.previewDynReceipt = function(input) {
+  const file = input.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('dyn-receipt-preview').innerHTML = `<img src="${e.target.result}" style="width:100%;border-radius:8px;max-height:150px;object-fit:cover;margin-top:10px">`;
+  };
+  reader.readAsDataURL(file);
+}
+
+window.processDynamicPayment = async function() {
+  const details = State.pendingOrder;
+  if (!details) return;
+  
+  const methodId = State.selectedPaymentMethod;
+  const method = AppData.paymentMethods.find(m => m.id === methodId);
+  const type = State.selectedPaymentType || method?.type || 'wallet';
+  
+  let receiptBase64 = null;
+  let bankName = null;
+  let customerNote = null;
+  
+  // Wallet validation
+  if (type === 'wallet') {
+    const bal = await getBalance(details.u.uid);
+    if (bal < details.total) {
+      toast(`رصيدك (${bal} ريال) غير كافٍ. المطلوب: ${details.total} ريال.`, 'error');
+      return;
+    }
+  }
+  
+  // Bank Transfer Validation
+  if (type === 'bank_transfer') {
+    const file = document.getElementById('dyn-pm-receipt')?.files[0];
+    if (!file) { toast('يرجى إرفاق إيصال التحويل', 'error'); return; }
+    
+    bankName = document.getElementById('dyn-pm-bank')?.value;
+    if (!bankName) { toast('يرجى اختيار الحساب البنكي', 'error'); return; }
+    
+    customerNote = document.getElementById('dyn-pm-note')?.value.trim();
+    
+    receiptBase64 = await new Promise(res => {
+      const r = new FileReader(); r.onload = e => res(e.target.result); r.readAsDataURL(file);
+    });
+  }
+  
+  showLoader('جاري معالجة الطلب...');
+  
+  try {
+    const isUpdate = !!details.isExistingOrder;
+    const orderId = isUpdate ? details.orderId : await generateOrderId();
+    const vendor = AppData.users.find(x => x.email === details.s?.vendorEmail) || null;
+    
+    // Status depends on payment method
+    let orderStatus = 'pending';
+    let paymentStatus = 'unpaid';
+    
+    if (type === 'wallet') {
+      orderStatus = isUpdate ? 'approved' : 'pending'; // Profession order becomes approved immediately after agreement + payment
+      paymentStatus = 'paid';
+      await deductWallet(details.u.uid, details.total, `حجز خدمة: ${details.s.name}`, orderId);
+    } else if (type === 'bank_transfer') {
+      orderStatus = isUpdate ? 'pending_payment' : 'pending_payment'; 
+      paymentStatus = 'verifying';
+    } else if (type === 'cod') {
+      orderStatus = isUpdate ? 'approved' : 'pending';
+      paymentStatus = 'cod';
+    }
+
+    const matchedAddr = (window.__ph41_addresses || []).find(a => a.address === details.addr);
+    const housePics = matchedAddr ? (matchedAddr.pics || []) : (details.u?.housePics || []);
+
+    // 1. Create or Update the order
+    const orderObj = {
+      orderId, 
+      svcId: details.svcId, 
+      svcName: details.s?.name, 
+      svcIcon: details.s?.icon,
+      servicePrice: details.total - (details.deliveryFee||0), 
+      deliveryFee: details.deliveryFee || 0, 
+      total: details.total,
+      customerId: details.u.uid, 
+      customerName: details.u.name, 
+      customerAddr: details.addr,
+      vendorId: details.s?.vendorId || details.s?.providerUid || null, 
+      vendorName: details.s?.provider || details.s?.providerName || '—',
+      date: details.date, 
+      time: details.time, 
+      note: details.note, 
+      status: orderStatus,
+      paymentMethodId: methodId,
+      paymentType: type,
+      paymentStatus: paymentStatus,
+      housePics: housePics
+    };
+
+    if (isUpdate) {
+      await fsUpdate('orders', details.dbOrderId, orderObj);
+    } else {
+      await fsAdd('orders', { ...orderObj, createdAt: new Date(), driverId: null, driverName: null });
+    }
+
+    // 2. Create the deposit record if bank transfer
+    if (type === 'bank_transfer') {
+      await fsAdd('bank_deposits', {
+        orderId,
+        customerId: details.u.uid,
+        customerName: details.u.name,
+        amount: details.total,
+        bankName,
+        customerNote,
+        receiptBase64,
+        status: 'pending', // pending admin approval
+        createdAt: new Date()
+      });
+      // Notify Admin
+      if (typeof notificationManager !== 'undefined') {
+        notificationManager.notifyAdmin(`تم استلام إيداع بنكي جديد لطلب ${orderId}`, 'deposit');
+      }
+    }
+    
+    closeModal();
+    toast(isUpdate ? `✅ تم الدفع بنجاح لطلب رقم ${orderId}` : `تم إرسال طلبك! رقم العملية: ${orderId} ✅`, 'success');
+    State.pendingOrder = null;
+    await loadAllData();
+    await navigate('myorders');
+
+  } catch(e) {
+    console.error(e);
+    toast('حدث خطأ أثناء معالجة الطلب', 'error');
+  }
+}

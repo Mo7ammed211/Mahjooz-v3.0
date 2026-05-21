@@ -1,0 +1,16 @@
+  /* Footer breathing room */
+  #footer { padding: 24px 16px; text-align: center; font-size: 13px; }
+}
+
+/* Tiny phones (<= 380px) */
+@media (max-width: 380px) {
+  .hub-grid, .cat-grid { grid-template-columns: 1fr; }
+  .stats-grid, .key-metrics, .support-stats, .support-stats-grid { grid-template-columns: 1fr 1fr; }
+  .hero-title { font-size: 24px; }
+  .nav-brand { font-size: 18px; }
+  .otp-input { width: 36px; height: 44px; font-size: 18px; }
+}
+
+/* Make any iframe / image / video safely fit the viewport */
+img, video, iframe { max-width: 100%; height: auto; }
+table { max-width: 100%; }

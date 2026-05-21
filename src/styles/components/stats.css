@@ -1,0 +1,8 @@
+  /* Stats */
+  .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px; }
+  .stat-card { padding: 14px 10px; }
+  .stat-num { font-size: 22px; margin-bottom: 4px; }
+  .stat-label { font-size: 12px; }
+  .key-metrics, .support-stats, .support-stats-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .metric-value { font-size: 22px; }
+  .metric-card { padding: 14px 10px; }

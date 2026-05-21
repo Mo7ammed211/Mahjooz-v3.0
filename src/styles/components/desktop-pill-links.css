@@ -1,0 +1,18 @@
+/* Desktop pill links */
+.nav-links { display: flex; gap: 6px; }
+.nav-link {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: transparent; border: 1px solid transparent;
+  padding: 9px 16px; border-radius: 999px;
+  color: var(--text-muted); font-family: var(--font);
+  font-weight: 600; font-size: 14px; cursor: pointer;
+  transition: all .25s cubic-bezier(.4,0,.2,1);
+  white-space: nowrap;
+}
+.nav-link:hover { color: var(--text-main); background: var(--bg-hover); transform: translateY(-1px); }
+.nav-link.active {
+  background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+  color: #fff;
+  box-shadow: 0 8px 20px rgba(139,92,246,.36);
+}
+.nav-link-ic { font-size: 15px; }
