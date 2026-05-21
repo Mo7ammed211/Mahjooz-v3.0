@@ -2931,14 +2931,15 @@ window.openPh46MapPicker = function() {
 
   openModal(`
     <div class="modal-header">
-      <h2 class="modal-title">🗺️ اختر الموقع من خرائط قوقل</h2>
+      <h2 class="modal-title">🗺️ اختر الموقع — Mapbox</h2>
       <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
     <div style="padding:20px">
       <div style="position:relative;margin-bottom:12px;">
-        <input id="ph46-map-search" type="text" class="form-control" placeholder="🔍 ابحث عن موقع بسرعة..." style="font-size:14px;">
+        <input id="ph46-map-search" type="text" class="form-control" placeholder="🔍 ابحث عن موقع، مدينة، حي..." style="font-size:14px;">
+        <div id="ph46-search-results" style="position:absolute;top:100%;right:0;left:0;background:#1e1e2e;border:1px solid var(--border);border-radius:8px;z-index:9999;display:none;max-height:200px;overflow-y:auto;"></div>
       </div>
-      <div id="ph46-map-canvas" style="height:340px;background:#f0f0f0;border-radius:12px;margin-bottom:16px;border:1px solid var(--border);overflow:hidden;"></div>
+      <div id="ph46-map-canvas" style="height:360px;border-radius:12px;margin-bottom:16px;border:1px solid var(--border);overflow:hidden;"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
         <div class="form-group"><label class="form-label">📍 Latitude</label><input class="form-control" id="ph46-map-lat-val" type="number" step="0.000001" value="${currentLat}"></div>
         <div class="form-group"><label class="form-label">📍 Longitude</label><input class="form-control" id="ph46-map-lng-val" type="number" step="0.000001" value="${currentLng}"></div>
@@ -2946,49 +2947,64 @@ window.openPh46MapPicker = function() {
       <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="savePh46Location()">✅ تأكيد الموقع</button>
     </div>`);
 
-  if (typeof google !== 'undefined' && google.maps) {
-    setTimeout(() => {
-      _ph46PickerMap = new google.maps.Map(document.getElementById('ph46-map-canvas'), {
-        center: { lat: currentLat, lng: currentLng },
-        zoom: 13,
-        mapTypeControl: false,
-        streetViewControl: false,
-        fullscreenControl: false
-      });
-      _ph46PickerMarker = new google.maps.Marker({
-        position: { lat: currentLat, lng: currentLng },
-        map: _ph46PickerMap,
-        draggable: true,
-        title: 'حدد الموقع'
-      });
-      _ph46PickerMarker.addListener('dragend', () => {
-        const pos = _ph46PickerMarker.getPosition();
-        document.getElementById('ph46-map-lat-val').value = pos.lat().toFixed(6);
-        document.getElementById('ph46-map-lng-val').value = pos.lng().toFixed(6);
-      });
-      _ph46PickerMap.addListener('click', (e) => {
-        _ph46PickerMarker.setPosition(e.latLng);
-        document.getElementById('ph46-map-lat-val').value = e.latLng.lat().toFixed(6);
-        document.getElementById('ph46-map-lng-val').value = e.latLng.lng().toFixed(6);
-      });
-      if (google.maps.places) {
-        const searchInput = document.getElementById('ph46-map-search');
-        if (searchInput) {
-          const autocomplete = new google.maps.places.Autocomplete(searchInput, { fields: ['geometry', 'name'] });
-          autocomplete.addListener('place_changed', () => {
-            const place = autocomplete.getPlace();
-            if (!place.geometry || !place.geometry.location) return;
-            const loc = place.geometry.location;
-            _ph46PickerMap.setCenter(loc);
-            _ph46PickerMap.setZoom(15);
-            _ph46PickerMarker.setPosition(loc);
-            document.getElementById('ph46-map-lat-val').value = loc.lat().toFixed(6);
-            document.getElementById('ph46-map-lng-val').value = loc.lng().toFixed(6);
-          });
-        }
-      }
-    }, 200);
-  }
+  if (typeof mapboxgl === 'undefined') return;
+  setTimeout(() => {
+    mapboxgl.accessToken = window.MAPBOX_TOKEN;
+    _ph46PickerMap = new mapboxgl.Map({
+      container: 'ph46-map-canvas',
+      style: 'mapbox://styles/mapbox/streets-v12',
+      center: [currentLng, currentLat],
+      zoom: 13,
+      language: 'ar'
+    });
+    _ph46PickerMap.addControl(new mapboxgl.NavigationControl(), 'top-left');
+    const el = document.createElement('div');
+    el.style.cssText = 'width:32px;height:32px;background:url("https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6/svgs/solid/location-dot.svg") center/contain no-repeat;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5));cursor:grab;';
+    _ph46PickerMarker = new mapboxgl.Marker({ element: el, draggable: true })
+      .setLngLat([currentLng, currentLat])
+      .addTo(_ph46PickerMap);
+    const updateCoords = (lng, lat) => {
+      document.getElementById('ph46-map-lat-val').value = lat.toFixed(6);
+      document.getElementById('ph46-map-lng-val').value = lng.toFixed(6);
+    };
+    _ph46PickerMarker.on('dragend', () => {
+      const pos = _ph46PickerMarker.getLngLat();
+      updateCoords(pos.lng, pos.lat);
+    });
+    _ph46PickerMap.on('click', (e) => {
+      _ph46PickerMarker.setLngLat(e.lngLat);
+      updateCoords(e.lngLat.lng, e.lngLat.lat);
+    });
+    // ── بحث Mapbox Geocoding ──
+    const searchInput = document.getElementById('ph46-map-search');
+    const resultsBox = document.getElementById('ph46-search-results');
+    let searchTimer;
+    searchInput.addEventListener('input', () => {
+      clearTimeout(searchTimer);
+      const q = searchInput.value.trim();
+      if (q.length < 2) { resultsBox.style.display = 'none'; return; }
+      searchTimer = setTimeout(async () => {
+        try {
+          const res = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(q)}.json?access_token=${window.MAPBOX_TOKEN}&language=ar&limit=5`);
+          const data = await res.json();
+          if (!data.features?.length) { resultsBox.style.display = 'none'; return; }
+          resultsBox.innerHTML = data.features.map(f => `
+            <div onclick="window._ph46SelectPlace(${f.center[0]},${f.center[1]},'${f.place_name.replace(/'/g,"\\'")}')" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.06);font-size:13px;color:#e2e8f0;" onmouseover="this.style.background='rgba(124,58,237,0.15)'" onmouseout="this.style.background=''">
+              <div style="font-weight:600">${f.text}</div>
+              <div style="font-size:11px;color:#94a3b8;margin-top:2px">${f.place_name}</div>
+            </div>`).join('');
+          resultsBox.style.display = 'block';
+        } catch(e) {}
+      }, 350);
+    });
+    window._ph46SelectPlace = (lng, lat, name) => {
+      _ph46PickerMap.flyTo({ center: [lng, lat], zoom: 15, speed: 1.4 });
+      _ph46PickerMarker.setLngLat([lng, lat]);
+      updateCoords(lng, lat);
+      searchInput.value = name;
+      resultsBox.style.display = 'none';
+    };
+  }, 200);
 };
 
 window.savePh46Location = function() {
