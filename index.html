@@ -52,7 +52,14 @@
   <!-- Mapbox GL JS — for location pickers -->
   <link href="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css" rel="stylesheet">
   <script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js"></script>
-  <script>window.MAPBOX_TOKEN = 'pk.eyJ1Ijoic2hua29vZiIsImEiOiJjbXBleXpqbHEwOHg5MnNzY3IzdGt5eHhtIn0.wxB_wSXkidBhppBGrE66Jg';</script>
+  <script>
+    window.MAPBOX_TOKEN = 'pk.eyJ1Ijoic2hua29vZiIsImEiOiJjbXBleXpqbHEwOHg5MnNzY3IzdGt5eHhtIn0.wxB_wSXkidBhppBGrE66Jg';
+    mapboxgl.setRTLTextPlugin(
+      'https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-rtl-text/v0.2.3/mapbox-gl-rtl-text.js',
+      null,
+      true
+    );
+  </script>
 </head>
 <body>
 
