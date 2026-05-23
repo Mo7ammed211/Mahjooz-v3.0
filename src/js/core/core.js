@@ -932,6 +932,12 @@ async function render() {
     if (typeof hideLoader === 'function') hideLoader();
     return;
   }
+  if (State.currentPage === 'forgot-password') {
+    nw.innerHTML = ''; fw.innerHTML = '';
+    app.innerHTML = typeof renderForgotPasswordPage === 'function' ? renderForgotPasswordPage() : '';
+    if (typeof hideLoader === 'function') hideLoader();
+    return;
+  }
   
   nw.innerHTML = renderNavbar(); fw.innerHTML = renderFooter();
   refreshWalletBalanceUI(); // Fetch wallet balance independently of loadAllData

@@ -121,6 +121,7 @@ function renderLoginPage() {
 
           <div class="login-links">
             <p>ليس لديك حساب؟ <a href="javascript:;" class="create-acc-link" onclick="navigate('signup')">إنشاء حساب جديد</a></p>
+            <p style="margin-top:8px"><a href="javascript:;" class="forgot-pw-link" onclick="navigate('forgot-password')">🔑 نسيت كلمة المرور؟</a></p>
             <div class="divider"><span>أو</span></div>
             <a href="javascript:;" class="guest-link" onclick="enterGuest()">
               <span>👁️</span> الدخول كضيف لتصفح المنصة
@@ -156,6 +157,133 @@ function renderLoginPage() {
     </div>
   </div>`;
 }
+
+// ───────────────────────────────────────────────────────
+//  FORGOT PASSWORD PAGE
+// ───────────────────────────────────────────────────────
+function renderForgotPasswordPage() {
+  return `
+  <div id="unified-login-page">
+    <div class="login-bg-circle circle-1"></div>
+    <div class="login-bg-circle circle-2"></div>
+    <div class="login-topbar-absolute">${languageToggleHTML()}</div>
+
+    <div class="unified-login-wrapper forgot-pw-wrapper">
+      <!-- Right Side: Info -->
+      <div class="login-info-side">
+        <div class="login-info-content">
+          <div class="login-brand-badge">🔑 استعادة الحساب</div>
+          <h1 class="info-title">نسيت كلمة <span>المرور؟</span></h1>
+          <p class="info-desc">لا تقلق! أدخل بريدك الإلكتروني أو رقم جوالك وسنرسل لك رابطاً لاستعادة كلمة المرور فوراً.</p>
+          <div class="info-features">
+            <div class="info-feature-item">
+              <div class="feature-icon glass-icon">📧</div>
+              <div><h4>عبر البريد الإلكتروني</h4><p>رابط استعادة يصل لصندوق الوارد خلال ثوانٍ</p></div>
+            </div>
+            <div class="info-feature-item">
+              <div class="feature-icon glass-icon">📱</div>
+              <div><h4>عبر رقم الجوال</h4><p>نبحث عن حسابك ونرسل الرابط لبريدك المسجل</p></div>
+            </div>
+            <div class="info-feature-item">
+              <div class="feature-icon glass-icon">🔒</div>
+              <div><h4>آمن وسريع</h4><p>الرابط صالح لمرة واحدة فقط لحماية حسابك</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Left Side: Form -->
+      <div class="login-form-side">
+        <div class="login-form-container">
+          <div class="form-header-area">
+            <div class="login-logo-mini">🔑 استعادة كلمة المرور</div>
+            <h2 class="form-title">إعادة تعيين كلمة المرور</h2>
+            <p class="form-subtitle">أدخل بريدك الإلكتروني أو رقم جوالك المسجل في المنصة</p>
+          </div>
+
+          <div id="forgot-pw-success" style="display:none" class="forgot-pw-success-box">
+            <div class="forgot-pw-success-icon">✅</div>
+            <h3>تم الإرسال بنجاح!</h3>
+            <p id="forgot-pw-success-msg">تم إرسال رابط استعادة كلمة المرور.</p>
+            <button class="btn btn-primary btn-block" onclick="navigate('login')" style="margin-top:16px">
+              العودة لتسجيل الدخول
+            </button>
+          </div>
+
+          <div id="forgot-pw-form">
+            <div class="form-group" style="margin-top:20px">
+              <label class="form-label">البريد الإلكتروني أو رقم الجوال</label>
+              <div class="input-with-icon">
+                <span class="input-icon">👤</span>
+                <input class="form-control" id="forgot-pw-input" type="text"
+                  placeholder="أدخل بريدك الإلكتروني أو رقم جوالك..."
+                  autocomplete="email"
+                  onkeydown="if(event.key==='Enter') sendPasswordReset()">
+              </div>
+            </div>
+
+            <button class="btn btn-primary btn-block btn-lg login-submit-btn" onclick="sendPasswordReset()">
+              إرسال رابط الاستعادة <span style="margin-inline-start:6px">📨</span>
+            </button>
+
+            <div class="login-links" style="margin-top:20px">
+              <p><a href="javascript:;" class="create-acc-link" onclick="navigate('login')">← العودة لتسجيل الدخول</a></p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+window.sendPasswordReset = async function() {
+  const input = document.getElementById('forgot-pw-input');
+  if (!input) return;
+  const val = input.value.trim();
+  if (!val) {
+    toast('يرجى إدخال البريد الإلكتروني أو رقم الجوال', 'error');
+    input.focus();
+    return;
+  }
+
+  showLoader('جاري إرسال رابط الاستعادة...');
+  try {
+    let emailToUse = val;
+
+    if (!val.includes('@')) {
+      const snap = await db.collection('users').where('phone', '==', val).limit(1).get();
+      if (snap.empty) {
+        throw new Error('لم يتم العثور على حساب مرتبط برقم الجوال هذا.');
+      }
+      emailToUse = snap.docs[0].data().email;
+      if (!emailToUse) {
+        throw new Error('هذا الحساب لا يحتوي على بريد إلكتروني صالح لإعادة التعيين.');
+      }
+    }
+
+    await auth.sendPasswordResetEmail(emailToUse);
+
+    hideLoader();
+    const form = document.getElementById('forgot-pw-form');
+    const success = document.getElementById('forgot-pw-success');
+    const msg = document.getElementById('forgot-pw-success-msg');
+    if (form) form.style.display = 'none';
+    if (success) success.style.display = 'flex';
+    if (msg) msg.textContent = `تم إرسال رابط استعادة كلمة المرور إلى: ${emailToUse}`;
+    toast('تم إرسال رابط الاستعادة بنجاح! تحقق من بريدك الإلكتروني 📧', 'success');
+
+  } catch (err) {
+    hideLoader();
+    console.error('Password reset error:', err);
+    let msg = 'حدث خطأ، يرجى المحاولة مرة أخرى.';
+    if (err.code === 'auth/user-not-found') msg = 'لا يوجد حساب مسجل بهذا البريد الإلكتروني.';
+    else if (err.code === 'auth/invalid-email') msg = 'البريد الإلكتروني غير صالح.';
+    else if (err.code === 'auth/too-many-requests') msg = 'طلبات كثيرة، يرجى الانتظار قليلاً والمحاولة مجدداً.';
+    else if (err.message) msg = err.message;
+    toast(msg, 'error');
+  }
+};
 
 function quickBtn(role, icon, label, c1, c2) {
   return `<button class="quick-demo-btn" style="background:linear-gradient(135deg,${c1},${c2})" onclick="quickLogin('${role}')">

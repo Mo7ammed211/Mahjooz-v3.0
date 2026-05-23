@@ -551,3 +551,62 @@ details[open] .dev-console-summary-arrow {
     font-size: 21px;
   }
 }
+
+/* ───────────────────────────────────────────
+   FORGOT PASSWORD LINK
+─────────────────────────────────────────── */
+.forgot-pw-link {
+  color: var(--primary, #8b5cf6);
+  font-size: 13.5px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: opacity 0.2s;
+  opacity: 0.85;
+}
+.forgot-pw-link:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
+/* ───────────────────────────────────────────
+   FORGOT PASSWORD PAGE
+─────────────────────────────────────────── */
+.forgot-pw-wrapper {
+  grid-template-columns: 1.1fr 0.9fr;
+}
+
+.forgot-pw-success-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 28px 20px;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1.5px solid rgba(16, 185, 129, 0.25);
+  border-radius: 16px;
+  margin-top: 20px;
+  gap: 8px;
+}
+.forgot-pw-success-box h3 {
+  color: #10b981;
+  font-size: 18px;
+  font-weight: 800;
+  margin: 0;
+}
+.forgot-pw-success-box p {
+  color: var(--text-secondary, #a89cc8);
+  font-size: 14px;
+  margin: 0;
+  line-height: 1.6;
+}
+.forgot-pw-success-icon {
+  font-size: 40px;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+@media (max-width: 700px) {
+  .forgot-pw-wrapper {
+    grid-template-columns: 1fr;
+  }
+}
