@@ -1179,16 +1179,50 @@ async function saveNewPassword() {
 function generateOTP() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
+// ─── EmailJS Config ───────────────────────────────
+const _EJS = {
+  publicKey:      'yoRVnRbtNtg1vaN-y',
+  serviceId:      'service_tn2f0ml',
+  otpTemplate:    'template_0new8ul',
+  alertTemplate:  'template_0wmtlfy',
+  _ready: false,
+  init() {
+    if (this._ready) return;
+    if (typeof emailjs !== 'undefined') {
+      emailjs.init({ publicKey: this.publicKey });
+      this._ready = true;
+    }
+  },
+  async send(templateId, params) {
+    this.init();
+    if (typeof emailjs === 'undefined') throw new Error('EmailJS غير محمّل');
+    return emailjs.send(this.serviceId, templateId, params);
+  }
+};
+
 async function sendOTP(uid, email) {
   const otp = generateOTP();
-  const expiry = new Date(Date.now() + 10 * 60000); // 10 دقائق
-  await fsUpdate('users', uid, { 
-    otpCode: otp, 
+  const expiry = new Date(Date.now() + 10 * 60000);
+  await fsUpdate('users', uid, {
+    otpCode: otp,
     otpExpiry: expiry,
     otpAttempts: 0
   });
-  console.log(`🔐 رمز OTP للاختبار: ${otp} (صالح لـ 10 دقائق)`);
-  toast(`📧 تم إرسال رمز التحقق إلى ${email}. الرمز: ${otp}`, 'info');
+
+  // إرسال البريد الحقيقي عبر EmailJS
+  try {
+    const userName = State.tempUserData?.name || 'مستخدم محجوز';
+    await _EJS.send(_EJS.otpTemplate, {
+      to_email: email,
+      to_name:  userName,
+      otp_code: otp,
+    });
+    toast(`📧 تم إرسال رمز التحقق إلى ${email}`, 'success');
+  } catch (ejsErr) {
+    console.warn('EmailJS OTP error:', ejsErr);
+    // fallback: اعرض الرمز في رسالة Toast للاختبار
+    toast(`📧 رمز التحقق: ${otp} (تحقق من إعداد EmailJS)`, 'info');
+  }
   return true;
 }
 async function verifyOTP(uid, otp) {
@@ -1381,17 +1415,22 @@ async function _checkNewDeviceLogin(uid, email, name) {
       type: 'new_device'
     });
 
-    // محاكاة إرسال البريد الإلكتروني (تسجيل في Console)
-    console.log(`📧 [تنبيه أمني — بريد إلكتروني] إلى: ${email}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-مرحباً ${name}،
-تم رصد دخول إلى حسابك من جهاز جديد.
-• الجهاز : ${device} — ${browser}${os ? ' / ' + os : ''}
-• الموقع : ${location}
-• عنوان IP: ${ip}
-• الوقت  : ${timeStr}
-إذا لم تكن أنت، غيّر كلمة مرورك فوراً.
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+    // إرسال بريد إلكتروني حقيقي عبر EmailJS
+    const resetLink = `${window.location.origin}/?page=forgot-password`;
+    try {
+      await _EJS.send(_EJS.alertTemplate, {
+        to_email:   email,
+        to_name:    name,
+        device:     `${device} — ${browser}${os ? ' / ' + os : ''}`,
+        location,
+        ip,
+        login_time: timeStr,
+        reset_link: resetLink,
+      });
+      console.log(`📧 [EmailJS] تم إرسال تنبيه أمني إلى ${email}`);
+    } catch (ejsErr) {
+      console.warn('EmailJS alert error:', ejsErr);
+    }
 
     // إشعار داخلي احترافي
     setTimeout(() => {
