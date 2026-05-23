@@ -553,19 +553,28 @@ details[open] .dev-console-summary-arrow {
 }
 
 /* ───────────────────────────────────────────
-   FORGOT PASSWORD LINK
+   PASSWORD LABEL ROW (label + forgot link)
 ─────────────────────────────────────────── */
-.forgot-pw-link {
-  color: var(--primary, #8b5cf6);
-  font-size: 13.5px;
-  font-weight: 600;
-  text-decoration: none;
-  transition: opacity 0.2s;
-  opacity: 0.85;
+.pw-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
 }
-.forgot-pw-link:hover {
+
+.forgot-pw-inline-link {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--primary, #8b5cf6);
+  text-decoration: none;
+  opacity: 0.8;
+  transition: opacity 0.2s, color 0.2s;
+  white-space: nowrap;
+}
+.forgot-pw-inline-link:hover {
   opacity: 1;
   text-decoration: underline;
+  color: #a78bfa;
 }
 
 /* ───────────────────────────────────────────

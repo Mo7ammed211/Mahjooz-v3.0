@@ -97,7 +97,10 @@ function renderLoginPage() {
           </div>
 
           <div class="form-group">
-            <label class="form-label">كلمة المرور</label>
+            <div class="pw-label-row">
+              <label class="form-label" style="margin-bottom:0">كلمة المرور</label>
+              <a href="javascript:;" class="forgot-pw-inline-link" onclick="navigate('forgot-password')">نسيت كلمة المرور؟</a>
+            </div>
             <div class="input-with-icon">
               <span class="input-icon">🔒</span>
               <input class="form-control" id="u-login-pass" type="password" placeholder="••••••••" autocomplete="current-password">
@@ -121,7 +124,6 @@ function renderLoginPage() {
 
           <div class="login-links">
             <p>ليس لديك حساب؟ <a href="javascript:;" class="create-acc-link" onclick="navigate('signup')">إنشاء حساب جديد</a></p>
-            <p style="margin-top:8px"><a href="javascript:;" class="forgot-pw-link" onclick="navigate('forgot-password')">🔑 نسيت كلمة المرور؟</a></p>
             <div class="divider"><span>أو</span></div>
             <a href="javascript:;" class="guest-link" onclick="enterGuest()">
               <span>👁️</span> الدخول كضيف لتصفح المنصة
