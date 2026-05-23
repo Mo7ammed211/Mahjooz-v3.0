@@ -108,7 +108,12 @@ function renderLoginPage() {
             </div>
           </div>
 
-          <button class="btn btn-primary btn-block btn-lg login-submit-btn" onclick="unifiedLogin()">
+          <div id="login-lockout-banner" style="display:none" class="login-lockout-banner">
+            🔒 تم تعليق تسجيل الدخول مؤقتاً بسبب محاولات متكررة.
+            <span id="lockout-countdown"></span>
+          </div>
+
+          <button id="login-submit-btn" class="btn btn-primary btn-block btn-lg login-submit-btn" onclick="unifiedLogin()">
             دخول آمن للمنصة <span style="margin-inline-start:6px">🚀</span>
           </button>
 
@@ -377,62 +382,132 @@ window.continueWithGoogle = async function() {
 };
 
 // ───────────────────────────────────────────────────────
+//  LOGIN LOCKOUT HELPERS
+// ───────────────────────────────────────────────────────
+const _LOCKOUT_MAX = 5;
+const _LOCKOUT_MS  = 15 * 60 * 1000; // 15 دقيقة
+
+function _getLockData(key) {
+  try { return JSON.parse(localStorage.getItem('_mlk_' + key) || '{"count":0,"until":0}'); }
+  catch { return { count: 0, until: 0 }; }
+}
+function _setLockData(key, data) {
+  localStorage.setItem('_mlk_' + key, JSON.stringify(data));
+}
+function _clearLockData(key) {
+  localStorage.removeItem('_mlk_' + key);
+}
+
+let _lockTimer = null;
+function _startLockCountdown(until) {
+  const banner   = document.getElementById('login-lockout-banner');
+  const countdown = document.getElementById('lockout-countdown');
+  const btn       = document.getElementById('login-submit-btn');
+  if (!banner || !btn) return;
+
+  banner.style.display = 'flex';
+  btn.disabled = true;
+  btn.style.opacity = '0.5';
+
+  clearInterval(_lockTimer);
+  _lockTimer = setInterval(() => {
+    const left = until - Date.now();
+    if (left <= 0) {
+      clearInterval(_lockTimer);
+      if (banner) banner.style.display = 'none';
+      if (countdown) countdown.textContent = '';
+      if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+      return;
+    }
+    const m = Math.floor(left / 60000);
+    const s = Math.floor((left % 60000) / 1000);
+    if (countdown) countdown.textContent = ` انتظر ${m}:${String(s).padStart(2,'0')} دقيقة`;
+  }, 1000);
+}
+
+// ───────────────────────────────────────────────────────
 //  UNIFIED LOGIN LOGIC
 // ───────────────────────────────────────────────────────
 async function unifiedLogin() {
   const loginId = document.getElementById('u-login-id').value.trim();
-  const pass = document.getElementById('u-login-pass').value;
+  const pass    = document.getElementById('u-login-pass').value;
 
   if (!loginId || !pass) {
     toast('يرجى إدخال البريد الإلكتروني/رقم الجوال وكلمة المرور', 'error');
     return;
   }
 
+  // ── فحص القفل المؤقت ──
+  const lockKey  = loginId.toLowerCase();
+  const lockData = _getLockData(lockKey);
+  if (lockData.until > Date.now()) {
+    _startLockCountdown(lockData.until);
+    toast('🔒 الحساب مقفل مؤقتاً بسبب محاولات متكررة. حاول لاحقاً.', 'error');
+    return;
+  }
+
   showLoader('جاري تسجيل الدخول...');
-  
+
   try {
     let emailToUse = loginId;
 
-    // Check if input is a phone number (doesn't contain @ and has numbers)
     if (!loginId.includes('@')) {
-      const usersRef = db.collection('users');
-      const q = usersRef.where('phone', '==', loginId).limit(1);
-      const snap = await q.get();
-      
-      if (snap.empty) {
-        throw new Error('لم يتم العثور على حساب مرتبط برقم الجوال هذا.');
-      }
-      
+      const snap = await db.collection('users').where('phone', '==', loginId).limit(1).get();
+      if (snap.empty) throw new Error('لم يتم العثور على حساب مرتبط برقم الجوال هذا.');
       emailToUse = snap.docs[0].data().email;
-      if (!emailToUse) {
-        throw new Error('هذا الحساب لا يحتوي على بريد إلكتروني صالح.');
-      }
+      if (!emailToUse) throw new Error('هذا الحساب لا يحتوي على بريد إلكتروني صالح.');
     }
 
-    // Login with Firebase Auth
-    await auth.signInWithEmailAndPassword(emailToUse, pass);
-    
-    toast('تم تسجيل الدخول بنجاح! ✅', 'success');
-    
-    setTimeout(async () => {
-      closeModal();
-      hideLoader();
-      await render();
-    }, 800);
-    
+    const cred = await auth.signInWithEmailAndPassword(emailToUse, pass);
+
+    // ✅ نجح الدخول — أعد عداد المحاولات
+    _clearLockData(lockKey);
+
+    // ── جلب بيانات المستخدم ──
+    const snap2 = await db.collection('users').doc(cred.user.uid).get();
+    const ud    = snap2.data();
+    if (!ud) throw new Error('بيانات الحساب غير موجودة في النظام.');
+
+    // ── إرسال OTP وتحويل لصفحة التحقق ──
+    hideLoader();
+    State.tempUserData = { uid: cred.user.uid, ...ud };
+    State.awaitingOTP  = true;
+    await sendOTP(cred.user.uid, ud.email);
+    await navigate('verify2fa');
+
   } catch (err) {
     hideLoader();
-    console.error("Login Error:", err);
-    let msg = 'بيانات الدخول غير صحيحة.';
-    if (err.message) {
-      if (err.message.includes('auth/')) {
-        if (err.code === 'auth/user-not-found') msg = 'المستخدم غير موجود.';
-        else if (err.code === 'auth/wrong-password') msg = 'كلمة المرور خاطئة.';
-      } else {
-        msg = err.message;
+    console.error('Login Error:', err);
+
+    const isAuthErr = err.code && (
+      err.code === 'auth/wrong-password'    ||
+      err.code === 'auth/user-not-found'    ||
+      err.code === 'auth/invalid-credential'||
+      err.code === 'auth/invalid-email'
+    );
+
+    if (isAuthErr) {
+      const ld = _getLockData(lockKey);
+      ld.count = (ld.count || 0) + 1;
+      if (ld.count >= _LOCKOUT_MAX) {
+        ld.until = Date.now() + _LOCKOUT_MS;
+        _setLockData(lockKey, ld);
+        _startLockCountdown(ld.until);
+        toast(`🔒 تم تعليق الحساب مؤقتاً لمدة 15 دقيقة بعد ${_LOCKOUT_MAX} محاولات فاشلة.`, 'error');
+        return;
       }
+      _setLockData(lockKey, ld);
+      const remaining = _LOCKOUT_MAX - ld.count;
+      const msgs = {
+        'auth/user-not-found':     'البريد الإلكتروني غير مسجل.',
+        'auth/wrong-password':     'كلمة المرور خاطئة.',
+        'auth/invalid-credential': 'بيانات الدخول غير صحيحة.',
+        'auth/invalid-email':      'صيغة البريد الإلكتروني غير صحيحة.',
+      };
+      toast(`${msgs[err.code] || 'بيانات غير صحيحة.'} — تبقّى ${remaining} محاولة قبل القفل.`, 'error');
+    } else {
+      toast(err.message || 'حدث خطأ، يرجى المحاولة مرة أخرى.', 'error');
     }
-    toast(msg, 'error');
   }
 }
 
