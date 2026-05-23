@@ -531,43 +531,106 @@ function renderSignupPage() {
     <div class="login-bg-circle circle-2"></div>
     <div class="login-topbar-absolute">${languageToggleHTML()}</div>
 
-    <div class="signup-full-wrapper">
-      <div class="signup-full-header">
-        <button class="signup-back-btn" onclick="navigate('login')">← العودة لتسجيل الدخول</button>
-        <div class="signup-logo">✨ ${t('app_name')}</div>
+    <div class="unified-login-wrapper signup-role-wrapper">
+
+      <!-- Right: Info Side -->
+      <div class="login-info-side">
+        <div class="login-info-content">
+          <div class="login-brand-badge">✨ ${t('app_name')}</div>
+          <h1 class="info-title">انضم إلى <span>محجوز</span></h1>
+          <p class="info-desc">منصتك الشاملة للحجوزات والخدمات — اختر دورك وابدأ رحلتك معنا في دقيقتين.</p>
+
+          <!-- Progress Bar -->
+          <div class="signup-progress-wrap">
+            <div class="signup-progress-label">
+              <span>الخطوة 1 من 2</span>
+              <span>50%</span>
+            </div>
+            <div class="signup-progress-track">
+              <div class="signup-progress-fill" style="width:50%"></div>
+            </div>
+          </div>
+
+          <div class="info-features" style="margin-top:28px">
+            <div class="info-feature-item">
+              <div class="feature-icon glass-icon">🔐</div>
+              <div><h4>حساب آمن ومحمي</h4><p>بيانات مشفرة وخصوصية تامة</p></div>
+            </div>
+            <div class="info-feature-item">
+              <div class="feature-icon glass-icon">⚡</div>
+              <div><h4>تسجيل خلال دقيقتين</h4><p>نموذج بسيط وسريع دون تعقيد</p></div>
+            </div>
+            <div class="info-feature-item">
+              <div class="feature-icon glass-icon">🎯</div>
+              <div><h4>تجربة مخصصة لك</h4><p>واجهة تتكيف مع دورك في المنصة</p></div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div class="signup-step-container">
-        <div class="signup-step-badge">الخطوة 1 من 2</div>
-        <h2 class="signup-step-title">ما هي صفتك في المنصة؟</h2>
-        <p class="signup-step-desc">اختر دورك لنخصص تجربتك ونوجهك بشكل صحيح</p>
+      <!-- Left: Role Selection -->
+      <div class="login-form-side">
+        <div class="login-form-container" style="max-width:460px">
 
-        <div class="signup-role-grid">
-          <button class="signup-role-card" onclick="renderSignupFormPage('customer')">
-            <div class="signup-role-emoji">👤</div>
-            <div class="signup-role-name">عميل</div>
-            <div class="signup-role-hint">أبحث عن خدمات وأطلبها</div>
-            <div class="signup-role-arrow">←</div>
-          </button>
-          <button class="signup-role-card" onclick="renderSignupFormPage('driver')">
-            <div class="signup-role-emoji">🚗</div>
-            <div class="signup-role-name">مندوب توصيل</div>
-            <div class="signup-role-hint">أوصّل الطلبات للعملاء</div>
-            <div class="signup-role-arrow">←</div>
-          </button>
-          <button class="signup-role-card" onclick="renderSignupFormPage('vendor')">
-            <div class="signup-role-emoji">🏪</div>
-            <div class="signup-role-name">مزود خدمة</div>
-            <div class="signup-role-hint">أقدّم خدمات أو منتجات</div>
-            <div class="signup-role-arrow">←</div>
-          </button>
-        </div>
+          <div class="form-header-area">
+            <div class="login-logo-mini">📋 الخطوة 1 من 2</div>
+            <h2 class="form-title">ما هي صفتك في المنصة؟</h2>
+            <p class="form-subtitle">اختر دورك لنخصّص تجربتك ونوجهك بشكل صحيح</p>
+          </div>
 
-        <div class="signup-login-hint">
-          لديك حساب بالفعل؟
-          <a href="javascript:;" onclick="navigate('login')" style="color:var(--primary);font-weight:700">تسجيل الدخول</a>
+          <div class="signup-role-cards-list">
+
+            <button class="signup-role-card-v2" onclick="renderSignupFormPage('customer')">
+              <div class="src-v2-icon-wrap" style="background:linear-gradient(135deg,#0ea5e9,#0284c7)">👤</div>
+              <div class="src-v2-body">
+                <div class="src-v2-name">عميل</div>
+                <div class="src-v2-desc">أبحث عن خدمات وأطلبها</div>
+              </div>
+              <div class="src-v2-features">
+                <span>🛒 طلبات</span>
+                <span>📦 توصيل</span>
+                <span>⭐ تقييم</span>
+              </div>
+              <div class="src-v2-arrow">←</div>
+            </button>
+
+            <button class="signup-role-card-v2" onclick="renderSignupFormPage('driver')">
+              <div class="src-v2-icon-wrap" style="background:linear-gradient(135deg,#10b981,#059669)">🚗</div>
+              <div class="src-v2-body">
+                <div class="src-v2-name">مندوب توصيل</div>
+                <div class="src-v2-desc">أوصّل الطلبات للعملاء وأكسب</div>
+              </div>
+              <div class="src-v2-features">
+                <span>📍 تتبع</span>
+                <span>💰 أرباح</span>
+                <span>🗺️ مسارات</span>
+              </div>
+              <div class="src-v2-arrow">←</div>
+            </button>
+
+            <button class="signup-role-card-v2" onclick="renderSignupFormPage('vendor')">
+              <div class="src-v2-icon-wrap" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed)">🏪</div>
+              <div class="src-v2-body">
+                <div class="src-v2-name">مزود خدمة / متجر</div>
+                <div class="src-v2-desc">أقدّم خدمات أو أبيع منتجات</div>
+              </div>
+              <div class="src-v2-features">
+                <span>📊 لوحة تحكم</span>
+                <span>🏷️ منتجات</span>
+                <span>📈 إحصائيات</span>
+              </div>
+              <div class="src-v2-arrow">←</div>
+            </button>
+
+          </div>
+
+          <div class="login-links" style="margin-top:20px;text-align:center">
+            <p>لديك حساب بالفعل؟ <a href="javascript:;" onclick="navigate('login')" class="create-acc-link">تسجيل الدخول</a></p>
+          </div>
+
         </div>
       </div>
+
     </div>
   </div>`;
 }

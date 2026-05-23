@@ -553,6 +553,175 @@ details[open] .dev-console-summary-arrow {
 }
 
 /* ───────────────────────────────────────────
+   SIGNUP ROLE SELECTION — V2
+─────────────────────────────────────────── */
+.signup-role-wrapper {
+  grid-template-columns: 1.1fr 0.9fr;
+}
+
+/* Progress Bar */
+.signup-progress-wrap {
+  margin-top: 28px;
+}
+.signup-progress-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-secondary, #a89cc8);
+  margin-bottom: 8px;
+}
+.signup-progress-track {
+  width: 100%;
+  height: 6px;
+  background: rgba(139, 92, 246, 0.15);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.signup-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #8b5cf6, #c4b5fd);
+  border-radius: 99px;
+  transition: width 0.5s ease;
+  box-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
+}
+
+/* Role Cards List */
+.signup-role-cards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+/* Individual Role Card */
+.signup-role-card-v2 {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 52px 1fr auto auto;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  background: rgba(26, 22, 49, 0.5);
+  border: 1.5px solid rgba(50, 43, 84, 0.6);
+  border-radius: 18px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  text-align: right;
+  position: relative;
+  overflow: hidden;
+}
+.signup-role-card-v2::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(139,92,246,0.04), transparent);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+.signup-role-card-v2:hover::before {
+  opacity: 1;
+}
+.signup-role-card-v2:hover {
+  border-color: rgba(139, 92, 246, 0.5);
+  background: rgba(139, 92, 246, 0.08);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(139, 92, 246, 0.15);
+}
+.signup-role-card-v2:active {
+  transform: translateY(0);
+}
+
+/* Icon */
+.src-v2-icon-wrap {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  flex-shrink: 0;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.25);
+  transition: transform 0.25s ease;
+}
+.signup-role-card-v2:hover .src-v2-icon-wrap {
+  transform: scale(1.08) rotate(-3deg);
+}
+
+/* Body */
+.src-v2-body {
+  text-align: right;
+  flex: 1;
+}
+.src-v2-name {
+  font-size: 16px;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 3px;
+  letter-spacing: -0.3px;
+}
+.src-v2-desc {
+  font-size: 12.5px;
+  color: var(--text-secondary, #a89cc8);
+  font-weight: 500;
+}
+
+/* Feature Tags */
+.src-v2-features {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.src-v2-features span {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary, #a89cc8);
+  background: rgba(139, 92, 246, 0.08);
+  border: 1px solid rgba(139, 92, 246, 0.15);
+  padding: 3px 8px;
+  border-radius: 99px;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+.signup-role-card-v2:hover .src-v2-features span {
+  border-color: rgba(139, 92, 246, 0.35);
+  color: #c4b5fd;
+}
+
+/* Arrow */
+.src-v2-arrow {
+  font-size: 18px;
+  color: rgba(139, 92, 246, 0.5);
+  font-weight: 900;
+  flex-shrink: 0;
+  transition: transform 0.25s ease, color 0.25s ease;
+  margin-inline-start: 4px;
+}
+.signup-role-card-v2:hover .src-v2-arrow {
+  transform: translateX(-4px);
+  color: #8b5cf6;
+}
+
+@media (max-width: 768px) {
+  .signup-role-wrapper {
+    grid-template-columns: 1fr;
+  }
+  .signup-role-card-v2 {
+    grid-template-columns: 44px 1fr auto;
+  }
+  .src-v2-features {
+    display: none;
+  }
+  .src-v2-icon-wrap {
+    width: 44px;
+    height: 44px;
+    font-size: 20px;
+  }
+}
+
+/* ───────────────────────────────────────────
    LOGIN LOCKOUT BANNER
 ─────────────────────────────────────────── */
 .login-lockout-banner {
