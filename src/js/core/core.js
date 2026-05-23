@@ -1286,6 +1286,10 @@ async function verify2FA() {
     State.tempUserData = null;
     State.awaitingOTP = false;
     toast(`✅ تم التحقق بنجاح! أهلاً ${State.currentUser.name}`, 'success');
+
+    // كشف الجهاز الجديد (غير مُعيق)
+    _checkNewDeviceLogin(State.currentUser.uid, State.currentUser.email, State.currentUser.name);
+
     if (State.currentUser.role === 'vendor' && State.currentUser.firstLogin) {
       await navigate('vendor');
       showChangePwModal();
@@ -1304,6 +1308,124 @@ async function resendOTP() {
     toast('✅ تم إعادة إرسال الرمز','success');
   } catch(e) {
     toast(e.message,'error');
+  }
+}
+
+// ─── New Device / Location Detection ──────────────
+function _genDeviceId() {
+  const fp = [
+    navigator.userAgent,
+    screen.width + 'x' + screen.height,
+    Intl.DateTimeFormat().resolvedOptions().timeZone,
+    navigator.language
+  ].join('|');
+  let h = 0;
+  for (const c of fp) h = (Math.imul(31, h) + c.charCodeAt(0)) | 0;
+  return 'dev_' + Math.abs(h).toString(36);
+}
+
+async function _getIPInfo() {
+  try {
+    const ctrl = new AbortController();
+    setTimeout(() => ctrl.abort(), 4000);
+    const r = await fetch('https://ipapi.co/json/?fields=ip,city,country_name', { signal: ctrl.signal });
+    return await r.json();
+  } catch { return null; }
+}
+
+function _getDeviceName() {
+  const ua = navigator.userAgent;
+  const device = /Mobile|Android|iPhone|iPad/.test(ua) ? '📱 جهاز محمول' : '💻 حاسب';
+  const browser = ua.includes('Edg') ? 'Edge'
+    : ua.includes('Chrome') ? 'Chrome'
+    : ua.includes('Firefox') ? 'Firefox'
+    : ua.includes('Safari') ? 'Safari'
+    : 'متصفح غير معروف';
+  const os = ua.includes('Windows') ? 'Windows'
+    : ua.includes('Mac') ? 'macOS'
+    : ua.includes('Android') ? 'Android'
+    : ua.includes('iPhone') || ua.includes('iPad') ? 'iOS'
+    : ua.includes('Linux') ? 'Linux'
+    : '';
+  return { device, browser, os };
+}
+
+async function _checkNewDeviceLogin(uid, email, name) {
+  try {
+    const deviceId  = _genDeviceId();
+    const storeKey  = '_mdid_' + uid;
+    const knownId   = localStorage.getItem(storeKey);
+    const isNew     = !knownId || knownId !== deviceId;
+
+    // جلب بيانات الموقع الجغرافي دائماً (للتسجيل حتى لو ليس جهازاً جديداً)
+    const ipInfo    = await _getIPInfo();
+    const city      = ipInfo?.city || '';
+    const country   = ipInfo?.country_name || '';
+    const location  = [city, country].filter(Boolean).join('، ') || 'غير محدد';
+    const ip        = ipInfo?.ip || 'غير معروف';
+    const { device, browser, os } = _getDeviceName();
+    const timeStr   = new Date().toLocaleString('ar-SA', { dateStyle:'full', timeStyle:'short' });
+
+    // حفظ بصمة الجهاز الحالي
+    localStorage.setItem(storeKey, deviceId);
+
+    if (!isNew) return; // ليس جهازاً جديداً
+
+    // حفظ التنبيه في Firestore
+    await db.collection('loginAlerts').add({
+      uid, email, name,
+      deviceId, device, browser, os,
+      location, ip,
+      time: new Date(),
+      read: false,
+      type: 'new_device'
+    });
+
+    // محاكاة إرسال البريد الإلكتروني (تسجيل في Console)
+    console.log(`📧 [تنبيه أمني — بريد إلكتروني] إلى: ${email}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+مرحباً ${name}،
+تم رصد دخول إلى حسابك من جهاز جديد.
+• الجهاز : ${device} — ${browser}${os ? ' / ' + os : ''}
+• الموقع : ${location}
+• عنوان IP: ${ip}
+• الوقت  : ${timeStr}
+إذا لم تكن أنت، غيّر كلمة مرورك فوراً.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+
+    // إشعار داخلي احترافي
+    setTimeout(() => {
+      openModal(`
+        <div class="modal-header new-device-alert-header">
+          <div class="new-device-alert-icon">🔔</div>
+          <div>
+            <h2 class="modal-title" style="color:#f59e0b">تنبيه أمني: دخول من جهاز جديد</h2>
+            <p style="color:var(--text-secondary);font-size:13px;margin:4px 0 0">تم رصد هذا النشاط على حسابك</p>
+          </div>
+          <button class="modal-close" onclick="closeModal()">✕</button>
+        </div>
+        <div class="modal-body new-device-alert-body">
+          <p class="new-device-greeting">مرحباً <strong>${name}</strong>، لاحظنا دخولاً إلى حسابك من جهاز لم نتعرف عليه سابقاً.</p>
+
+          <div class="new-device-info-card">
+            <div class="new-device-info-row"><span class="info-label">📱 الجهاز</span><span class="info-val">${device} — ${browser}${os ? ' / ' + os : ''}</span></div>
+            <div class="new-device-info-row"><span class="info-label">📍 الموقع</span><span class="info-val">${location}</span></div>
+            <div class="new-device-info-row"><span class="info-label">🌐 عنوان IP</span><span class="info-val">${ip}</span></div>
+            <div class="new-device-info-row"><span class="info-label">🕐 الوقت</span><span class="info-val">${timeStr}</span></div>
+          </div>
+
+          <p class="new-device-tip">إذا لم تكن أنت من قام بهذا الدخول، يرجى تغيير كلمة مرورك فوراً لحماية حسابك.</p>
+
+          <div class="new-device-actions">
+            <button class="btn btn-primary" onclick="closeModal()">✅ أنا من دخل، لا مشكلة</button>
+            <button class="btn btn-danger new-device-change-pw-btn" onclick="navigate('forgot-password');closeModal()">🔒 تغيير كلمة المرور</button>
+          </div>
+        </div>
+      `);
+    }, 1200);
+
+  } catch(e) {
+    console.warn('[NewDevice] فشل كشف الجهاز:', e);
   }
 }
 
