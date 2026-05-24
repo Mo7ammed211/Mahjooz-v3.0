@@ -816,8 +816,14 @@ function renderAdminUsers() {
                 </div>
               </div>
             </div>
-            <div style="margin-bottom:12px">
+            <div style="margin-bottom:12px;display:flex;flex-wrap:wrap;gap:6px;align-items:center">
               <span class="badge ${roleBadge[u.role]||'badge-purple'}" style="font-size:11px;padding:4px 8px">${roleIcon[u.role]||''} ${roleLabel[u.role]||u.role||'—'}</span>
+              ${(u.role==='vendor'||u.role==='provider') ? (()=>{
+                const grp = (AppData.providerGroups||[]).find(g=>g.id===u.providerGroupId);
+                return grp
+                  ? `<span style="font-size:11px;padding:3px 8px;border-radius:20px;background:rgba(139,92,246,0.12);color:var(--primary);border:1px solid rgba(139,92,246,0.25);font-weight:600">${grp.icon||'🏢'} ${escHtml(grp.name)}</span>`
+                  : `<span style="font-size:11px;padding:3px 8px;border-radius:20px;background:rgba(100,116,139,0.1);color:var(--text-muted);border:1px solid rgba(100,116,139,0.2);font-weight:500">غير مصنّف</span>`;
+              })() : ''}
             </div>
             <div class="usys-svc-desc" style="font-size:12px;display:flex;flex-direction:column;gap:4px;margin-bottom:16px;flex:1">
               <div style="display:flex;align-items:center;gap:6px;color:var(--text-secondary)"><span style="font-size:14px">📧</span> <span style="direction:ltr;font-family:monospace">${u.email||'—'}</span></div>
