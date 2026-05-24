@@ -203,6 +203,7 @@ window.dp_saveSubzone = async function(data, id = null) {
     const payload = {
       zoneId: data.zoneId,
       name: data.name?.trim(),
+      vehicleType: data.vehicleType || 'motorcycle',
       updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
     };
     if (id) {
@@ -231,13 +232,14 @@ window.dp_deleteSubzone = async function(id) {
 window.dp_saveRoute = async function(data, id = null) {
   try {
     const payload = {
-      zoneId:   data.zoneId,
-      fromArea: data.fromArea?.trim(),
-      toArea:   data.toArea?.trim(),
-      price:    Number(data.price) || 0,
-      weight:   data.weight ? Number(data.weight) : null, // اختياري للمستقبل
-      active:   data.active !== false,
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      zoneId:      data.zoneId,
+      fromArea:    data.fromArea?.trim(),
+      toArea:      data.toArea?.trim(),
+      price:       Number(data.price) || 0,
+      weight:      data.weight ? Number(data.weight) : null,
+      active:      data.active !== false,
+      vehicleType: data.vehicleType || 'motorcycle',
+      updatedAt:   firebase.firestore.FieldValue.serverTimestamp(),
     };
     if (id) {
       await db.collection('delivery_routes').doc(id).update(payload);
