@@ -194,24 +194,37 @@
 }
 
 .login-logo-mini {
-  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
   font-weight: 800;
-  color: var(--primary, #8b5cf6);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: 8px;
+  font-family: 'Cairo', 'Tajawal', sans-serif;
+  color: #a78bfa;
+  background: rgba(139, 92, 246, 0.1);
+  border: 1px solid rgba(139, 92, 246, 0.25);
+  padding: 5px 12px;
+  border-radius: 99px;
+  letter-spacing: 0.5px;
+  margin-bottom: 14px;
 }
 
 .form-title {
-  font-size: 26px;
-  font-weight: 800;
+  font-size: 28px;
+  font-weight: 900;
+  font-family: 'Cairo', 'Tajawal', sans-serif;
   color: #fff;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
+  line-height: 1.25;
+  letter-spacing: -0.5px;
 }
 
 .form-subtitle {
-  font-size: 13.5px;
+  font-size: 14px;
+  font-family: 'Cairo', 'Tajawal', sans-serif;
   color: var(--text-secondary, #a7a5b8);
+  font-weight: 500;
+  line-height: 1.6;
 }
 
 /* Glowing Input Fields styling */
@@ -597,14 +610,13 @@ details[open] .dev-console-summary-arrow {
 /* Individual Role Card */
 .signup-role-card-v2 {
   width: 100%;
-  display: grid;
-  grid-template-columns: 52px 1fr auto auto;
-  align-items: center;
-  gap: 14px;
-  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px 20px;
   background: rgba(26, 22, 49, 0.5);
   border: 1.5px solid rgba(50, 43, 84, 0.6);
-  border-radius: 18px;
+  border-radius: 20px;
   cursor: pointer;
   transition: all 0.25s ease;
   text-align: right;
@@ -615,9 +627,10 @@ details[open] .dev-console-summary-arrow {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(139,92,246,0.04), transparent);
+  background: linear-gradient(135deg, rgba(139,92,246,0.05), transparent);
   opacity: 0;
   transition: opacity 0.25s ease;
+  pointer-events: none;
 }
 .signup-role-card-v2:hover::before {
   opacity: 1;
@@ -629,7 +642,16 @@ details[open] .dev-console-summary-arrow {
   box-shadow: 0 12px 32px rgba(139, 92, 246, 0.15);
 }
 .signup-role-card-v2:active {
-  transform: translateY(0);
+  transform: scale(0.98);
+  box-shadow: none;
+}
+
+/* Top row: icon + text + arrow */
+.src-v2-top-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
 }
 
 /* Icon */
@@ -640,31 +662,53 @@ details[open] .dev-console-summary-arrow {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
+  font-size: 26px;
   flex-shrink: 0;
-  box-shadow: 0 6px 16px rgba(0,0,0,0.25);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.28);
   transition: transform 0.25s ease;
 }
 .signup-role-card-v2:hover .src-v2-icon-wrap {
-  transform: scale(1.08) rotate(-3deg);
+  transform: scale(1.07) rotate(-3deg);
 }
 
 /* Body */
 .src-v2-body {
   text-align: right;
   flex: 1;
+  min-width: 0;
 }
 .src-v2-name {
-  font-size: 16px;
-  font-weight: 800;
+  font-size: 17px;
+  font-weight: 900;
   color: #fff;
   margin-bottom: 3px;
-  letter-spacing: -0.3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: 'Cairo', 'Tajawal', sans-serif;
+  letter-spacing: -0.2px;
 }
 .src-v2-desc {
   font-size: 12.5px;
   color: var(--text-secondary, #a89cc8);
   font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Arrow */
+.src-v2-arrow {
+  font-size: 20px;
+  color: rgba(139, 92, 246, 0.45);
+  font-weight: 900;
+  flex-shrink: 0;
+  transition: transform 0.25s ease, color 0.25s ease;
+  line-height: 1;
+}
+.signup-role-card-v2:hover .src-v2-arrow {
+  transform: translateX(-5px);
+  color: #a78bfa;
 }
 
 /* Feature Tags */
@@ -673,14 +717,16 @@ details[open] .dev-console-summary-arrow {
   gap: 6px;
   flex-wrap: wrap;
   justify-content: flex-end;
+  padding-top: 2px;
+  border-top: 1px solid rgba(139, 92, 246, 0.1);
 }
 .src-v2-features span {
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 700;
   color: var(--text-secondary, #a89cc8);
   background: rgba(139, 92, 246, 0.08);
   border: 1px solid rgba(139, 92, 246, 0.15);
-  padding: 3px 8px;
+  padding: 4px 10px;
   border-radius: 99px;
   white-space: nowrap;
   transition: all 0.2s;
@@ -690,34 +736,81 @@ details[open] .dev-console-summary-arrow {
   color: #c4b5fd;
 }
 
-/* Arrow */
-.src-v2-arrow {
-  font-size: 18px;
-  color: rgba(139, 92, 246, 0.5);
-  font-weight: 900;
-  flex-shrink: 0;
-  transition: transform 0.25s ease, color 0.25s ease;
-  margin-inline-start: 4px;
-}
-.signup-role-card-v2:hover .src-v2-arrow {
-  transform: translateX(-4px);
-  color: #8b5cf6;
-}
-
-@media (max-width: 768px) {
+/* ─── TABLET ─── */
+@media (max-width: 992px) {
   .signup-role-wrapper {
     grid-template-columns: 1fr;
+    max-width: 500px;
   }
-  .signup-role-card-v2 {
-    grid-template-columns: 44px 1fr auto;
-  }
-  .src-v2-features {
+  .signup-role-wrapper .login-info-side {
     display: none;
   }
+  .signup-role-wrapper .login-form-side {
+    padding: 40px 32px;
+  }
+  .signup-role-wrapper .login-form-container {
+    max-width: 100% !important;
+  }
+}
+
+/* ─── MOBILE ─── */
+@media (max-width: 600px) {
+  .signup-role-wrapper {
+    max-width: 100%;
+    margin: 0;
+    border-radius: 0;
+    min-height: 100svh;
+    box-shadow: none;
+  }
+  .signup-role-wrapper .login-form-side {
+    padding: 32px 20px 40px;
+    min-height: 100svh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .signup-role-wrapper .login-form-container {
+    max-width: 100% !important;
+    width: 100%;
+  }
+  .signup-role-wrapper .form-title {
+    font-size: 22px;
+  }
+  .signup-role-wrapper .form-subtitle {
+    font-size: 13px;
+  }
+  .signup-role-cards-list {
+    gap: 10px;
+  }
+  .signup-role-card-v2 {
+    padding: 14px 16px;
+    border-radius: 16px;
+    gap: 8px;
+  }
+  .src-v2-top-row {
+    gap: 12px;
+  }
   .src-v2-icon-wrap {
-    width: 44px;
-    height: 44px;
-    font-size: 20px;
+    width: 46px;
+    height: 46px;
+    font-size: 22px;
+    border-radius: 12px;
+  }
+  .src-v2-name {
+    font-size: 15px;
+  }
+  .src-v2-desc {
+    font-size: 12px;
+  }
+  .src-v2-features {
+    gap: 5px;
+  }
+  .src-v2-features span {
+    font-size: 11px;
+    padding: 3px 8px;
+  }
+  .src-v2-arrow {
+    font-size: 17px;
   }
 }
 

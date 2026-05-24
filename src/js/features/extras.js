@@ -581,45 +581,51 @@ function renderSignupPage() {
           <div class="signup-role-cards-list">
 
             <button class="signup-role-card-v2" onclick="renderSignupFormPage('customer')">
-              <div class="src-v2-icon-wrap" style="background:linear-gradient(135deg,#0ea5e9,#0284c7)">👤</div>
-              <div class="src-v2-body">
-                <div class="src-v2-name">عميل</div>
-                <div class="src-v2-desc">أبحث عن خدمات وأطلبها</div>
+              <div class="src-v2-top-row">
+                <div class="src-v2-icon-wrap" style="background:linear-gradient(135deg,#0ea5e9,#0284c7)">👤</div>
+                <div class="src-v2-body">
+                  <div class="src-v2-name">عميل</div>
+                  <div class="src-v2-desc">أبحث عن خدمات وأطلبها</div>
+                </div>
+                <div class="src-v2-arrow">←</div>
               </div>
               <div class="src-v2-features">
                 <span>🛒 طلبات</span>
                 <span>📦 توصيل</span>
                 <span>⭐ تقييم</span>
               </div>
-              <div class="src-v2-arrow">←</div>
             </button>
 
             <button class="signup-role-card-v2" onclick="renderSignupFormPage('driver')">
-              <div class="src-v2-icon-wrap" style="background:linear-gradient(135deg,#10b981,#059669)">🚗</div>
-              <div class="src-v2-body">
-                <div class="src-v2-name">مندوب توصيل</div>
-                <div class="src-v2-desc">أوصّل الطلبات للعملاء وأكسب</div>
+              <div class="src-v2-top-row">
+                <div class="src-v2-icon-wrap" style="background:linear-gradient(135deg,#10b981,#059669)">🚗</div>
+                <div class="src-v2-body">
+                  <div class="src-v2-name">مندوب توصيل</div>
+                  <div class="src-v2-desc">أوصّل الطلبات للعملاء وأكسب</div>
+                </div>
+                <div class="src-v2-arrow">←</div>
               </div>
               <div class="src-v2-features">
                 <span>📍 تتبع</span>
                 <span>💰 أرباح</span>
                 <span>🗺️ مسارات</span>
               </div>
-              <div class="src-v2-arrow">←</div>
             </button>
 
             <button class="signup-role-card-v2" onclick="renderSignupFormPage('vendor')">
-              <div class="src-v2-icon-wrap" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed)">🏪</div>
-              <div class="src-v2-body">
-                <div class="src-v2-name">مزود خدمة / متجر</div>
-                <div class="src-v2-desc">أقدّم خدمات أو أبيع منتجات</div>
+              <div class="src-v2-top-row">
+                <div class="src-v2-icon-wrap" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed)">🏪</div>
+                <div class="src-v2-body">
+                  <div class="src-v2-name">مزود خدمة أو متجر</div>
+                  <div class="src-v2-desc">أقدّم خدمات أو أبيع منتجات</div>
+                </div>
+                <div class="src-v2-arrow">←</div>
               </div>
               <div class="src-v2-features">
                 <span>📊 لوحة تحكم</span>
                 <span>🏷️ منتجات</span>
                 <span>📈 إحصائيات</span>
               </div>
-              <div class="src-v2-arrow">←</div>
             </button>
 
           </div>
