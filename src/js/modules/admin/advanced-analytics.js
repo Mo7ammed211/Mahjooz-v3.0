@@ -329,11 +329,18 @@ window.renderStaffPermissions = function () {
               <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
                 ${sus ? '<span class="badge badge-rose">⏸️ معلّق</span>' : '<span class="badge badge-teal">✅ نشط</span>'}
                 <span class="badge badge-gold">${pcount} صلاحية</span>
+                ${(u.assignedSections||[]).length ? `<span class="badge badge-purple">📋 ${(u.assignedSections||[]).length} قسم</span>` : '<span class="badge" style="background:rgba(107,114,128,0.1);color:var(--text-muted)">📋 كل الأقسام</span>'}
               </div>
+              ${typeof ph_renderStaffScopeBadges === 'function' ? ph_renderStaffScopeBadges(u) : ''}
             </div>
-            <button class="btn btn-primary btn-sm ph42-perm-btn" onclick="showPermsModal('${u.id}')">
-              🔑 الصلاحيات
-            </button>
+            <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
+              <button class="btn btn-primary btn-sm ph42-perm-btn" onclick="showPermsModal('${u.id}')">
+                🔑 الصلاحيات
+              </button>
+              <button class="btn btn-sm" style="background:rgba(139,92,246,0.12);color:var(--primary);border:1px solid rgba(139,92,246,0.3);border-radius:10px;padding:6px 12px;font-weight:700;cursor:pointer;font-size:12px" onclick="ph_openAssignModal('${u.id}')">
+                📋 تعيين الأقسام
+              </button>
+            </div>
           </div>`;
       }).join('')}
     </div>` : `

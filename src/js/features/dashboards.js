@@ -2138,18 +2138,27 @@ function renderDriverProfile() {
 window.renderStaff = function() {
   if (State.currentUser?.role !== 'staff') { navigate('home'); return ''; }
   const u = State.currentUser;
-  const staffTab = State.staffTab || 'support';
+  const staffTab = State.staffTab || 'orders';
   const initial = (u.name || u.email || 'S')[0].toUpperCase();
   const displayName = u.name || u.email || 'الموظف';
+
+  // حساب عدد الطلبات المعينة للموظف
+  const myAssignedOrders = typeof ph_filterOrdersByAssignment === 'function'
+    ? ph_filterOrdersByAssignment(AppData.orders || [], u)
+    : (AppData.orders || []);
+  const pendingMine = myAssignedOrders.filter(o => ['pending','pending_admin'].includes(o.status)).length;
+
   const tabs = [
+    ['orders', '📋', `طلباتي${pendingMine ? ` <span style="background:#ef4444;color:#fff;border-radius:99px;padding:0 6px;font-size:10px;margin-right:2px">${pendingMine}</span>` : ''}`],
     ['support','💬','الدعم والمحادثات'],
     ['payments','💳','توثيق المدفوعات'],
     ['cats','📂','إدارة التصنيفات'],
     ['services','🛠️','إدارة الخدمات']
   ];
-  
+
   let content = '';
-  if (staffTab==='support') content = `
+  if (staffTab==='orders') content = typeof renderStaffOrders === 'function' ? renderStaffOrders() : '<div style="padding:40px;text-align:center;color:var(--text-muted)">⏳ جاري التحميل...</div>';
+  else if (staffTab==='support') content = `
     <div class="dashboard-header">
       <h2>💬 مركز الدعم الفني</h2>
       <p>إدارة استفسارات المستخدمين والمحادثات المباشرة</p>
