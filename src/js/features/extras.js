@@ -377,7 +377,16 @@ window.continueWithGoogle = async function() {
       return;
     }
     
-    toast('حدث خطأ أثناء المتابعة باستخدام جوجل: ' + (err.message || err), 'error');
+    const googleErrMap = {
+      'auth/popup-closed-by-user':   'تم إغلاق نافذة جوجل، يرجى المحاولة مجدداً.',
+      'auth/popup-blocked':          'تم حجب النافذة المنبثقة، يرجى السماح بها في المتصفح.',
+      'auth/account-exists-with-different-credential': 'يوجد حساب بهذا البريد بطريقة دخول مختلفة.',
+      'auth/network-request-failed': 'فشل الاتصال بالشبكة، تحقق من اتصالك بالإنترنت.',
+      'auth/too-many-requests':      'محاولات كثيرة جداً، يرجى الانتظار قليلاً.',
+      'auth/user-disabled':          'هذا الحساب موقوف، يرجى التواصل مع الإدارة.',
+      'auth/cancelled-popup-request':'تم إلغاء الطلب، يرجى المحاولة مجدداً.',
+    };
+    toast(googleErrMap[errCode] || 'حدث خطأ أثناء تسجيل الدخول بجوجل، يرجى المحاولة مجدداً.', 'error');
   }
 };
 
@@ -506,7 +515,17 @@ async function unifiedLogin() {
       };
       toast(`${msgs[err.code] || 'بيانات غير صحيحة.'} — تبقّى ${remaining} محاولة قبل القفل.`, 'error');
     } else {
-      toast(err.message || 'حدث خطأ، يرجى المحاولة مرة أخرى.', 'error');
+      const otherErrs = {
+        'auth/too-many-requests':      'محاولات كثيرة جداً، يرجى الانتظار ثم المحاولة مجدداً.',
+        'auth/network-request-failed': 'فشل الاتصال بالشبكة، تحقق من اتصالك بالإنترنت.',
+        'auth/user-disabled':          'هذا الحساب موقوف، يرجى التواصل مع الإدارة.',
+        'auth/popup-closed-by-user':   'تم إغلاق نافذة تسجيل الدخول، يرجى المحاولة مجدداً.',
+        'auth/popup-blocked':          'تم حجب النافذة المنبثقة، يرجى السماح بها في المتصفح.',
+        'auth/requires-recent-login':  'يرجى تسجيل الدخول مجدداً للمتابعة.',
+        'auth/internal-error':         'خطأ داخلي، يرجى المحاولة مجدداً.',
+      };
+      const fallback = otherErrs[err.code] || 'حدث خطأ، يرجى المحاولة مرة أخرى.';
+      toast(fallback, 'error');
     }
   }
 }
@@ -888,15 +907,31 @@ async function doSignup() {
     toast('يجب التحقق من رقم الجوال أولاً', 'error'); return;
   }
 
+  // ── Fallback: read email/phone/name directly from DOM if not collected via config ──
+  const _elEmail = document.getElementById('su-email');
+  if (_elEmail && _elEmail.value.trim()) data.email = _elEmail.value.trim();
+  const _elPhone = document.getElementById('su-phone');
+  if (_elPhone && _elPhone.value.trim()) data.phone = _elPhone.value.trim();
+  const _elName = document.getElementById('su-name');
+  if (_elName && _elName.value.trim()) data.name = _elName.value.trim();
+
+  if (!SignupState.isGoogle) {
+    if (!data.email || typeof data.email !== 'string' || !data.email.includes('@')) {
+      toast('يرجى إدخال بريد إلكتروني صالح', 'error'); return;
+    }
+    if (!data.pass || data.pass.length < 6) {
+      toast('كلمة المرور يجب أن تكون 6 أحرف على الأقل', 'error'); return;
+    }
+  }
+
   showLoader('جاري إنشاء حسابك...');
-  window.__suppressAuthRedirect = true; // Prevent app.js from redirecting us mid-signup
+  window.__suppressAuthRedirect = true;
 
   try {
     let uid;
     if (SignupState.isGoogle) {
       if (!auth.currentUser) throw new Error('انتهت جلسة تسجيل دخول Google. يرجى المحاولة مجدداً.');
       uid = auth.currentUser.uid;
-      // Pre-fill email and name from SignupState if not in form fields
       data.email = data.email || SignupState.email;
       data.name = data.name || SignupState.name;
     } else {
@@ -909,10 +944,10 @@ async function doSignup() {
     const userData = {
       name: data.name || '',
       email: data.email || '',
-      phone: data.phone || '',
+      phone: data.phone || SignupState.pendingPhone || '',
       phoneVerified: true,
       role,
-      isActive: false,           // Account requires admin approval
+      isActive: false,
       isActivePending: true,
       createdAt: new Date(),
       firstLogin: false,
@@ -929,7 +964,6 @@ async function doSignup() {
     await fsSet('users', uid, userData);
     await ensureWallet(uid);
 
-    // Notify admin/staff about new pending account
     try {
       await fsAdd('notifications', {
         targetRole: 'admin',
@@ -947,27 +981,31 @@ async function doSignup() {
     } catch(notifErr) { console.warn('Notification failed', notifErr); }
 
     State.currentUser = { uid, ...userData };
-    
-    // Clear Google signup flags
     SignupState.isGoogle = false;
     SignupState.googleUid = null;
 
     closeModal();
     toast('✅ تم إنشاء حسابك! يرجى الانتظار حتى تفعيله من قبل الإدارة.', 'info');
     
-    // Clear flag and navigate
     window.__suppressAuthRedirect = false;
     await navigate('home');
   } catch (e) {
     window.__suppressAuthRedirect = false;
     hideLoader();
-    const m = {
-      'auth/email-already-in-use': 'هذا البريد مستخدم بالفعل',
-      'auth/invalid-email': 'البريد الإلكتروني غير صالح',
-      'auth/weak-password': 'كلمة المرور ضعيفة جداً',
-      'auth/operation-not-allowed': 'يجب تفعيل Email/Password في Firebase Console',
+    const arabicErrors = {
+      'auth/email-already-in-use':        'هذا البريد الإلكتروني مستخدم بالفعل، جرّب تسجيل الدخول.',
+      'auth/invalid-email':               'صيغة البريد الإلكتروني غير صحيحة.',
+      'auth/weak-password':               'كلمة المرور ضعيفة جداً، يجب أن تكون 6 أحرف على الأقل.',
+      'auth/operation-not-allowed':       'هذه الطريقة غير مفعّلة، يرجى التواصل مع الإدارة.',
+      'auth/too-many-requests':           'طلبات كثيرة جداً، يرجى الانتظار ثم المحاولة مجدداً.',
+      'auth/network-request-failed':      'فشل الاتصال بالشبكة، تحقق من اتصالك بالإنترنت.',
+      'auth/user-disabled':               'هذا الحساب موقوف، يرجى التواصل مع الإدارة.',
+      'auth/requires-recent-login':       'يرجى تسجيل الدخول مجدداً للمتابعة.',
+      'auth/credential-already-in-use':   'هذا البريد مرتبط بحساب آخر بالفعل.',
+      'auth/account-exists-with-different-credential': 'يوجد حساب بهذا البريد بطريقة دخول مختلفة.',
     };
-    toast(m[e.code] || e.message, 'error');
+    const msg = arabicErrors[e.code] || (e.message && !e.message.includes('Firebase') && !e.message.includes('auth/') ? e.message : 'حدث خطأ غير متوقع، يرجى المحاولة مجدداً.');
+    toast(msg, 'error');
   }
 }
 
