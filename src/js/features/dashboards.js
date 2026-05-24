@@ -126,7 +126,8 @@ window.renderAdmin = function () {
         { k: 'signup_settings',  icon: '📝', label: 'حقول التسجيل',     desc: 'تخصيص نموذج التسجيل' },
         { k: 'login_settings',   icon: '🔐', label: 'إعدادات الدخول',   desc: 'خيارات تسجيل الدخول' },
         { k: 'regions',          icon: '🌍', label: 'المناطق والمدن',    desc: 'إدارة المناطق الجغرافية' },
-        { k: 'delivery_pricing', icon: '🚚', label: 'أسعار التوصيل',    desc: 'تسعير التوصيل بين المناطق' },
+        { k: 'delivery_pricing',   icon: '🚚', label: 'أسعار التوصيل',    desc: 'تسعير التوصيل بين المناطق' },
+        { k: 'delivery_addresses', icon: '🗺️', label: 'قاعدة العناوين',   desc: 'إدارة المناطق والعناوين الفرعية' },
         { k: 'cms_texts',        icon: '✏️', label: 'النصوص والأيقونات', desc: 'تخصيص نصوص المنصة' },
         { k: 'cms_pages',        icon: '📄', label: 'الصفحات الثابتة',  desc: 'شروط الخدمة وسياسة الخصوصية' },
         { k: 'ph17settings',     icon: '⚙️', label: 'الإعدادات العامة', desc: 'إعدادات النظام الشاملة' },
@@ -234,6 +235,7 @@ window.renderAdmin = function () {
           ${activeTab === 'direct_routing'      ? (typeof renderDirectRouting === 'function' ? renderDirectRouting() : renderAdminDash()) : ''}
           ${activeTab === 'signup_settings'     ? (typeof renderSignupSettings === 'function' ? renderSignupSettings() : 'جاري التحميل...') : ''}
           ${activeTab === 'delivery_pricing'    ? (typeof renderAdminDeliveryPricing === 'function' ? renderAdminDeliveryPricing() : 'جاري التحميل...') : ''}
+          ${activeTab === 'delivery_addresses'  ? (typeof renderAdminDeliveryAddresses === 'function' ? renderAdminDeliveryAddresses() : 'جاري التحميل...') : ''}
         </main>
       </div>
     </div>
