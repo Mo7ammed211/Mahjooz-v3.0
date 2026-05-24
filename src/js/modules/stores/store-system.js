@@ -1086,7 +1086,34 @@ window.ph43_showAddProductModal = function (storeId) {
         </div>
       </div>
 
-      <div style="margin-top:20px; display:flex; justify-content:flex-end; gap:10px;">
+      <!-- قسم العروض والخصومات -->
+      <div style="margin-top:20px;border:1px solid rgba(239,68,68,0.25);background:linear-gradient(135deg,rgba(239,68,68,0.04),rgba(245,158,11,0.03));border-radius:16px;padding:16px">
+        <div style="font-weight:800;font-size:15px;color:#ef4444;margin-bottom:12px">🏷️ قسم العروض والخصومات</div>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 14px;background:rgba(239,68,68,0.06);border:1px dashed rgba(239,68,68,0.3);border-radius:12px;margin-bottom:12px">
+          <input type="checkbox" id="ph46-add-to-offers" onchange="ph46_toggleOfferFields(this.checked)" style="width:20px;height:20px;accent-color:#ef4444">
+          <div>
+            <div style="font-weight:700;font-size:13px">إضافة هذه المنتجات إلى قسم العروض والخصومات</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:2px">ستظهر المنتجات للعملاء في قسم العروض بسعر مخفض</div>
+          </div>
+        </label>
+        <div id="ph46-offer-fields" style="display:none">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px">
+            <div class="form-group">
+              <label class="form-label">نسبة الخصم (%) *</label>
+              <input class="form-control" id="ph46-offer-pct" type="number" min="1" max="99" placeholder="مثال: 20">
+            </div>
+            <div class="form-group">
+              <label class="form-label">تاريخ الانتهاء (فارغ = دائم)</label>
+              <input class="form-control" id="ph46-offer-expires" type="date">
+            </div>
+          </div>
+          <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);border-radius:10px;padding:10px 14px;font-size:12px;color:#10b981">
+            💡 سيُطبَّق نفس الخصم على جميع المنتجات المحددة
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:16px; display:flex; justify-content:flex-end; gap:10px;">
         <button class="btn btn-secondary" onclick="closeModal()">إلغاء</button>
         <button class="btn btn-primary" onclick="window.ph46_saveAdminStoreProducts('${storeId}')">💾 حفظ وربط المنتجات</button>
       </div>
@@ -1095,6 +1122,11 @@ window.ph43_showAddProductModal = function (storeId) {
 
   openModal(modalHtml);
   window.__ph46_selectedStoreCatId = State.adminStoreCat || null;
+};
+
+window.ph46_toggleOfferFields = function (show) {
+  const el = document.getElementById('ph46-offer-fields');
+  if (el) el.style.display = show ? 'block' : 'none';
 };
 
 window.ph46_filterStoreCatalogList = function(q) {
@@ -1135,13 +1167,30 @@ window.ph46_saveAdminStoreProducts = async function(storeId) {
         assignedVendors: checkedProviders
       };
 
-      await fsAdd('store_products', productData);
+      const prodId = await fsAdd('store_products', productData);
       addCount++;
+
+      // إضافة للعروض إن طُلب ذلك
+      const addToOffers = document.getElementById('ph46-add-to-offers')?.checked;
+      if (addToOffers && typeof ph_saveOfferFromSource === 'function') {
+        const offerPct  = parseFloat(document.getElementById('ph46-offer-pct')?.value) || 0;
+        const expStr    = document.getElementById('ph46-offer-expires')?.value || '';
+        if (offerPct > 0 && item.price > 0) {
+          await ph_saveOfferFromSource({
+            title: item.name, desc: item.desc || '',
+            sourceType: 'store_product', sourceId: prodId,
+            sourceSection: 'stores', originalPrice: item.price,
+            discountPercent: offerPct, imageBase64: item.mainImage || null,
+            expiresStr: expStr
+          });
+        }
+      }
     }
 
     if (typeof ph43_reloadStoreData === 'function') await ph43_reloadStoreData();
     closeModal();
-    toast(`تمت إضافة وربط ${addCount} منتج بنجاح 🎉`, 'success');
+    const addedToOffers = document.getElementById('ph46-add-to-offers')?.checked && parseFloat(document.getElementById('ph46-offer-pct')?.value) > 0;
+    toast(`تمت إضافة وربط ${addCount} منتج بنجاح 🎉${addedToOffers ? ' وتمت إضافتها للعروض 🏷️' : ''}`, 'success');
     await render();
   } catch(e) {
     toast('حدث خطأ أثناء الحفظ: ' + e.message, 'error');
@@ -1185,8 +1234,38 @@ window.ph43_showEditProductModal = function (productId, storeId) {
       <label class="toggle-switch"><input type="checkbox" id="prod-active"${p.active !== false ? ' checked' : ''}><span class="toggle-slider"></span></label>
       <span>منتج نشط</span>
     </div>
-    <button class="btn btn-primary btn-block" onclick="ph43_updateProduct('${productId}','${storeId}')">💾 حفظ</button>
+
+    <!-- قسم العروض -->
+    <div style="border:1px solid rgba(239,68,68,0.25);background:linear-gradient(135deg,rgba(239,68,68,0.04),rgba(245,158,11,0.03));border-radius:14px;padding:14px;margin-top:12px">
+      <div style="font-weight:800;font-size:14px;color:#ef4444;margin-bottom:10px">🏷️ قسم العروض والخصومات</div>
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:8px 12px;background:rgba(239,68,68,0.06);border:1px dashed rgba(239,68,68,0.3);border-radius:10px;margin-bottom:10px">
+        <input type="checkbox" id="prod-add-to-offers" onchange="ph43_toggleEditOfferFields(this.checked)" style="width:18px;height:18px;accent-color:#ef4444" ${p.offerId ? 'checked' : ''}>
+        <div>
+          <div style="font-weight:700;font-size:13px">إضافة هذا المنتج إلى قسم العروض</div>
+          <div style="font-size:11px;color:var(--text-muted)">يظهر للعملاء في صفحة العروض بسعر مخفض</div>
+        </div>
+      </label>
+      <div id="prod-offer-fields" style="display:${p.offerId ? 'block' : 'none'}">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="form-group">
+            <label class="form-label">نسبة الخصم (%)</label>
+            <input class="form-control" id="prod-offer-pct" type="number" min="1" max="99" value="${p.offerDiscountPct || ''}" placeholder="مثال: 25">
+          </div>
+          <div class="form-group">
+            <label class="form-label">تاريخ الانتهاء (فارغ = دائم)</label>
+            <input class="form-control" id="prod-offer-expires" type="date" value="${p.offerExpiresAt ? (p.offerExpiresAt.toDate ? p.offerExpiresAt.toDate() : new Date(p.offerExpiresAt)).toISOString().split('T')[0] : ''}">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="ph43_updateProduct('${productId}','${storeId}')">💾 حفظ</button>
   `);
+};
+
+window.ph43_toggleEditOfferFields = function (show) {
+  const el = document.getElementById('prod-offer-fields');
+  if (el) el.style.display = show ? 'block' : 'none';
 };
 
 window.ph43_updateProduct = async function (productId, storeId) {
@@ -1204,6 +1283,25 @@ window.ph43_updateProduct = async function (productId, storeId) {
   try {
     await fsUpdate('store_products', productId, upd);
     window.__ph43_pendingImg = null;
+
+    // معالجة العروض
+    const addToOffers = document.getElementById('prod-add-to-offers')?.checked;
+    if (addToOffers && typeof ph_saveOfferFromSource === 'function') {
+      const offerPct = parseFloat(document.getElementById('prod-offer-pct')?.value) || 0;
+      const expStr   = document.getElementById('prod-offer-expires')?.value || '';
+      const p = (AppData.storeProducts || []).find(x => x.id === productId);
+      if (offerPct > 0 && price > 0) {
+        const img = window.__ph43_pendingImg || p?.imageBase64 || null;
+        await ph_saveOfferFromSource({
+          title: name, desc,
+          sourceType: 'store_product', sourceId: productId,
+          sourceSection: 'stores', originalPrice: price,
+          discountPercent: offerPct, imageBase64: img,
+          expiresStr: expStr
+        });
+      }
+    }
+
     await ph43_reloadStoreData();
     hideLoader(); closeModal();
     toast('✅ تم التعديل', 'success');
