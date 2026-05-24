@@ -2,11 +2,14 @@
 #navbar-wrap { position: sticky; top: 0; z-index: 1000; }
 #navbar {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 16px 5%; background: var(--bg-card);
+  padding: 14px 5%; background: var(--bg-card);
   border-bottom: 1px solid var(--border);
   box-shadow: var(--shadow-md);
+  min-height: 60px;
 }
-.nav-brand { font-size: 24px; font-weight: 800; color: var(--primary); letter-spacing: -0.5px; cursor: pointer; }
+.nav-brand { font-size: 24px; font-weight: 800; color: var(--primary); letter-spacing: -0.5px; cursor: pointer; display:flex; align-items:center; gap:6px; }
+.brand-mark { font-size: 22px; }
+.brand-text { font-size: 22px; }
 .nav-links { display: flex; gap: 8px; }
 .nav-link {
   background: none; border: none; padding: 8px 16px; border-radius: var(--radius-sm);
@@ -14,9 +17,44 @@
   transition: var(--transition);
 }
 .nav-link:hover, .nav-link.active { background: var(--bg-hover); color: var(--text-main); }
-.nav-user { display: flex; align-items: center; gap: 12px; }
+.nav-user { display: flex; align-items: center; gap: 10px; }
 .nav-avatar {
-  width: 40px; height: 40px; border-radius: 50%; background: var(--primary);
+  width: 38px; height: 38px; border-radius: 50%; background: var(--primary);
   color: #ffffff; display: flex; align-items: center; justify-content: center;
-  font-weight: bold; cursor: pointer; box-shadow: var(--shadow-md);
+  font-weight: bold; cursor: pointer; box-shadow: var(--shadow-md); flex-shrink:0;
+  font-size: 15px;
+}
+.nav-avatar-lg { width: 46px; height: 46px; font-size: 18px; }
+
+/* Drawer user sub-info */
+.drawer-user-sub { font-size: 12px; color: var(--text-muted); margin-top: 3px; line-height: 1.5; }
+.drawer-user-sub span { display: flex; align-items: center; gap: 4px; }
+
+/* ── Mobile compact navbar ── */
+@media (max-width: 640px) {
+  #navbar {
+    padding: 8px 4%;
+    min-height: 52px;
+  }
+  .brand-text { font-size: 19px; }
+  .brand-mark  { font-size: 19px; }
+  .nav-brand   { gap: 4px; }
+  .nav-user    { gap: 6px; }
+  .nav-avatar  { width: 34px; height: 34px; font-size: 13px; }
+  .nav-avatar-lg { width: 42px; height: 42px; font-size: 16px; }
+
+  /* Hide profile name/badge/chevron on small screens — show avatar only */
+  .nav-profile-info { display: none !important; }
+  .nav-profile-chev { display: none !important; }
+
+  /* Shrink cart button */
+  .ph43-cart-nav-btn {
+    padding: 6px 9px !important;
+    font-size: 12px !important;
+    border-radius: 10px !important;
+  }
+  .nav-desktop-only { display: none !important; }
+}
+@media (max-width: 380px) {
+  .brand-text { display: none; }
 }

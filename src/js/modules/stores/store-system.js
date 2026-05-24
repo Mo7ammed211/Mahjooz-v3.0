@@ -388,43 +388,64 @@ window.ph43_renderStoresList = function () {
     stores = stores.filter(s => favs.includes(s.id));
   }
 
+  const view = State.ph43StoreView || 'grid';
+
   return `<div id="app-content">
-    <div class="page-header">
+    <div class="page-header" style="padding-bottom:12px">
       <button class="back-btn" onclick="navigate('home')">→ رجوع</button>
-      <h1>🏪 المتاجر والصيدليات</h1>
-      <p style="color:var(--text-secondary);margin-top:4px">${stores.length} متجر متاح</p>
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div>
+          <h1 style="margin:0">🏪 المتاجر والصيدليات</h1>
+          <p style="color:var(--text-secondary);margin:4px 0 0;font-size:13px">${stores.length} متجر متاح</p>
+        </div>
+        <!-- أزرار طريقة العرض -->
+        <div class="ph43-view-toggle">
+          <button class="ph43-vtbtn${view==='grid'?' active':''}" onclick="State.ph43StoreView='grid';render()" title="مربعات">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1.5"/><rect x="9" y="1" width="6" height="6" rx="1.5"/><rect x="1" y="9" width="6" height="6" rx="1.5"/><rect x="9" y="9" width="6" height="6" rx="1.5"/></svg>
+            <span>مربعات</span>
+          </button>
+          <button class="ph43-vtbtn${view==='list'?' active':''}" onclick="State.ph43StoreView='list';render()" title="قائمة">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="2" width="14" height="3" rx="1.5"/><rect x="1" y="6.5" width="14" height="3" rx="1.5"/><rect x="1" y="11" width="14" height="3" rx="1.5"/></svg>
+            <span>قائمة</span>
+          </button>
+          <button class="ph43-vtbtn${view==='slideshow'?' active':''}" onclick="State.ph43StoreView='slideshow';render()" title="شرائح">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="2" width="14" height="9" rx="2"/><rect x="4" y="13" width="8" height="2" rx="1"/></svg>
+            <span>شرائح</span>
+          </button>
+        </div>
+      </div>
     </div>
     <div class="sec-layout">
       ${typeof renderSectionSidebar === 'function' ? renderSectionSidebar() : ''}
       <main class="sec-main">
-        <div class="search-wrap" style="margin-bottom:24px;">
+        <div class="search-wrap" style="margin-bottom:20px;">
           <div class="search-box" style="padding:0; border:none; background:transparent">
             <input class="search-input" id="stores-search" oninput="ph43_filterStores()" placeholder="ابحث عن متجر..." style="border-radius:12px">
             <span class="search-icon" style="right:16px; left:auto">🔍</span>
           </div>
         </div>
-        
+
         <!-- ⚡ بطاقة النظام الرقمي ⚡ -->
         ${(AppData.digitalStoreCats && AppData.digitalStoreCats.length > 0) ? `
-        <div onclick="navigate('stores', { digital: 'cats' })" style="background:linear-gradient(135deg, var(--bg-card) 0%, rgba(139,92,246,0.05) 100%);border:1px solid var(--glass-border);border-radius:20px;padding:20px;margin-bottom:24px;display:flex;align-items:center;gap:16px;cursor:pointer;transition:transform 0.2s, box-shadow 0.2s" class="hover-scale">
-          <div style="width:56px;height:56px;background:linear-gradient(135deg,var(--primary),#c4b5fd);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:28px;color:#fff;box-shadow:0 8px 20px rgba(139,92,246,0.25);flex-shrink:0">⚡</div>
+        <div onclick="navigate('stores', { digital: 'cats' })" style="background:linear-gradient(135deg,rgba(139,92,246,0.08),rgba(99,102,241,0.04));border:1px solid var(--glass-border);border-radius:16px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:all 0.2s" class="hover-scale">
+          <div style="width:48px;height:48px;background:linear-gradient(135deg,var(--primary),#c4b5fd);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;color:#fff;box-shadow:0 6px 16px rgba(139,92,246,0.3);flex-shrink:0">⚡</div>
           <div style="flex:1">
-            <h2 style="margin:0 0 4px 0;font-size:18px;font-weight:800">الشحن والمنتجات الرقمية</h2>
-            <div style="font-size:12px;color:var(--text-secondary)">رصيد - كروت شبكات - تسديد - وأكثر</div>
+            <div style="font-weight:800;font-size:15px;margin-bottom:2px">الشحن والمنتجات الرقمية</div>
+            <div style="font-size:12px;color:var(--text-secondary)">رصيد · كروت شبكات · تسديد · وأكثر</div>
           </div>
-          <div style="color:var(--primary);font-size:20px;padding:0 10px">🡰</div>
-        </div>
-        ` : ''}
+          <div style="color:var(--primary);font-size:18px">←</div>
+        </div>` : ''}
 
-        ${stores.length ? `
-        <div class="ph43-stores-grid" id="stores-grid">
-          ${stores.map(s => ph43_renderStoreCard(s)).join('')}
-        </div>` : `
+        ${stores.length === 0 ? `
         <div class="empty-state">
           <div class="empty-icon">🏪</div>
           <div class="empty-title">${filter==='nearby'?'المتاجر لا تدعم خاصية الموقع حالياً':'لا توجد متاجر متاحة'}</div>
           <div class="empty-sub">${filter==='nearby'?'سيتم تفعيلها في التحديثات القادمة':'ترقبوا إضافة المزيد قريباً'}</div>
-        </div>`}
+        </div>` :
+        view === 'grid' ? `<div class="ph43-stores-grid" id="stores-grid">${stores.map(s=>ph43_renderStoreCard(s)).join('')}</div>` :
+        view === 'list' ? `<div class="ph43-stores-list" id="stores-grid">${stores.map(s=>ph43_renderStoreListItem(s)).join('')}</div>` :
+        ph43_renderSlideshowView(stores)
+        }
       </main>
     </div>
   </div>`;
@@ -432,10 +453,70 @@ window.ph43_renderStoresList = function () {
 
 window.ph43_filterStores = function () {
   const q = document.getElementById('stores-search')?.value.toLowerCase() || '';
-  document.querySelectorAll('.ph43-store-card').forEach(c => {
+  document.querySelectorAll('.ph43-store-card, .ph43-store-list-item, .ph43-slide-card').forEach(c => {
     c.style.display = c.textContent.toLowerCase().includes(q) ? '' : 'none';
   });
 };
+
+function ph43_renderStoreListItem(s) {
+  const prodCount = (AppData.storeProducts||[]).filter(p=>p.storeId===s.id&&p.active!==false).length;
+  return `
+  <div class="ph43-store-list-item" onclick="navigate('store',{storeId:'${s.id}'})">
+    <div class="ph43-list-logo">
+      ${s.logoBase64 ? `<img src="${s.logoBase64}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:12px">` : `<span style="font-size:26px">${s.icon||'🏪'}</span>`}
+    </div>
+    <div class="ph43-list-info">
+      <div class="ph43-list-name">${escHtml(s.name)}</div>
+      ${s.desc ? `<div class="ph43-list-desc">${escHtml(s.desc.length>65?s.desc.substring(0,65)+'…':s.desc)}</div>` : ''}
+      <div class="ph43-list-meta">
+        <span>📦 ${prodCount} منتج</span>
+        ${s.deliveryTime ? `<span>🚗 ${escHtml(s.deliveryTime)}</span>` : ''}
+        ${s.active===false ? `<span style="color:#ef4444">⏸️ مغلق</span>` : '<span style="color:#10b981">✅ مفتوح</span>'}
+      </div>
+    </div>
+    <div class="ph43-list-arrow">←</div>
+  </div>`;
+}
+
+function ph43_renderSlideshowView(stores) {
+  if (!stores.length) return `<div class="empty-state"><div class="empty-icon">🏪</div><div class="empty-title">لا توجد متاجر</div></div>`;
+  return `<div class="ph43-slideshow-view">${stores.map(s => {
+    const cats = (AppData.storeCats||[]).filter(c=>c.storeId===s.id).sort((a,b)=>(a.order||0)-(b.order||0));
+    const prodCount = (AppData.storeProducts||[]).filter(p=>p.storeId===s.id&&p.active!==false).length;
+    return `
+    <div class="ph43-slide-card">
+      <div class="ph43-slide-hero" onclick="navigate('store',{storeId:'${s.id}'})">
+        ${s.bannerBase64
+          ? `<img src="${s.bannerBase64}" class="ph43-slide-banner-img" alt="">`
+          : `<div class="ph43-slide-banner-ph">${s.icon||'🏪'}</div>`}
+        <div class="ph43-slide-overlay">
+          <div class="ph43-slide-avatar">${s.logoBase64?`<img src="${s.logoBase64}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:10px">`:(s.icon||'🏪')}</div>
+          <div style="flex:1;min-width:0">
+            <div class="ph43-slide-name">${escHtml(s.name)}</div>
+            ${s.desc ? `<div class="ph43-slide-subdesc">${escHtml(s.desc.length>50?s.desc.substring(0,50)+'…':s.desc)}</div>` : ''}
+          </div>
+          <button class="ph43-slide-showall-btn" onclick="event.stopPropagation();navigate('store',{storeId:'${s.id}'})">
+            عرض الكل <span style="font-size:11px;opacity:.8">(${prodCount})</span> ←
+          </button>
+        </div>
+      </div>
+      ${cats.length ? `
+      <div class="ph43-slide-cats-row">
+        <div class="ph43-slide-cats-label">الأقسام</div>
+        <div class="ph43-slide-cats-scroll">
+          ${cats.map(c=>{
+            const cnt = (AppData.storeProducts||[]).filter(p=>p.storeId===s.id&&p.catId===c.id&&p.active!==false).length;
+            return `<button class="ph43-slide-chip" onclick="State.storeActiveCat='${c.id}';navigate('store',{storeId:'${s.id}'})">
+              <span>${c.icon||'📦'}</span>
+              <span>${escHtml(c.name)}</span>
+              <span class="ph43-chip-cnt">${cnt}</span>
+            </button>`;
+          }).join('')}
+        </div>
+      </div>` : ''}
+    </div>`;
+  }).join('')}</div>`;
+}
 
 function ph43_renderStoreCard(s) {
   const prodCount = (AppData.storeProducts || []).filter(p => p.storeId === s.id && p.active !== false).length;
@@ -1508,20 +1589,60 @@ setInterval(ph43_updateCartBadge, 1000);
   window.__ph43Styles = true;
   const s = document.createElement('style');
   s.textContent = `
+    /* ── View Toggle ── */
+    .ph43-view-toggle { display:flex; gap:4px; background:var(--bg-secondary); border-radius:12px; padding:4px; border:1px solid var(--border); }
+    .ph43-vtbtn { display:flex; align-items:center; gap:5px; padding:6px 12px; border-radius:9px; border:none; background:transparent; cursor:pointer; font-size:12px; font-weight:600; color:var(--text-muted); font-family:inherit; transition:all 0.18s; }
+    .ph43-vtbtn:hover { background:var(--bg-card); color:var(--text-main); }
+    .ph43-vtbtn.active { background:var(--bg-card); color:var(--primary); box-shadow:0 2px 8px rgba(0,0,0,0.1); }
+    @media(max-width:480px) { .ph43-vtbtn span:not(svg) { display:none; } .ph43-vtbtn { padding:7px 10px; } }
+
     /* ── Store Listing Grid ── */
-    .ph43-stores-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:20px; }
-    .ph43-store-card { background:var(--bg-card); border:1px solid var(--glass-border); border-radius:20px; overflow:hidden; cursor:pointer; transition:all 0.22s; }
-    .ph43-store-card:hover { transform:translateY(-5px); box-shadow:var(--shadow-lg); border-color:var(--primary); }
-    .ph43-store-card-header { position:relative; height:120px; overflow:hidden; background:var(--bg-secondary); }
+    .ph43-stores-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:16px; }
+    .ph43-store-card { background:var(--bg-card); border:1px solid var(--glass-border); border-radius:18px; overflow:hidden; cursor:pointer; transition:all 0.22s; }
+    .ph43-store-card:hover { transform:translateY(-4px); box-shadow:var(--shadow-lg); border-color:rgba(139,92,246,0.4); }
+    .ph43-store-card-header { position:relative; height:110px; overflow:hidden; background:var(--bg-secondary); }
     .ph43-store-banner { width:100%; height:100%; object-fit:cover; }
-    .ph43-store-banner-placeholder { height:100%; display:flex; align-items:center; justify-content:center; font-size:52px; background:linear-gradient(135deg,rgba(139,92,246,0.08),rgba(139,92,246,0.02)); }
-    .ph43-store-card-avatar { position:absolute; bottom:-18px; right:16px; width:48px; height:48px; border-radius:12px; border:3px solid var(--bg-card); background:var(--bg-secondary); display:flex; align-items:center; justify-content:center; font-size:24px; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.15); }
+    .ph43-store-banner-placeholder { height:100%; display:flex; align-items:center; justify-content:center; font-size:46px; background:linear-gradient(135deg,rgba(139,92,246,0.08),rgba(139,92,246,0.02)); }
+    .ph43-store-card-avatar { position:absolute; bottom:-16px; right:14px; width:44px; height:44px; border-radius:11px; border:3px solid var(--bg-card); background:var(--bg-secondary); display:flex; align-items:center; justify-content:center; font-size:22px; overflow:hidden; box-shadow:0 4px 10px rgba(0,0,0,0.12); }
     .ph43-store-card-avatar img { width:100%; height:100%; object-fit:cover; }
-    .ph43-store-card-body { padding:24px 16px 16px; }
-    .ph43-store-name { font-size:17px; font-weight:800; margin-bottom:5px; }
-    .ph43-store-desc { font-size:13px; color:var(--text-secondary); line-height:1.5; margin-bottom:10px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
-    .ph43-store-meta { display:flex; gap:12px; font-size:12px; color:var(--text-muted); margin-bottom:14px; }
-    .ph43-store-btn { width:100%; border-radius:12px !important; }
+    .ph43-store-card-body { padding:22px 14px 14px; }
+    .ph43-store-name { font-size:16px; font-weight:800; margin-bottom:4px; }
+    .ph43-store-desc { font-size:12px; color:var(--text-secondary); line-height:1.5; margin-bottom:9px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+    .ph43-store-meta { display:flex; gap:10px; font-size:11px; color:var(--text-muted); margin-bottom:12px; flex-wrap:wrap; }
+    .ph43-store-btn { width:100%; border-radius:11px !important; padding:9px !important; font-size:13px !important; }
+
+    /* ── List View ── */
+    .ph43-stores-list { display:flex; flex-direction:column; gap:10px; }
+    .ph43-store-list-item { display:flex; align-items:center; gap:14px; background:var(--bg-card); border:1px solid var(--glass-border); border-radius:14px; padding:14px 16px; cursor:pointer; transition:all 0.2s; }
+    .ph43-store-list-item:hover { border-color:rgba(139,92,246,0.35); box-shadow:0 4px 14px rgba(0,0,0,0.08); transform:translateX(-2px); }
+    .ph43-list-logo { width:52px; height:52px; border-radius:13px; background:var(--bg-secondary); display:flex; align-items:center; justify-content:center; flex-shrink:0; overflow:hidden; border:1px solid var(--border); }
+    .ph43-list-info { flex:1; min-width:0; }
+    .ph43-list-name { font-weight:800; font-size:15px; margin-bottom:3px; }
+    .ph43-list-desc { font-size:12px; color:var(--text-secondary); margin-bottom:5px; line-height:1.4; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .ph43-list-meta { display:flex; gap:10px; font-size:11px; color:var(--text-muted); flex-wrap:wrap; }
+    .ph43-list-arrow { font-size:18px; color:var(--primary); flex-shrink:0; padding:0 4px; }
+
+    /* ── Slideshow View ── */
+    .ph43-slideshow-view { display:flex; flex-direction:column; gap:16px; }
+    .ph43-slide-card { background:var(--bg-card); border:1px solid var(--glass-border); border-radius:18px; overflow:hidden; }
+    .ph43-slide-hero { position:relative; height:130px; cursor:pointer; overflow:hidden; background:var(--bg-secondary); }
+    .ph43-slide-banner-img { width:100%; height:100%; object-fit:cover; display:block; transition:transform 0.3s; }
+    .ph43-slide-hero:hover .ph43-slide-banner-img { transform:scale(1.04); }
+    .ph43-slide-banner-ph { height:100%; display:flex; align-items:center; justify-content:center; font-size:56px; background:linear-gradient(135deg,rgba(139,92,246,0.08),rgba(139,92,246,0.02)); }
+    .ph43-slide-overlay { position:absolute; bottom:0; inset-inline:0; background:linear-gradient(to top,rgba(0,0,0,0.72) 0%,rgba(0,0,0,0.1) 80%,transparent 100%); padding:10px 14px; display:flex; align-items:flex-end; gap:10px; }
+    .ph43-slide-avatar { width:38px; height:38px; border-radius:10px; background:var(--bg-secondary); display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; overflow:hidden; border:2px solid rgba(255,255,255,0.3); }
+    .ph43-slide-name { font-weight:800; font-size:15px; color:#fff; line-height:1.3; }
+    .ph43-slide-subdesc { font-size:11px; color:rgba(255,255,255,0.7); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .ph43-slide-showall-btn { background:rgba(255,255,255,0.15); backdrop-filter:blur(6px); border:1px solid rgba(255,255,255,0.25); color:#fff; border-radius:9px; padding:6px 11px; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap; flex-shrink:0; transition:all 0.2s; }
+    .ph43-slide-showall-btn:hover { background:rgba(255,255,255,0.25); }
+    .ph43-slide-cats-row { padding:12px 14px 14px; }
+    .ph43-slide-cats-label { font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:8px; text-transform:uppercase; letter-spacing:.4px; }
+    .ph43-slide-cats-scroll { display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; }
+    .ph43-slide-cats-scroll::-webkit-scrollbar { height:3px; }
+    .ph43-slide-cats-scroll::-webkit-scrollbar-thumb { background:rgba(139,92,246,0.3); border-radius:99px; }
+    .ph43-slide-chip { display:flex; align-items:center; gap:5px; padding:6px 12px; border-radius:20px; border:1px solid var(--glass-border); background:var(--bg-secondary); cursor:pointer; font-size:12px; font-weight:600; color:var(--text-main); font-family:inherit; white-space:nowrap; transition:all 0.18s; flex-shrink:0; }
+    .ph43-slide-chip:hover { background:rgba(139,92,246,0.1); border-color:rgba(139,92,246,0.35); color:var(--primary); }
+    .ph43-chip-cnt { background:var(--bg-card); border-radius:9px; padding:1px 6px; font-size:10px; font-weight:800; color:var(--text-muted); }
 
     /* ── Store Hero ── */
     .ph43-store-hero { background:var(--bg-card); border-radius:20px; overflow:hidden; margin-bottom:20px; border:1px solid var(--glass-border); }

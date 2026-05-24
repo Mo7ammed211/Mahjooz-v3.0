@@ -566,10 +566,15 @@ function renderNavbar() {
   <aside class="nav-drawer" id="nav-drawer" aria-hidden="true">
     <div class="drawer-header">
       <div class="drawer-user">
-        <div class="nav-avatar nav-avatar-lg">${initial}</div>
-        <div>
-          <div class="drawer-user-name">${u.name||'مستخدم'}</div>
-          <span class="badge ${rc[u.role]}">${rl[u.role]}</span>
+        <div class="nav-avatar nav-avatar-lg" style="background:linear-gradient(135deg,var(--primary),#a389f4)">${initial}</div>
+        <div style="min-width:0;flex:1">
+          <div class="drawer-user-name">${escHtml(u.name||'مستخدم')}</div>
+          <span class="badge ${rc[u.role]}" style="font-size:10px">${rl[u.role]}</span>
+          <div class="drawer-user-sub">
+            ${u.phone    ? `<span>📞 <span style="direction:ltr;font-family:monospace">${escHtml(u.phone)}</span></span>` : ''}
+            ${u.email    ? `<span>📧 <span style="direction:ltr;font-family:monospace;font-size:11px">${escHtml(u.email.length>22?u.email.substring(0,22)+'…':u.email)}</span></span>` : ''}
+            ${u.regionId ? `<span>📍 ${escHtml((AppData.cities||[]).find(c=>c.id===u.regionId)?.name||u.regionId)}</span>` : ''}
+          </div>
         </div>
       </div>
       <button class="drawer-close" onclick="closeDrawer()" aria-label="إغلاق">✕</button>
@@ -698,57 +703,57 @@ function logoutConfirm() {
     <div id="logout-confirm-card" style="
       background:var(--bg-card);
       border:1px solid var(--border);
-      border-radius:24px;
-      padding:36px 32px 28px;
-      max-width:400px;width:100%;
-      box-shadow:0 24px 60px rgba(0,0,0,0.45),0 0 0 1px rgba(139,92,246,0.15);
+      border-radius:20px;
+      padding:24px 22px 20px;
+      max-width:320px;width:calc(100% - 32px);
+      box-shadow:0 20px 50px rgba(0,0,0,0.45),0 0 0 1px rgba(139,92,246,0.12);
       text-align:center;
-      transform:translateY(24px) scale(0.96);
-      transition:transform 0.3s cubic-bezier(0.34,1.56,0.64,1),opacity 0.25s ease;
+      transform:translateY(20px) scale(0.96);
+      transition:transform 0.28s cubic-bezier(0.34,1.56,0.64,1),opacity 0.22s ease;
       opacity:0;
       position:relative;
     ">
       <button onclick="document.getElementById('logout-confirm-overlay').remove()" style="
-        position:absolute;top:14px;inset-inline-end:14px;
+        position:absolute;top:10px;inset-inline-end:10px;
         background:var(--bg-hover);border:none;
-        width:32px;height:32px;border-radius:50%;
-        color:var(--text-muted);font-size:15px;cursor:pointer;
+        width:28px;height:28px;border-radius:50%;
+        color:var(--text-muted);font-size:13px;cursor:pointer;
         display:flex;align-items:center;justify-content:center;
         transition:all 0.2s;
       " onmouseover="this.style.background='rgba(239,68,68,0.15)';this.style.color='#ef4444'"
          onmouseout="this.style.background='var(--bg-hover)';this.style.color='var(--text-muted)'">✕</button>
 
       <div style="
-        width:72px;height:72px;border-radius:50%;margin:0 auto 20px;
-        background:linear-gradient(135deg,rgba(239,68,68,0.18),rgba(239,68,68,0.05));
-        border:1.5px solid rgba(239,68,68,0.3);
+        width:56px;height:56px;border-radius:50%;margin:0 auto 14px;
+        background:linear-gradient(135deg,rgba(239,68,68,0.15),rgba(239,68,68,0.04));
+        border:1.5px solid rgba(239,68,68,0.25);
         display:flex;align-items:center;justify-content:center;
-        font-size:32px;
-        box-shadow:0 8px 24px rgba(239,68,68,0.2);
+        font-size:26px;
+        box-shadow:0 6px 18px rgba(239,68,68,0.18);
       ">🚪</div>
 
-      <h2 style="margin:0 0 10px;font-size:20px;font-weight:800;color:var(--text-main)">تسجيل الخروج</h2>
-      <p style="margin:0 0 28px;color:var(--text-muted);font-size:14px;line-height:1.6">
-        هل أنت متأكد من رغبتك في الخروج من حسابك؟
+      <h2 style="margin:0 0 8px;font-size:17px;font-weight:800;color:var(--text-main)">تسجيل الخروج</h2>
+      <p style="margin:0 0 20px;color:var(--text-muted);font-size:13px;line-height:1.5">
+        هل أنت متأكد من رغبتك في الخروج؟
       </p>
 
-      <div style="display:flex;gap:12px;justify-content:center;flex-direction:row-reverse">
+      <div style="display:flex;gap:10px;justify-content:center;flex-direction:row-reverse">
         <button onclick="doLogout()" style="
-          flex:1;max-width:160px;
-          padding:12px 20px;border-radius:12px;border:none;cursor:pointer;
+          flex:1;
+          padding:10px 16px;border-radius:10px;border:none;cursor:pointer;
           background:linear-gradient(135deg,#ef4444,#dc2626);
-          color:#fff;font-weight:700;font-size:14px;
-          box-shadow:0 6px 18px rgba(239,68,68,0.35);
+          color:#fff;font-weight:700;font-size:13px;
+          box-shadow:0 4px 14px rgba(239,68,68,0.3);
           transition:all 0.2s;font-family:inherit;
-        " onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 10px 24px rgba(239,68,68,0.5)'"
-           onmouseout="this.style.transform='';this.style.boxShadow='0 6px 18px rgba(239,68,68,0.35)'">
-          🚪 تسجيل الخروج
+        " onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 8px 20px rgba(239,68,68,0.45)'"
+           onmouseout="this.style.transform='';this.style.boxShadow='0 4px 14px rgba(239,68,68,0.3)'">
+          🚪 خروج
         </button>
         <button onclick="document.getElementById('logout-confirm-overlay').remove()" style="
-          flex:1;max-width:130px;
-          padding:12px 20px;border-radius:12px;cursor:pointer;
+          flex:1;
+          padding:10px 16px;border-radius:10px;cursor:pointer;
           background:var(--bg-hover);border:1px solid var(--border);
-          color:var(--text-main);font-weight:700;font-size:14px;
+          color:var(--text-main);font-weight:700;font-size:13px;
           transition:all 0.2s;font-family:inherit;
         " onmouseover="this.style.borderColor='var(--primary)'"
            onmouseout="this.style.borderColor='var(--border)'">
