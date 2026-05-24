@@ -907,13 +907,20 @@ async function doSignup() {
     toast('يجب التحقق من رقم الجوال أولاً', 'error'); return;
   }
 
-  // ── Fallback: read email/phone/name directly from DOM if not collected via config ──
+  // ── Fallback: read key fields directly from DOM in case signupConfig uses different ids ──
   const _elEmail = document.getElementById('su-email');
   if (_elEmail && _elEmail.value.trim()) data.email = _elEmail.value.trim();
   const _elPhone = document.getElementById('su-phone');
   if (_elPhone && _elPhone.value.trim()) data.phone = _elPhone.value.trim();
   const _elName = document.getElementById('su-name');
   if (_elName && _elName.value.trim()) data.name = _elName.value.trim();
+  // Password: try common field ids
+  if (!data.pass) {
+    for (const pid of ['su-pass', 'su-password', 'su-passwd']) {
+      const _el = document.getElementById(pid);
+      if (_el && _el.value) { data.pass = _el.value; break; }
+    }
+  }
 
   if (!SignupState.isGoogle) {
     if (!data.email || typeof data.email !== 'string' || !data.email.includes('@')) {
@@ -921,6 +928,10 @@ async function doSignup() {
     }
     if (!data.pass || data.pass.length < 6) {
       toast('كلمة المرور يجب أن تكون 6 أحرف على الأقل', 'error'); return;
+    }
+    const pass2El = document.getElementById('su-pass2');
+    if (pass2El && data.pass !== pass2El.value) {
+      toast('كلمتا المرور غير متطابقتين', 'error'); return;
     }
   }
 
