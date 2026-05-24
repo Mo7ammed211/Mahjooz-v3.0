@@ -1030,416 +1030,554 @@ async function notifyOrderStatusChange(o, newStatus) {
 }
 window.notifyOrderStatusChange = notifyOrderStatusChange;
 
+
 // ══════════════════════════════════════════════════════════════════
-//  أسعار التوصيل — واجهة لوحة المدير
+//  أسعار التوصيل — واجهة لوحة المدير الاحترافية
+//  الترتيب: أنواع المركبات ← المناطق ← العناوين ← المسارات
 // ══════════════════════════════════════════════════════════════════
 
-// حالة الواجهة: null = قائمة المناطق، string = داخل منطقة
-window.__dp_selectedZone    = window.__dp_selectedZone    || null;
-window.__dp_selectedVehicle = window.__dp_selectedVehicle || null; // 'motorcycle' | 'car'
-window.__dp_selectedSubzone = window.__dp_selectedSubzone || null;
-window.__dp_searchQuery     = window.__dp_searchQuery     || '';
+// ─── حالة التنقل بين الصفحات ─────────────────────────────────────
+window.__dp_selectedVehicleType = window.__dp_selectedVehicleType || null;
+window.__dp_selectedZone        = window.__dp_selectedZone        || null;
+window.__dp_selectedSubzone     = window.__dp_selectedSubzone     || null;
+window.__dp_searchQuery         = window.__dp_searchQuery         || '';
 
+// ─── ألوان وأيقونات افتراضية لأنواع المركبات ─────────────────────
+const _DP_DEFAULT_ICONS  = ['🚗','🏍️','🚐','🚛','🛵','🚚','🏎️','🚜'];
+const _DP_DEFAULT_COLORS = ['#3b82f6','#f97316','#8b5cf6','#10b981','#ef4444','#f59e0b','#06b6d4','#84cc16'];
+
+// ══════════════════════════════════════════════════════════════════
+//  الدالة الرئيسية: عرض صفحات نظام أسعار التوصيل
+// ══════════════════════════════════════════════════════════════════
 window.renderAdminDeliveryPricing = function() {
-  const zones      = AppData.deliveryZones  || [];
-  const routes     = AppData.deliveryRoutes || [];
-  const selZone    = window.__dp_selectedZone;
-  const selVehicle = window.__dp_selectedVehicle;
+  const vehicleTypes = AppData.deliveryVehicleTypes || [];
+  const zones        = AppData.deliveryZones        || [];
+  const subzones     = AppData.deliverySubzones     || [];
+  const routes       = AppData.deliveryRoutes       || [];
 
-  // ─── عرض قائمة المناطق ─────────────────────────────────────
-  if (!selZone) {
-    return `
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px">
-        <div>
-          <h2 style="margin:0">🚚 أسعار التوصيل</h2>
-          <p style="color:var(--text-muted);font-size:13px;margin:4px 0 0">حدد أسعار التوصيل بين المناطق لكل مسار (من → إلى)</p>
-        </div>
-        <button class="btn btn-primary" onclick="dp_openAddZoneModal()">+ إضافة منطقة رئيسية</button>
-      </div>
+  const selVT  = window.__dp_selectedVehicleType;
+  const selZ   = window.__dp_selectedZone;
+  const selSZ  = window.__dp_selectedSubzone;
 
-      ${zones.length === 0 ? `
-        <div style="text-align:center;padding:60px 20px;background:rgba(124,58,237,.05);border:2px dashed rgba(124,58,237,.2);border-radius:16px">
-          <div style="font-size:48px;margin-bottom:12px">🗺️</div>
-          <h3 style="color:var(--text-secondary)">لا توجد مناطق رئيسية بعد</h3>
-          <p style="color:var(--text-muted)">ابدأ بإضافة منطقة رئيسية مثل "المكلا" أو "سيئون"</p>
-          <button class="btn btn-primary" onclick="dp_openAddZoneModal()">+ إضافة أول منطقة</button>
-        </div>` : `
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px">
-          ${zones.map(z => {
-            const zRoutes = routes.filter(r => r.zoneId === z.id);
-            return `
-            <div style="background:var(--glass-bg);border:1px solid var(--border);border-radius:14px;padding:20px;transition:all .2s;cursor:pointer"
-                 onmouseenter="this.style.borderColor='var(--accent-purple)';this.style.transform='translateY(-2px)'"
-                 onmouseleave="this.style.borderColor='var(--border)';this.style.transform=''"
-                 onclick="window.__dp_selectedZone='${z.id}';window.__dp_selectedVehicle=null;window.__dp_selectedSubzone=null;render()">
-              <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:12px">
-                <div>
-                  <div style="font-size:18px;font-weight:700">📍 ${escHtml(z.name)}</div>
-                  <div style="color:var(--text-muted);font-size:13px;margin-top:4px">${zRoutes.length} مسار مسجّل</div>
-                </div>
-                <div style="display:flex;gap:6px">
-                  <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();dp_openEditZoneModal('${z.id}')" title="تعديل">✏️</button>
-                  <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();dp_confirmDeleteZone('${z.id}','${escHtml(z.name)}')" title="حذف">🗑️</button>
-                </div>
-              </div>
-              <button class="btn btn-primary btn-sm" style="width:100%" onclick="event.stopPropagation();window.__dp_selectedZone='${z.id}';window.__dp_selectedVehicle=null;window.__dp_selectedSubzone=null;render()">
-                فتح المسارات ←
-              </button>
-            </div>`;
-          }).join('')}
-        </div>`}
-
-      ${/* مسارات مفقودة */ ''}
-      <div id="dp-missing-routes-section" style="margin-top:32px"></div>
-      <script>
-        (async () => {
-          if (typeof dp_loadMissingRoutes !== 'function') return;
-          const missing = await dp_loadMissingRoutes();
-          const el = document.getElementById('dp-missing-routes-section');
-          if (!el || !missing.length) return;
-          el.innerHTML = \`
-            <div style="background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.3);border-radius:12px;padding:20px">
-              <h3 style="color:#ef4444;margin-bottom:12px">⚠️ مسارات غير مسجّلة (طلبات بدون سعر توصيل)</h3>
-              <div class="table-wrap">
-                <table class="admin-table">
-                  <thead><tr><th>من</th><th>إلى</th><th>تاريخ الإبلاغ</th><th>إجراء</th></tr></thead>
-                  <tbody>
-                    \${missing.map(m => \`<tr>
-                      <td><strong>\${m.fromArea || '—'}</strong></td>
-                      <td><strong>\${m.toArea || '—'}</strong></td>
-                      <td style="color:var(--text-muted);font-size:12px">\${typeof fmtDate==='function'?fmtDate(m.reportedAt):''}</td>
-                      <td>
-                        <button class="btn btn-sm btn-primary" onclick="dp_openAddRouteFromMissing('\${m.fromArea}','\${m.toArea}','\${m.id}')">+ إضافة السعر</button>
-                        <button class="btn btn-sm btn-secondary" onclick="dp_resolveMissingRoute('\${m.id}').then(()=>render())">تجاهل</button>
-                      </td>
-                    </tr>\`).join('')}
-                  </tbody>
-                </table>
-              </div>
-            </div>\`;
-        })();
-      </scr` + `ipt>`;
-  }
-
-  // ─── عرض تفاصيل منطقة محددة ───────────────────────────────
-  const zone = zones.find(z => z.id === selZone);
-  if (!zone) return '';
-
-  // ─── صفحة اختيار نوع المركبة (جديدة) ─────────────────────
-  if (!selVehicle) {
-    const motoRoutes = (AppData.deliveryRoutes||[]).filter(r => r.zoneId === selZone && r.vehicleType === 'motorcycle');
-    const carRoutes  = (AppData.deliveryRoutes||[]).filter(r => r.zoneId === selZone && r.vehicleType === 'car');
-    const motoSubs   = (AppData.deliverySubzones||[]).filter(s => s.zoneId === selZone && s.vehicleType === 'motorcycle');
-    const carSubs    = (AppData.deliverySubzones||[]).filter(s => s.zoneId === selZone && s.vehicleType === 'car');
+  // ──────────────────────────────────────────────────────────────
+  //  صفحة 1: أنواع المركبات
+  // ──────────────────────────────────────────────────────────────
+  if (!selVT) {
+    const activeVTs = vehicleTypes.filter(v => v.active !== false);
+    const inactiveVTs = vehicleTypes.filter(v => v.active === false);
 
     return `
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px">
-        <div style="display:flex;align-items:center;gap:12px">
-          <button class="btn btn-secondary btn-sm" onclick="window.__dp_selectedZone=null;window.__dp_selectedVehicle=null;window.__dp_selectedSubzone=null;window.__dp_searchQuery='';render()">← كافة المناطق</button>
-          <div>
-            <h2 style="margin:0;font-family:'Cairo',sans-serif;font-weight:800">📍 ${escHtml(zone.name)}</h2>
-            <p style="color:var(--text-muted);font-size:13px;margin:4px 0 0">اختر نوع المركبة لعرض وإدارة أسعار التوصيل</p>
-          </div>
-        </div>
+    <style>
+      .dp-vt-card {
+        background: var(--glass-bg);
+        border: 2px solid var(--border);
+        border-radius: 20px;
+        padding: 24px 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 14px;
+        cursor: pointer;
+        transition: all 0.25s ease;
+        text-align: center;
+        position: relative;
+      }
+      .dp-vt-card:hover {
+        transform: translateY(-4px);
+      }
+      .dp-vt-card .dp-vt-badge {
+        position: absolute;
+        top: 12px;
+        left: 12px;
+        font-size: 10px;
+        padding: 3px 8px;
+        border-radius: 20px;
+        font-weight: 700;
+      }
+      .dp-vt-icon-wrap {
+        width: 72px;
+        height: 72px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 32px;
+      }
+      .dp-add-vt-card {
+        background: rgba(139,92,246,0.04);
+        border: 2px dashed rgba(139,92,246,0.25);
+        border-radius: 20px;
+        padding: 24px 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        cursor: pointer;
+        transition: all 0.25s ease;
+        text-align: center;
+      }
+      .dp-add-vt-card:hover {
+        border-color: var(--primary);
+        background: rgba(139,92,246,0.08);
+        transform: translateY(-2px);
+      }
+      .dp-breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        color: var(--text-muted);
+        margin-bottom: 4px;
+        flex-wrap: wrap;
+      }
+      .dp-breadcrumb span { cursor: default; }
+      .dp-breadcrumb .dp-bc-link {
+        cursor: pointer;
+        color: var(--primary);
+        text-decoration: underline;
+        text-underline-offset: 3px;
+      }
+      .dp-breadcrumb .dp-bc-link:hover { opacity: 0.8; }
+    </style>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;flex-wrap:wrap;gap:12px">
+      <div>
+        <h2 style="margin:0;font-family:'Cairo',sans-serif;font-weight:800;font-size:22px">🚚 أسعار التوصيل</h2>
+        <p style="color:var(--text-muted);font-size:13px;margin:6px 0 0">اختر نوع المركبة لإدارة مناطقها وأسعارها</p>
       </div>
+    </div>
 
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px;max-width:700px;margin:0 auto">
+    ${vehicleTypes.length === 0 ? `
+      <div style="text-align:center;padding:80px 20px;background:rgba(139,92,246,0.03);border:2px dashed rgba(139,92,246,0.15);border-radius:20px">
+        <div style="font-size:56px;margin-bottom:16px">🚗</div>
+        <h3 style="color:var(--text-secondary);font-family:'Cairo',sans-serif">لا توجد أنواع مركبات بعد</h3>
+        <p style="color:var(--text-muted);margin-bottom:20px">أضف نوع مركبة مثل سيارة، دراجة نارية، شاحنة...</p>
+        <button class="btn btn-primary" onclick="dp_openAddVehicleTypeModal()">+ إضافة أول نوع مركبة</button>
+      </div>` : `
 
-        <!-- بطاقة الدراجة النارية -->
-        <div style="background:linear-gradient(135deg,rgba(251,146,60,0.08),rgba(251,146,60,0.03));border:2px solid rgba(251,146,60,0.25);border-radius:20px;padding:28px;display:flex;flex-direction:column;align-items:center;gap:16px;cursor:pointer;transition:all 0.25s ease;text-align:center"
-             onmouseenter="this.style.borderColor='rgba(251,146,60,0.7)';this.style.transform='translateY(-4px)';this.style.boxShadow='0 12px 32px rgba(251,146,60,0.18)'"
-             onmouseleave="this.style.borderColor='rgba(251,146,60,0.25)';this.style.transform='none';this.style.boxShadow='none'"
-             onclick="window.__dp_selectedVehicle='motorcycle';window.__dp_selectedSubzone=null;window.__dp_searchQuery='';render()">
-          <div style="font-size:60px;line-height:1">🏍️</div>
-          <div>
-            <div style="font-size:20px;font-weight:800;color:#f97316;font-family:'Cairo',sans-serif;margin-bottom:6px">دراجة نارية</div>
-            <div style="font-size:13px;color:var(--text-muted)">${motoSubs.length} عنوان · ${motoRoutes.length} مسار</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px">
+
+      ${activeVTs.map(vt => {
+        const vtRoutes = routes.filter(r => r.vehicleTypeId === vt.id);
+        const vtZonesCount = [...new Set(vtRoutes.map(r => r.zoneId))].length;
+        const color = vt.color || '#3b82f6';
+        const colorAlpha = color + '22';
+        return `
+        <div class="dp-vt-card"
+             style="border-color:${color}33"
+             onmouseenter="this.style.borderColor='${color}';this.style.boxShadow='0 8px 30px ${color}33'"
+             onmouseleave="this.style.borderColor='${color}33';this.style.boxShadow='none'"
+             onclick="window.__dp_selectedVehicleType='${vt.id}';window.__dp_selectedZone=null;window.__dp_selectedSubzone=null;window.__dp_searchQuery='';render()">
+          <div class="dp-vt-icon-wrap" style="background:${colorAlpha};border:2px solid ${color}44">
+            <span>${escHtml(vt.icon || '🚗')}</span>
           </div>
-          <button class="btn btn-sm" style="background:rgba(251,146,60,0.15);color:#f97316;border:1px solid rgba(251,146,60,0.3);border-radius:10px;padding:8px 20px;font-family:'Cairo',sans-serif;font-weight:700;width:100%;transition:all 0.2s ease"
-                  onmouseenter="this.style.background='rgba(251,146,60,0.25)'"
-                  onmouseleave="this.style.background='rgba(251,146,60,0.15)'">
-            إدارة أسعار الدراجة ←
-          </button>
-        </div>
-
-        <!-- بطاقة السيارة -->
-        <div style="background:linear-gradient(135deg,rgba(59,130,246,0.08),rgba(59,130,246,0.03));border:2px solid rgba(59,130,246,0.25);border-radius:20px;padding:28px;display:flex;flex-direction:column;align-items:center;gap:16px;cursor:pointer;transition:all 0.25s ease;text-align:center"
-             onmouseenter="this.style.borderColor='rgba(59,130,246,0.7)';this.style.transform='translateY(-4px)';this.style.boxShadow='0 12px 32px rgba(59,130,246,0.18)'"
-             onmouseleave="this.style.borderColor='rgba(59,130,246,0.25)';this.style.transform='none';this.style.boxShadow='none'"
-             onclick="window.__dp_selectedVehicle='car';window.__dp_selectedSubzone=null;window.__dp_searchQuery='';render()">
-          <div style="font-size:60px;line-height:1">🚗</div>
           <div>
-            <div style="font-size:20px;font-weight:800;color:#3b82f6;font-family:'Cairo',sans-serif;margin-bottom:6px">سيارة</div>
-            <div style="font-size:13px;color:var(--text-muted)">${carSubs.length} عنوان · ${carRoutes.length} مسار</div>
+            <div style="font-size:17px;font-weight:800;color:var(--text-main);font-family:'Cairo',sans-serif">${escHtml(vt.name)}</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:4px">${vtRoutes.length} مسار · ${vtZonesCount} منطقة</div>
           </div>
-          <button class="btn btn-sm" style="background:rgba(59,130,246,0.15);color:#3b82f6;border:1px solid rgba(59,130,246,0.3);border-radius:10px;padding:8px 20px;font-family:'Cairo',sans-serif;font-weight:700;width:100%;transition:all 0.2s ease"
-                  onmouseenter="this.style.background='rgba(59,130,246,0.25)'"
-                  onmouseleave="this.style.background='rgba(59,130,246,0.15)'">
-            إدارة أسعار السيارة ←
-          </button>
-        </div>
+          <div style="display:flex;gap:6px;margin-top:4px" onclick="event.stopPropagation()">
+            <button class="btn btn-sm btn-secondary" onclick="dp_openEditVehicleTypeModal('${vt.id}')" title="تعديل" style="padding:5px 10px;font-size:12px">✏️ تعديل</button>
+            <button class="btn btn-sm btn-danger" onclick="dp_confirmDeleteVehicleType('${vt.id}','${escHtml(vt.name)}')" title="حذف" style="padding:5px 10px;font-size:12px">🗑️</button>
+          </div>
+        </div>`;
+      }).join('')}
+
+      <!-- بطاقة إضافة نوع مركبة جديد -->
+      <div class="dp-add-vt-card" onclick="dp_openAddVehicleTypeModal()">
+        <div style="width:72px;height:72px;border-radius:50%;background:rgba(139,92,246,0.08);border:2px dashed rgba(139,92,246,0.3);display:flex;align-items:center;justify-content:center;font-size:28px">+</div>
+        <div style="font-size:14px;font-weight:700;color:var(--primary);font-family:'Cairo',sans-serif">إضافة نوع مركبة</div>
+        <div style="font-size:12px;color:var(--text-muted)">سيارة، دراجة، شاحنة...</div>
       </div>
+    </div>
+
+    ${inactiveVTs.length > 0 ? `
+    <div style="margin-top:24px;padding:16px;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:14px">
+      <div style="font-size:13px;color:var(--text-muted);font-weight:600;margin-bottom:10px">مركبات غير مفعّلة (${inactiveVTs.length})</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        ${inactiveVTs.map(vt => `
+        <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;padding:8px 14px;display:flex;align-items:center;gap:8px">
+          <span>${escHtml(vt.icon||'🚗')}</span>
+          <span style="font-size:13px;color:var(--text-muted)">${escHtml(vt.name)}</span>
+          <button class="btn btn-sm btn-secondary" onclick="dp_openEditVehicleTypeModal('${vt.id}')" style="padding:2px 8px;font-size:11px">✏️</button>
+        </div>`).join('')}
+      </div>
+    </div>` : ''}
+    `}
     `;
   }
 
-  // ─── إعداد بيانات نوع المركبة المختارة ─────────────────────
-  const vehicleLabel = selVehicle === 'motorcycle' ? 'دراجة نارية 🏍️' : 'سيارة 🚗';
-  const vehicleColor = selVehicle === 'motorcycle' ? '#f97316' : '#3b82f6';
-  const vehicleIcon  = selVehicle === 'motorcycle' ? '🏍️' : '🚗';
+  // ─── معلومات نوع المركبة المختارة ────────────────────────────
+  const vt = vehicleTypes.find(v => v.id === selVT);
+  if (!vt) { window.__dp_selectedVehicleType = null; return renderAdminDeliveryPricing(); }
+  const vtColor = vt.color || '#3b82f6';
+  const vtColorAlpha = vtColor + '18';
 
-  const subzones = (AppData.deliverySubzones || []).filter(s => s.zoneId === selZone && s.vehicleType === selVehicle);
-  const selSubzoneId = window.__dp_selectedSubzone;
+  // ──────────────────────────────────────────────────────────────
+  //  صفحة 2: المناطق الرئيسية
+  // ──────────────────────────────────────────────────────────────
+  if (!selZ) {
+    const activeZones = zones.filter(z => z.active !== false);
+    const inactiveZones = zones.filter(z => z.active === false);
 
-  // ─── صفحة قائمة العناوين الفرعية ─────────────────────────
-  if (!selSubzoneId) {
     return `
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px">
-        <div style="display:flex;align-items:center;gap:12px">
-          <button class="btn btn-secondary btn-sm" onclick="window.__dp_selectedVehicle=null;window.__dp_selectedSubzone=null;window.__dp_searchQuery='';render()">← ${escHtml(zone.name)}</button>
-          <div>
-            <div style="display:flex;align-items:center;gap:8px">
-              <h2 style="margin:0;font-family:'Cairo',sans-serif;font-weight:800">${vehicleLabel}</h2>
-            </div>
-            <div style="font-size:12px;color:var(--text-muted);margin-top:2px">منطقة: ${escHtml(zone.name)}</div>
-          </div>
-        </div>
-        <button class="btn btn-primary" onclick="dp_openAddSubzoneModal('${selZone}','${selVehicle}')">+ إضافة عنوان فرعي</button>
-      </div>
+    <div class="dp-breadcrumb">
+      <span class="dp-bc-link" onclick="window.__dp_selectedVehicleType=null;window.__dp_selectedZone=null;window.__dp_selectedSubzone=null;render()">🚚 أسعار التوصيل</span>
+      <span>›</span>
+      <span style="color:var(--text-main);font-weight:700">${escHtml(vt.icon)} ${escHtml(vt.name)}</span>
+    </div>
 
-      <!-- شريط البحث -->
-      <div style="position:relative;margin-bottom:24px">
-        <input type="text" id="dp-subzone-search" placeholder="🔍 ابحث عن عنوان فرعي سريعاً (مثال: روكب، بويش، الديس)..." 
-               value="${escAttr(window.__dp_searchQuery || '')}" 
-               oninput="window.__dp_searchQuery=this.value; dp_filterSubzonesList()"
-               style="width:100%;padding:14px 20px 14px 45px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:16px;color:var(--text-main);font-family:'Cairo',sans-serif;font-size:14px;transition:all 0.25s ease;box-shadow:var(--shadow-sm)"
-               onfocus="this.style.borderColor='var(--primary)';this.style.boxShadow='0 0 0 3px rgba(139,92,246,0.15)'"
-               onblur="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
-      </div>
-
-      <p style="color:var(--text-muted);font-size:13px;margin-bottom:20px">اختر العنوان الفرعي لعرض مسارات التوصيل أو إضافة مسارات جديدة:</p>
-
-      ${subzones.length === 0 ? `
-        <div style="text-align:center;padding:60px 20px;background:rgba(124,58,237,.03);border:2px dashed rgba(124,58,237,.15);border-radius:16px;margin-top:16px">
-          <div style="font-size:48px;margin-bottom:12px">${vehicleIcon}</div>
-          <h3 style="color:var(--text-secondary)">لا توجد عناوين فرعية لـ ${vehicleLabel} بعد</h3>
-          <p style="color:var(--text-muted)">ابدأ بإضافة عنوان فرعي مثل "روكب" أو "بويش" للبدء في ربط الأسعار</p>
-          <button class="btn btn-primary btn-sm" onclick="dp_openAddSubzoneModal('${selZone}','${selVehicle}')">+ إضافة أول عنوان فرعي</button>
-        </div>` : `
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">
-          ${subzones.map(sz => {
-            const szRoutes = routes.filter(r => r.zoneId === selZone && r.fromArea === sz.name && r.vehicleType === selVehicle);
-            return `
-            <div class="dp-subzone-card" data-name="${escAttr(sz.name)}"
-                 style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:16px;padding:18px;display:flex;flex-direction:column;justify-content:space-between;transition:all 0.25s ease;cursor:pointer;box-shadow:var(--shadow-sm)"
-                 onmouseenter="this.style.transform='translateY(-3px)';this.style.borderColor='${vehicleColor}';this.style.boxShadow='var(--shadow-md)'"
-                 onmouseleave="this.style.transform='none';this.style.borderColor='var(--border)';this.style.boxShadow='var(--shadow-sm)'"
-                 onclick="window.__dp_selectedSubzone='${sz.id}';window.__dp_searchQuery='';render()">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-                <div style="display:flex;align-items:center;gap:10px">
-                  <div style="background:rgba(139,92,246,0.12);width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px">${vehicleIcon}</div>
-                  <div>
-                    <span style="font-weight:800;font-size:16px;color:var(--text-main);font-family:'Cairo',sans-serif">${escHtml(sz.name)}</span>
-                    <div style="color:var(--text-muted);font-size:12px;margin-top:2px">${szRoutes.length} مسار مسجّل</div>
-                  </div>
-                </div>
-                <div style="display:flex;gap:6px" onclick="event.stopPropagation()">
-                  <button class="btn btn-sm btn-secondary" onclick="dp_openEditSubzoneModal('${sz.id}')" style="padding:6px;border-radius:8px;background:rgba(255,255,255,0.05);border:none" title="تعديل">✏️</button>
-                  <button class="btn btn-sm btn-danger" onclick="dp_confirmDeleteSubzone('${sz.id}','${escHtml(sz.name)}')" style="padding:6px;border-radius:8px;border:none" title="حذف">🗑️</button>
-                </div>
-              </div>
-              <button class="btn btn-secondary btn-sm" style="width:100%;font-weight:700;font-family:'Cairo',sans-serif" onclick="window.__dp_selectedSubzone='${sz.id}';window.__dp_searchQuery='';render()">
-                عرض المسارات والأسعار ←
-              </button>
-            </div>`;
-          }).join('')}
-        </div>`}
-    `;
-  }
-
-  // ─── صفحة مسارات عنوان فرعي محدد ─────────────────────────
-  const subzone = subzones.find(s => s.id === selSubzoneId);
-  if (!subzone) {
-    window.__dp_selectedSubzone = null;
-    return '';
-  }
-
-  const subzoneRoutes = routes.filter(r => r.zoneId === selZone && r.fromArea === subzone.name && r.vehicleType === selVehicle);
-
-  return `
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px">
       <div style="display:flex;align-items:center;gap:12px">
-        <button class="btn btn-secondary btn-sm" onclick="window.__dp_selectedSubzone=null;render()">← ${vehicleLabel} (${escHtml(zone.name)})</button>
+        <div style="width:48px;height:48px;border-radius:14px;background:${vtColorAlpha};border:2px solid ${vtColor}44;display:flex;align-items:center;justify-content:center;font-size:22px">${escHtml(vt.icon||'🚗')}</div>
         <div>
-          <h2 style="margin:0;font-family:'Cairo',sans-serif;font-weight:800">🏠 ${escHtml(subzone.name)}</h2>
-          <span style="font-size:12px;color:var(--text-muted);margin-top:2px">المسارات المنطلقة من "${escHtml(subzone.name)}" · ${vehicleLabel}</span>
+          <h2 style="margin:0;font-family:'Cairo',sans-serif;font-weight:800">${escHtml(vt.name)}</h2>
+          <p style="color:var(--text-muted);font-size:13px;margin:3px 0 0">اختر المنطقة الرئيسية لإدارة عناوينها وأسعارها</p>
         </div>
       </div>
-      <button class="btn btn-primary" onclick="dp_openAddRouteModalForSubzone('${selZone}', '${subzone.id}', '${selVehicle}')">+ إضافة مسارات جديدة</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-secondary btn-sm" onclick="dp_openManageZonesModal()">⚙️ إدارة المناطق</button>
+        <button class="btn btn-primary" onclick="dp_openAddZoneModal()">+ إضافة منطقة</button>
+      </div>
+    </div>
+
+    ${activeZones.length === 0 ? `
+      <div style="text-align:center;padding:70px 20px;background:rgba(139,92,246,0.03);border:2px dashed rgba(139,92,246,0.15);border-radius:20px">
+        <div style="font-size:48px;margin-bottom:14px">🗺️</div>
+        <h3 style="color:var(--text-secondary);font-family:'Cairo',sans-serif">لا توجد مناطق رئيسية بعد</h3>
+        <p style="color:var(--text-muted)">ابدأ بإضافة منطقة مثل "المكلا" أو "سيئون"</p>
+        <button class="btn btn-primary" onclick="dp_openAddZoneModal()">+ إضافة أول منطقة</button>
+      </div>` : `
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px">
+      ${activeZones.map(z => {
+        const zRoutes   = routes.filter(r => r.zoneId === z.id && r.vehicleTypeId === selVT);
+        const zSubzones = subzones.filter(s => s.zoneId === z.id && s.active !== false);
+        return `
+        <div style="background:var(--glass-bg);border:1px solid var(--border);border-radius:16px;padding:18px;cursor:pointer;transition:all 0.22s ease"
+             onmouseenter="this.style.borderColor='${vtColor}';this.style.transform='translateY(-3px)';this.style.boxShadow='0 6px 20px ${vtColor}22'"
+             onmouseleave="this.style.borderColor='var(--border)';this.style.transform='none';this.style.boxShadow='none'"
+             onclick="window.__dp_selectedZone='${z.id}';window.__dp_selectedSubzone=null;window.__dp_searchQuery='';render()">
+          <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:14px">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="width:38px;height:38px;border-radius:10px;background:${vtColorAlpha};display:flex;align-items:center;justify-content:center;font-size:18px">📍</div>
+              <div>
+                <div style="font-size:16px;font-weight:800;font-family:'Cairo',sans-serif;color:var(--text-main)">${escHtml(z.name)}</div>
+                <div style="font-size:12px;color:var(--text-muted);margin-top:2px">${zSubzones.length} عنوان · ${zRoutes.length} مسار</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:5px" onclick="event.stopPropagation()">
+              <button class="btn btn-sm btn-secondary" onclick="dp_openEditZoneModal('${z.id}')" style="padding:5px;border-radius:8px" title="تعديل">✏️</button>
+              <button class="btn btn-sm btn-danger" onclick="dp_confirmDeleteZone('${z.id}','${escHtml(z.name)}')" style="padding:5px;border-radius:8px" title="حذف">🗑️</button>
+            </div>
+          </div>
+          <div style="display:flex;gap:4px">
+            <button class="btn btn-primary btn-sm" style="flex:1;font-family:'Cairo',sans-serif;font-weight:700" onclick="event.stopPropagation();window.__dp_selectedZone='${z.id}';window.__dp_selectedSubzone=null;render()">
+              إدارة الأسعار ←
+            </button>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+    ${inactiveZones.length > 0 ? `<div style="margin-top:16px;font-size:12px;color:var(--text-muted)">+ ${inactiveZones.length} منطقة معطّلة</div>` : ''}
+    `}
+    `;
+  }
+
+  // ─── معلومات المنطقة المختارة ─────────────────────────────────
+  const zone = zones.find(z => z.id === selZ);
+  if (!zone) { window.__dp_selectedZone = null; return renderAdminDeliveryPricing(); }
+
+  const zoneSubzones = subzones.filter(s => s.zoneId === selZ);
+  const activeSubzones = zoneSubzones.filter(s => s.active !== false);
+
+  // ──────────────────────────────────────────────────────────────
+  //  صفحة 3: العناوين الفرعية
+  // ──────────────────────────────────────────────────────────────
+  if (!selSZ) {
+    return `
+    <div class="dp-breadcrumb">
+      <span class="dp-bc-link" onclick="window.__dp_selectedVehicleType=null;window.__dp_selectedZone=null;window.__dp_selectedSubzone=null;render()">🚚 أسعار التوصيل</span>
+      <span>›</span>
+      <span class="dp-bc-link" onclick="window.__dp_selectedZone=null;window.__dp_selectedSubzone=null;render()">${escHtml(vt.icon)} ${escHtml(vt.name)}</span>
+      <span>›</span>
+      <span style="color:var(--text-main);font-weight:700">📍 ${escHtml(zone.name)}</span>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px">
+      <div>
+        <h2 style="margin:0;font-family:'Cairo',sans-serif;font-weight:800">📍 ${escHtml(zone.name)}</h2>
+        <p style="color:var(--text-muted);font-size:13px;margin:3px 0 0">اختر العنوان الفرعي لإدارة مسارات التوصيل لـ ${escHtml(vt.icon)} ${escHtml(vt.name)}</p>
+      </div>
+      <button class="btn btn-primary" onclick="dp_openAddSubzoneModal('${selZ}')">+ إضافة عنوان فرعي</button>
+    </div>
+
+    <!-- شريط البحث -->
+    <div style="position:relative;margin-bottom:20px">
+      <input type="text" id="dp-subzone-search"
+             placeholder="🔍 ابحث عن عنوان فرعي سريعاً..."
+             value="${escAttr(window.__dp_searchQuery || '')}"
+             oninput="window.__dp_searchQuery=this.value;dp_filterSubzonesList()"
+             style="width:100%;padding:12px 18px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:14px;color:var(--text-main);font-family:'Cairo',sans-serif;font-size:14px;transition:all 0.2s"
+             onfocus="this.style.borderColor='var(--primary)';this.style.boxShadow='0 0 0 3px rgba(139,92,246,0.15)'"
+             onblur="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
+    </div>
+
+    ${zoneSubzones.length === 0 ? `
+      <div style="text-align:center;padding:70px 20px;background:rgba(139,92,246,0.03);border:2px dashed rgba(139,92,246,0.15);border-radius:20px">
+        <div style="font-size:48px;margin-bottom:14px">🏠</div>
+        <h3 style="color:var(--text-secondary);font-family:'Cairo',sans-serif">لا توجد عناوين فرعية بعد</h3>
+        <p style="color:var(--text-muted)">ابدأ بإضافة عناوين مثل "روكب" أو "بويش"</p>
+        <button class="btn btn-primary btn-sm" onclick="dp_openAddSubzoneModal('${selZ}')">+ إضافة أول عنوان</button>
+      </div>` : `
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px" id="dp-subzones-grid">
+      ${zoneSubzones.map(sz => {
+        const szRoutes = routes.filter(r => r.zoneId === selZ && r.vehicleTypeId === selVT && r.fromArea === sz.name);
+        const isActive = sz.active !== false;
+        return `
+        <div class="dp-subzone-card" data-name="${escAttr(sz.name)}"
+             style="background:rgba(255,255,255,0.02);border:1px solid ${isActive ? 'var(--border)' : 'rgba(239,68,68,0.2)'};border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px;cursor:pointer;transition:all 0.22s ease;${!isActive?'opacity:0.6':''}"
+             onmouseenter="this.style.transform='translateY(-3px)';this.style.borderColor='${vtColor}';this.style.boxShadow='0 6px 20px ${vtColor}22'"
+             onmouseleave="this.style.transform='none';this.style.borderColor='${isActive ? 'var(--border)' : 'rgba(239,68,68,0.2)'}';this.style.boxShadow='none'"
+             onclick="window.__dp_selectedSubzone='${sz.id}';window.__dp_searchQuery='';render()">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="width:38px;height:38px;border-radius:10px;background:${vtColorAlpha};display:flex;align-items:center;justify-content:center;font-size:16px">🏠</div>
+              <div>
+                <div style="font-size:15px;font-weight:800;font-family:'Cairo',sans-serif;color:var(--text-main)">${escHtml(sz.name)}</div>
+                <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${szRoutes.length} مسار مسجّل</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:4px" onclick="event.stopPropagation()">
+              <span class="badge ${isActive?'badge-teal':'badge-rose'}" style="font-size:10px;cursor:default">${isActive?'مفعّل':'معطّل'}</span>
+            </div>
+          </div>
+          <div style="display:flex;gap:6px" onclick="event.stopPropagation()">
+            <button class="btn btn-primary btn-sm" style="flex:1;font-family:'Cairo',sans-serif;font-size:12px" onclick="window.__dp_selectedSubzone='${sz.id}';window.__dp_searchQuery='';render()">المسارات ←</button>
+            <button class="btn btn-sm btn-secondary" onclick="dp_openEditSubzoneModal('${sz.id}')" style="padding:5px 8px" title="تعديل">✏️</button>
+            <button class="btn btn-sm btn-danger" onclick="dp_confirmDeleteSubzone('${sz.id}','${escHtml(sz.name)}')" style="padding:5px 8px" title="حذف">🗑️</button>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+    `}
+    `;
+  }
+
+  // ─── معلومات العنوان الفرعي المختار ──────────────────────────
+  const subzone = zoneSubzones.find(s => s.id === selSZ);
+  if (!subzone) { window.__dp_selectedSubzone = null; return renderAdminDeliveryPricing(); }
+
+  const subzoneRoutes = routes.filter(r =>
+    r.zoneId === selZ && r.vehicleTypeId === selVT && r.fromArea === subzone.name
+  );
+
+  // ──────────────────────────────────────────────────────────────
+  //  صفحة 4: المسارات والأسعار
+  // ──────────────────────────────────────────────────────────────
+  return `
+    <div class="dp-breadcrumb">
+      <span class="dp-bc-link" onclick="window.__dp_selectedVehicleType=null;window.__dp_selectedZone=null;window.__dp_selectedSubzone=null;render()">🚚 أسعار التوصيل</span>
+      <span>›</span>
+      <span class="dp-bc-link" onclick="window.__dp_selectedZone=null;window.__dp_selectedSubzone=null;render()">${escHtml(vt.icon)} ${escHtml(vt.name)}</span>
+      <span>›</span>
+      <span class="dp-bc-link" onclick="window.__dp_selectedSubzone=null;render()">📍 ${escHtml(zone.name)}</span>
+      <span>›</span>
+      <span style="color:var(--text-main);font-weight:700">🏠 ${escHtml(subzone.name)}</span>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+      <div>
+        <h2 style="margin:0;font-family:'Cairo',sans-serif;font-weight:800">🏠 ${escHtml(subzone.name)}</h2>
+        <p style="color:var(--text-muted);font-size:13px;margin:3px 0 0">
+          المسارات المنطلقة من "${escHtml(subzone.name)}" عبر ${escHtml(vt.icon)} ${escHtml(vt.name)}
+        </p>
+      </div>
+      <button class="btn btn-primary" onclick="dp_openAddRouteModalForSubzone('${selZ}','${selSZ}','${selVT}')">+ إضافة مسارات جديدة</button>
     </div>
 
     ${subzoneRoutes.length === 0 ? `
-      <div style="text-align:center;padding:60px 20px;background:rgba(16,185,129,.03);border:2px dashed rgba(16,185,129,.15);border-radius:16px;margin-top:16px">
-        <div style="font-size:48px;margin-bottom:12px">🛣️</div>
-        <h3 style="color:var(--text-secondary)">لا توجد مسارات مسجّلة من "${escHtml(subzone.name)}" بعد</h3>
-        <p style="color:var(--text-muted)">ابدأ بإضافة مسار توصيل من "${escHtml(subzone.name)}" إلى بقية العناوين</p>
-        <button class="btn btn-primary btn-sm" onclick="dp_openAddRouteModalForSubzone('${selZone}', '${subzone.id}', '${selVehicle}')">+ إضافة أول مسار</button>
+      <div style="text-align:center;padding:70px 20px;background:rgba(16,185,129,0.03);border:2px dashed rgba(16,185,129,0.15);border-radius:20px">
+        <div style="font-size:48px;margin-bottom:14px">🛣️</div>
+        <h3 style="color:var(--text-secondary);font-family:'Cairo',sans-serif">لا توجد مسارات من "${escHtml(subzone.name)}" بعد</h3>
+        <p style="color:var(--text-muted)">ابدأ بإضافة مسار توصيل إلى العناوين المجاورة</p>
+        <button class="btn btn-primary btn-sm" onclick="dp_openAddRouteModalForSubzone('${selZ}','${selSZ}','${selVT}')">+ إضافة أول مسار</button>
       </div>` : `
-      <!-- شريط بحث المسارات -->
-      <div style="position:relative;margin-bottom:16px">
-        <input type="text" id="dp-route-search" placeholder="🔍 ابحث عن مسار أو وجهة معينة (مثال: بويش)..." 
-               oninput="dp_filterRoutesTable()"
-               style="width:100%;padding:12px 18px 12px 40px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:14px;color:var(--text-main);font-family:'Cairo',sans-serif;font-size:13.5px;transition:all 0.25s ease;box-shadow:var(--shadow-sm)"
-               onfocus="this.style.borderColor='var(--primary)';this.style.boxShadow='0 0 0 3px rgba(139,92,246,0.15)'"
-               onblur="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
-      </div>
+    <!-- شريط البحث -->
+    <div style="margin-bottom:14px">
+      <input type="text" id="dp-route-search"
+             placeholder="🔍 ابحث عن وجهة في الجدول..."
+             oninput="dp_filterRoutesTable()"
+             style="width:100%;padding:10px 16px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:12px;color:var(--text-main);font-family:'Cairo',sans-serif;font-size:13px;transition:all 0.2s"
+             onfocus="this.style.borderColor='var(--primary)'"
+             onblur="this.style.borderColor='var(--border)'">
+    </div>
 
-      <div class="table-wrap" style="background:rgba(255,255,255,0.01);border:1px solid var(--border);border-radius:16px;overflow:hidden">
-        <table class="admin-table">
-          <thead>
-            <tr>
-              <th style="font-family:'Cairo',sans-serif;font-weight:700">من (نقطة الاستلام)</th>
-              <th style="font-family:'Cairo',sans-serif;font-weight:700">إلى (موقع العميل)</th>
-              <th style="font-family:'Cairo',sans-serif;font-weight:700">سعر التوصيل</th>
-              <th style="font-family:'Cairo',sans-serif;font-weight:700">الحالة</th>
-              <th style="font-family:'Cairo',sans-serif;font-weight:700">الإجراءات</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${subzoneRoutes.map(r => `
-              <tr class="dp-route-row" data-to="${escAttr(r.toArea)}" data-from="${escAttr(r.fromArea)}" style="transition:all 0.2s hover">
-                <td><strong style="color:var(--accent-purple);font-size:14px">${escHtml(r.fromArea)}</strong></td>
-                <td><strong style="color:var(--text-main);font-size:14px">${escHtml(r.toArea)}</strong></td>
-                <td>
-                  <span style="font-size:15px;font-weight:800;color:#10b981">${(r.price||0).toLocaleString('ar')} ريال</span>
-                  ${r.weight ? `<div style="font-size:11px;color:var(--text-muted);margin-top:2px">⚖️ ${r.weight} كغ</div>` : ''}
-                </td>
-                <td>
-                  <span class="badge ${r.active!==false?'badge-teal':'badge-rose'}">${r.active!==false?'فعّال':'معطّل'}</span>
-                </td>
-                <td style="white-space:nowrap">
-                  <button class="btn btn-sm btn-secondary" onclick="dp_openEditRouteModal('${r.id}')">✏️ تعديل</button>
-                  <button class="btn btn-sm btn-danger" onclick="dp_confirmDeleteRoute('${r.id}','${escHtml(r.fromArea)}','${escHtml(r.toArea)}')">🗑️</button>
-                </td>
-              </tr>`).join('')}
-          </tbody>
-        </table>
-      </div>`}
+    <div class="table-wrap" style="background:rgba(255,255,255,0.01);border:1px solid var(--border);border-radius:16px;overflow:hidden">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th style="font-family:'Cairo',sans-serif;font-weight:700">📤 من</th>
+            <th style="font-family:'Cairo',sans-serif;font-weight:700">📥 إلى</th>
+            <th style="font-family:'Cairo',sans-serif;font-weight:700">💰 السعر</th>
+            <th style="font-family:'Cairo',sans-serif;font-weight:700">الحالة</th>
+            <th style="font-family:'Cairo',sans-serif;font-weight:700">الإجراءات</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${subzoneRoutes.map(r => `
+          <tr class="dp-route-row" data-to="${escAttr(r.toArea)}" data-from="${escAttr(r.fromArea)}">
+            <td><strong style="color:${vtColor};font-size:14px">${escHtml(r.fromArea)}</strong></td>
+            <td><strong style="font-size:14px">${escHtml(r.toArea)}</strong></td>
+            <td><span style="font-size:15px;font-weight:800;color:#10b981">${(r.price||0).toLocaleString('ar')} ريال</span></td>
+            <td><span class="badge ${r.active!==false?'badge-teal':'badge-rose'}">${r.active!==false?'فعّال':'معطّل'}</span></td>
+            <td style="white-space:nowrap">
+              <button class="btn btn-sm btn-secondary" onclick="dp_openEditRouteModal('${r.id}')">✏️ تعديل</button>
+              <button class="btn btn-sm btn-danger" onclick="dp_confirmDeleteRoute('${r.id}','${escHtml(r.fromArea)}','${escHtml(r.toArea)}')">🗑️</button>
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+    `}
   `;
-}
+};
 
-// ─── وظيفة التصفية الفورية بالـ DOM دون إعادة رسم الصفحة بالكامل ────────────────
+// ══════════════════════════════════════════════════════════════════
+//  فلترة بالـ DOM (بدون إعادة رسم)
+// ══════════════════════════════════════════════════════════════════
 window.dp_filterSubzonesList = function() {
-  const query = document.getElementById('dp-subzone-search')?.value?.trim()?.toLowerCase() || '';
-  const cards = document.querySelectorAll('.dp-subzone-card');
-  cards.forEach(card => {
-    const name = card.getAttribute('data-name')?.toLowerCase() || '';
-    if (name.includes(query)) {
-      card.style.display = 'flex';
-    } else {
-      card.style.display = 'none';
-    }
+  const q = (document.getElementById('dp-subzone-search')?.value || '').trim().toLowerCase();
+  document.querySelectorAll('.dp-subzone-card').forEach(c => {
+    const name = (c.getAttribute('data-name') || '').toLowerCase();
+    c.style.display = name.includes(q) ? '' : 'none';
   });
-}
+};
 
-// ─── وظيفة التصفية الفورية للمسارات بداخل الجدول ────────────────
 window.dp_filterRoutesTable = function() {
-  const query = document.getElementById('dp-route-search')?.value?.trim()?.toLowerCase() || '';
-  const rows = document.querySelectorAll('.dp-route-row');
-  rows.forEach(row => {
-    const to = row.getAttribute('data-to')?.toLowerCase() || '';
-    const from = row.getAttribute('data-from')?.toLowerCase() || '';
-    if (to.includes(query) || from.includes(query)) {
-      row.style.display = '';
-    } else {
-      row.style.display = 'none';
-    }
+  const q = (document.getElementById('dp-route-search')?.value || '').trim().toLowerCase();
+  document.querySelectorAll('.dp-route-row').forEach(r => {
+    const to   = (r.getAttribute('data-to')   || '').toLowerCase();
+    const from = (r.getAttribute('data-from') || '').toLowerCase();
+    r.style.display = (to.includes(q) || from.includes(q)) ? '' : 'none';
   });
+};
+
+// ══════════════════════════════════════════════════════════════════
+//  نوافذ: أنواع المركبات
+// ══════════════════════════════════════════════════════════════════
+function _buildVehicleTypeModal(vt = null) {
+  const icons  = _DP_DEFAULT_ICONS;
+  const colors = _DP_DEFAULT_COLORS;
+  const selIcon  = vt?.icon  || '🚗';
+  const selColor = vt?.color || '#3b82f6';
+
+  return `
+  <style>
+    .dp-icon-pick { display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px }
+    .dp-icon-btn { padding:10px;font-size:22px;border:2px solid var(--border);border-radius:10px;cursor:pointer;transition:all .15s;text-align:center;background:rgba(255,255,255,0.02) }
+    .dp-icon-btn.selected { border-color:var(--primary);background:rgba(139,92,246,0.12) }
+    .dp-icon-btn:hover { border-color:var(--primary) }
+    .dp-color-pick { display:flex;flex-wrap:wrap;gap:8px;margin-top:8px }
+    .dp-color-dot { width:32px;height:32px;border-radius:50%;cursor:pointer;border:3px solid transparent;transition:all .15s;flex-shrink:0 }
+    .dp-color-dot.selected { border-color:#fff;box-shadow:0 0 0 2px var(--primary) }
+  </style>
+  <div class="modal-header">
+    <h2 class="modal-title">${vt ? '✏️ تعديل نوع المركبة' : '🚗 إضافة نوع مركبة جديد'}</h2>
+    <button class="modal-close" onclick="closeModal()">✕</button>
+  </div>
+  <div style="padding:20px;display:flex;flex-direction:column;gap:16px;overflow-y:auto;max-height:70vh">
+    <div class="form-group">
+      <label class="form-label">اسم نوع المركبة <span style="color:#ef4444">*</span></label>
+      <input class="form-control" id="dp-vt-name" value="${escHtml(vt?.name||'')}" placeholder="مثال: سيارة، دراجة نارية، شاحنة..." autofocus>
+    </div>
+    <div class="form-group">
+      <label class="form-label">الأيقونة</label>
+      <div class="dp-icon-pick" id="dp-icon-grid">
+        ${icons.map(ic => `
+        <div class="dp-icon-btn ${ic===selIcon?'selected':''}" onclick="dp_selectVtIcon(this,'${ic}')" title="${ic}">${ic}</div>`).join('')}
+      </div>
+      <input type="hidden" id="dp-vt-icon" value="${escHtml(selIcon)}">
+    </div>
+    <div class="form-group">
+      <label class="form-label">اللون</label>
+      <div class="dp-color-pick" id="dp-color-grid">
+        ${colors.map(c => `
+        <div class="dp-color-dot ${c===selColor?'selected':''}" style="background:${c}" onclick="dp_selectVtColor(this,'${c}')" title="${c}"></div>`).join('')}
+        <input type="color" id="dp-vt-color-custom" value="${selColor}"
+               style="width:32px;height:32px;border-radius:50%;border:3px solid transparent;cursor:pointer;padding:0"
+               oninput="dp_selectVtColorCustom(this.value)">
+      </div>
+      <input type="hidden" id="dp-vt-color" value="${escHtml(selColor)}">
+    </div>
+    <div class="form-group">
+      <label class="form-label">ترتيب العرض</label>
+      <input class="form-control" id="dp-vt-order" type="number" min="1" value="${vt?.order||''}" placeholder="1، 2، 3...">
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:4px">
+      <button class="btn btn-secondary" onclick="closeModal()">إلغاء</button>
+      <button class="btn btn-primary" onclick="dp_submitVehicleType(${vt?`'${vt.id}'`:'null'})">✅ حفظ</button>
+    </div>
+  </div>`;
 }
 
-// ─── نـوافذ المناطق الفرعية (Neighborhoods) ──────────────────────
-window.dp_openAddSubzoneModal = function(zoneId, vehicleType) {
-  const vt = vehicleType || window.__dp_selectedVehicle || 'motorcycle';
-  const vtLabel = vt === 'motorcycle' ? '🏍️ دراجة نارية' : '🚗 سيارة';
-  openModal(`
-    <div class="modal-header"><h2 class="modal-title">🏠 إضافة عنوان جديد</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
-    <div style="padding:20px;display:flex;flex-direction:column;gap:16px">
-      <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--text-muted)">
-        نوع المركبة: <strong style="color:var(--text-main)">${vtLabel}</strong>
-      </div>
-      <div class="form-group">
-        <label class="form-label">اسم المنطقة الفرعية / العنوان</label>
-        <input class="form-control" id="dp-sz-name" placeholder="مثال: روكب، جول مسحة، الشرج..." autofocus>
-      </div>
-      <div style="display:flex;gap:10px;justify-content:flex-end">
-        <button class="btn btn-secondary" onclick="closeModal()">إلغاء</button>
-        <button class="btn btn-primary" onclick="dp_submitSubzone('${zoneId}','${vt}')">✅ حفظ</button>
-      </div>
-    </div>`);
+window.dp_selectVtIcon = function(el, icon) {
+  document.querySelectorAll('.dp-icon-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('dp-vt-icon').value = icon;
+};
+window.dp_selectVtColor = function(el, color) {
+  document.querySelectorAll('.dp-color-dot').forEach(d => d.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('dp-vt-color').value = color;
+  const picker = document.getElementById('dp-vt-color-custom');
+  if (picker) picker.value = color;
+};
+window.dp_selectVtColorCustom = function(color) {
+  document.querySelectorAll('.dp-color-dot').forEach(d => d.classList.remove('selected'));
+  document.getElementById('dp-vt-color').value = color;
 };
 
-window.dp_openEditSubzoneModal = function(id) {
-  const sz = (AppData.deliverySubzones||[]).find(s=>s.id===id);
-  if (!sz) return;
-  openModal(`
-    <div class="modal-header"><h2 class="modal-title">✏️ تعديل العنوان</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
-    <div style="padding:20px;display:flex;flex-direction:column;gap:16px">
-      <div class="form-group">
-        <label class="form-label">الاسم</label>
-        <input class="form-control" id="dp-sz-name" value="${escHtml(sz.name)}">
-      </div>
-      <div style="display:flex;gap:10px;justify-content:flex-end">
-        <button class="btn btn-secondary" onclick="closeModal()">إلغاء</button>
-        <button class="btn btn-primary" onclick="dp_submitSubzone('${sz.zoneId}', '${id}')">✅ حفظ التعديل</button>
-      </div>
-    </div>`);
+window.dp_openAddVehicleTypeModal  = function() { openModal(_buildVehicleTypeModal()); };
+window.dp_openEditVehicleTypeModal = function(id) {
+  const vt = (AppData.deliveryVehicleTypes||[]).find(v=>v.id===id);
+  if (vt) openModal(_buildVehicleTypeModal(vt));
 };
 
-window.dp_submitSubzone = async function(zoneId, vehicleTypeOrId=null, editId=null) {
-  if (window.__dp_isSavingSubzone) return;
-  const name = document.getElementById('dp-sz-name')?.value?.trim();
-  if (!name) { toast('يرجى إدخال الاسم','warning'); return; }
+window.dp_submitVehicleType = async function(id=null) {
+  if (window.__dp_isSavingVT) return;
+  const name  = document.getElementById('dp-vt-name')?.value?.trim();
+  const icon  = document.getElementById('dp-vt-icon')?.value  || '🚗';
+  const color = document.getElementById('dp-vt-color')?.value || '#3b82f6';
+  const order = document.getElementById('dp-vt-order')?.value;
+  if (!name) { toast('يرجى إدخال اسم نوع المركبة','warning'); return; }
 
-  // تحديد هل المعامل الثاني نوع مركبة أم معرّف تعديل
-  let vehicleType = window.__dp_selectedVehicle || 'motorcycle';
-  let id = editId;
-  if (vehicleTypeOrId === 'motorcycle' || vehicleTypeOrId === 'car') {
-    vehicleType = vehicleTypeOrId;
-  } else if (vehicleTypeOrId && vehicleTypeOrId !== 'null') {
-    id = vehicleTypeOrId; // قديم: للتوافقية مع نوافذ التعديل
-    const existingSz = (AppData.deliverySubzones||[]).find(s=>s.id===id);
-    if (existingSz?.vehicleType) vehicleType = existingSz.vehicleType;
-  }
-
-  window.__dp_isSavingSubzone = true;
-  showLoader('جاري حفظ العنوان...');
+  window.__dp_isSavingVT = true;
+  showLoader('جاري الحفظ...');
   try {
-    const ok = await dp_saveSubzone({ zoneId, name, vehicleType }, id);
+    const ok = await dp_saveVehicleType({ name, icon, color, order: order ? Number(order) : undefined }, id === 'null' ? null : id);
     if (ok) { toast('✅ تم الحفظ','success'); closeModal(); await render(); }
     else toast('فشل الحفظ','error');
-  } catch(e) {
-    toast('حدث خطأ أثناء الحفظ','error');
-  } finally {
-    window.__dp_isSavingSubzone = false;
-    hideLoader();
-  }
+  } catch(e) { toast('حدث خطأ','error'); }
+  finally { window.__dp_isSavingVT = false; hideLoader(); }
 };
 
-window.dp_confirmDeleteSubzone = function(id, name) {
-  if (!confirm(`هل أنت متأكد من حذف العنوان "${name}"؟`)) return;
-  dp_deleteSubzone(id).then(ok => {
+window.dp_confirmDeleteVehicleType = function(id, name) {
+  if (!confirm(`هل أنت متأكد من حذف نوع المركبة "${name}"؟\nسيتم حذف جميع المسارات المرتبطة به.`)) return;
+  dp_deleteVehicleType(id).then(ok => {
     if (ok) { toast('✅ تم الحذف','success'); render(); }
     else toast('فشل الحذف','error');
   });
 };
 
-// ─── نافذة: إضافة/تعديل منطقة ──────────────────────────────────
+// ══════════════════════════════════════════════════════════════════
+//  نوافذ: المناطق الرئيسية
+// ══════════════════════════════════════════════════════════════════
 window.dp_openAddZoneModal = function() {
   openModal(`
     <div class="modal-header"><h2 class="modal-title">🗺️ إضافة منطقة رئيسية</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
     <div style="padding:20px;display:flex;flex-direction:column;gap:16px">
       <div class="form-group">
         <label class="form-label">اسم المنطقة <span style="color:#ef4444">*</span></label>
-        <input class="form-control" id="dp-zone-name" placeholder="مثال: المكلا" autofocus>
+        <input class="form-control" id="dp-zone-name" placeholder="مثال: المكلا، سيئون، مكة..." autofocus>
       </div>
       <div style="display:flex;gap:10px;justify-content:flex-end">
         <button class="btn btn-secondary" onclick="closeModal()">إلغاء</button>
@@ -1452,373 +1590,283 @@ window.dp_openEditZoneModal = function(id) {
   const z = (AppData.deliveryZones||[]).find(z=>z.id===id);
   if (!z) return;
   openModal(`
-    <div class="modal-header"><h2 class="modal-title">✏️ تعديل منطقة</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div class="modal-header"><h2 class="modal-title">✏️ تعديل المنطقة</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
     <div style="padding:20px;display:flex;flex-direction:column;gap:16px">
       <div class="form-group">
         <label class="form-label">اسم المنطقة</label>
         <input class="form-control" id="dp-zone-name" value="${escHtml(z.name||'')}">
       </div>
-      <style>
-        .dp-toggle-card {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          background: rgba(255,255,255,0.02);
-          border: 1px solid var(--border);
-          border-radius: 14px;
-          padding: 14px 18px;
-          transition: all 0.25s ease;
-          margin-top: 8px;
-        }
-        .dp-toggle-card:hover {
-          background: rgba(255,255,255,0.04);
-          border-color: rgba(139,92,246,0.3);
-        }
-        .dp-switch {
-          position: relative;
-          display: inline-block;
-          width: 44px;
-          height: 24px;
-          flex-shrink: 0;
-          margin: 0;
-        }
-        .dp-switch input {
-          opacity: 0;
-          width: 0;
-          height: 0;
-        }
-        .dp-slider {
-          position: absolute;
-          cursor: pointer;
-          top: 0; left: 0; right: 0; bottom: 0;
-          background-color: rgba(255,255,255,0.08);
-          border: 1px solid var(--border);
-          transition: .25s ease;
-          border-radius: 24px;
-        }
-        .dp-slider:before {
-          position: absolute;
-          content: "";
-          height: 16px;
-          width: 16px;
-          left: 3px;
-          bottom: 3px;
-          background-color: #fff;
-          transition: .25s ease;
-          border-radius: 50%;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .dp-switch input:checked + .dp-slider {
-          background-color: var(--primary);
-          border-color: var(--primary);
-        }
-        .dp-switch input:checked + .dp-slider:before {
-          transform: translateX(20px);
-        }
-      </style>
-      <div class="dp-toggle-card">
-        <div style="display:flex;flex-direction:column;gap:4px;text-align:right">
-          <span style="font-weight:700;font-size:14px;color:var(--text-main)">الحالة: منطقة فعّالة</span>
-          <span style="font-size:12px;color:var(--text-muted)">تفعيل أو إيقاف التوصيل والمسارات لهذه المنطقة</span>
+      <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:12px;padding:14px 16px">
+        <div>
+          <div style="font-weight:700;font-size:14px">الحالة</div>
+          <div style="font-size:12px;color:var(--text-muted)">تفعيل أو تعطيل هذه المنطقة</div>
         </div>
-        <label class="dp-switch">
-          <input type="checkbox" id="dp-zone-active" ${z.active!==false?'checked':''}>
-          <span class="dp-slider"></span>
+        <label style="position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0">
+          <input type="checkbox" id="dp-zone-active" ${z.active!==false?'checked':''} style="opacity:0;width:0;height:0">
+          <span onclick="this.previousElementSibling.click()" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:${z.active!==false?'var(--primary)':'rgba(255,255,255,0.1)'};border-radius:24px;transition:.25s"></span>
         </label>
       </div>
-      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
+      <div style="display:flex;gap:10px;justify-content:flex-end">
         <button class="btn btn-secondary" onclick="closeModal()">إلغاء</button>
-        <button class="btn btn-primary" onclick="dp_submitZone('${id}')">✅ حفظ التعديلات</button>
+        <button class="btn btn-primary" onclick="dp_submitZone('${id}')">✅ حفظ</button>
       </div>
     </div>`);
 };
 
 window.dp_submitZone = async function(id=null) {
   if (window.__dp_isSavingZone) return;
-  const name = document.getElementById('dp-zone-name')?.value?.trim();
-  if (!name) { toast('يرجى إدخال اسم المنطقة','warning'); return; }
+  const name   = document.getElementById('dp-zone-name')?.value?.trim();
   const active = document.getElementById('dp-zone-active')?.checked ?? true;
-  
+  if (!name) { toast('يرجى إدخال اسم المنطقة','warning'); return; }
   window.__dp_isSavingZone = true;
-  showLoader('جاري حفظ المنطقة...');
+  showLoader('جاري الحفظ...');
   try {
     const ok = await dp_saveZone({ name, active }, id);
-    if (ok) { toast(`✅ تم ${id?'تعديل':'إضافة'} المنطقة بنجاح`,'success'); closeModal(); await render(); }
-    else toast('حدث خطأ أثناء الحفظ','error');
-  } catch(e) {
-    toast('حدث خطأ أثناء الحفظ','error');
-  } finally {
-    window.__dp_isSavingZone = false;
-    hideLoader();
-  }
+    if (ok) { toast(`✅ تم ${id?'تعديل':'إضافة'} المنطقة`,'success'); closeModal(); await render(); }
+    else toast('فشل الحفظ','error');
+  } catch(e) { toast('حدث خطأ','error'); }
+  finally { window.__dp_isSavingZone = false; hideLoader(); }
 };
 
 window.dp_confirmDeleteZone = function(id, name) {
-  if (!confirm(`هل أنت متأكد من حذف منطقة "${name}" وكافة مساراتها؟`)) return;
+  if (!confirm(`حذف منطقة "${name}" وكافة عناوينها ومساراتها؟`)) return;
   dp_deleteZone(id).then(ok => {
-    if (ok) { toast('✅ تم حذف المنطقة','success'); render(); }
+    if (ok) { toast('✅ تم الحذف','success'); render(); }
     else toast('فشل الحذف','error');
   });
 };
 
+window.dp_openManageZonesModal = function() {
+  const zones = AppData.deliveryZones || [];
+  openModal(`
+    <div class="modal-header"><h2 class="modal-title">⚙️ إدارة المناطق الرئيسية</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div style="padding:16px 20px;overflow-y:auto;max-height:60vh">
+      ${zones.length === 0 ? '<p style="text-align:center;color:var(--text-muted)">لا توجد مناطق بعد</p>' : `
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${zones.map(z => `
+        <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:10px;padding:10px 14px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="badge ${z.active!==false?'badge-teal':'badge-rose'}" style="font-size:10px">${z.active!==false?'فعّال':'معطّل'}</span>
+            <span style="font-weight:700;font-family:'Cairo',sans-serif">${escHtml(z.name)}</span>
+          </div>
+          <div style="display:flex;gap:5px">
+            <button class="btn btn-sm btn-secondary" onclick="closeModal();dp_openEditZoneModal('${z.id}')">✏️</button>
+            <button class="btn btn-sm btn-danger" onclick="closeModal();dp_confirmDeleteZone('${z.id}','${escHtml(z.name)}')">🗑️</button>
+          </div>
+        </div>`).join('')}
+      </div>`}
+    </div>
+    <div style="padding:12px 20px;border-top:1px solid var(--border)">
+      <button class="btn btn-primary" style="width:100%" onclick="closeModal();dp_openAddZoneModal()">+ إضافة منطقة جديدة</button>
+    </div>`);
+};
 
+// ══════════════════════════════════════════════════════════════════
+//  نوافذ: العناوين الفرعية
+// ══════════════════════════════════════════════════════════════════
+window.dp_openAddSubzoneModal = function(zoneId) {
+  openModal(`
+    <div class="modal-header"><h2 class="modal-title">🏠 إضافة عنوان فرعي</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div style="padding:20px;display:flex;flex-direction:column;gap:16px">
+      <div class="form-group">
+        <label class="form-label">اسم العنوان الفرعي <span style="color:#ef4444">*</span></label>
+        <input class="form-control" id="dp-sz-name" placeholder="مثال: روكب، بويش، الديس..." autofocus>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button class="btn btn-secondary" onclick="closeModal()">إلغاء</button>
+        <button class="btn btn-primary" onclick="dp_submitSubzone('${zoneId}')">✅ حفظ</button>
+      </div>
+    </div>`);
+};
 
-function _buildRouteModal(zoneId, r=null, fixedFromSubzoneId=null, vehicleType=null) {
-  const vt = vehicleType || r?.vehicleType || window.__dp_selectedVehicle || 'motorcycle';
-  const vtLabel = vt === 'motorcycle' ? '🏍️ دراجة نارية' : '🚗 سيارة';
+window.dp_openEditSubzoneModal = function(id) {
+  const sz = (AppData.deliverySubzones||[]).find(s=>s.id===id);
+  if (!sz) return;
+  openModal(`
+    <div class="modal-header"><h2 class="modal-title">✏️ تعديل العنوان الفرعي</h2><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div style="padding:20px;display:flex;flex-direction:column;gap:16px">
+      <div class="form-group">
+        <label class="form-label">الاسم</label>
+        <input class="form-control" id="dp-sz-name" value="${escHtml(sz.name||'')}">
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:12px;padding:14px 16px">
+        <div>
+          <div style="font-weight:700;font-size:14px">الحالة</div>
+          <div style="font-size:12px;color:var(--text-muted)">تفعيل أو تعطيل هذا العنوان</div>
+        </div>
+        <label style="position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0">
+          <input type="checkbox" id="dp-sz-active" ${sz.active!==false?'checked':''} style="opacity:0;width:0;height:0">
+          <span onclick="this.previousElementSibling.click()" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:${sz.active!==false?'var(--primary)':'rgba(255,255,255,0.1)'};border-radius:24px;transition:.25s"></span>
+        </label>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button class="btn btn-secondary" onclick="closeModal()">إلغاء</button>
+        <button class="btn btn-primary" onclick="dp_submitSubzone('${sz.zoneId}','${id}')">✅ حفظ</button>
+      </div>
+    </div>`);
+};
 
-  const zones = AppData.deliveryZones||[];
-  const subzones = (AppData.deliverySubzones || []).filter(sz => sz.zoneId === zoneId && sz.vehicleType === vt);
-  
+window.dp_submitSubzone = async function(zoneId, id=null) {
+  if (window.__dp_isSavingSubzone) return;
+  const name   = document.getElementById('dp-sz-name')?.value?.trim();
+  const active = document.getElementById('dp-sz-active')?.checked ?? true;
+  if (!name) { toast('يرجى إدخال الاسم','warning'); return; }
+  window.__dp_isSavingSubzone = true;
+  showLoader('جاري الحفظ...');
+  try {
+    const ok = await dp_saveSubzone({ zoneId, name, active }, id);
+    if (ok) { toast('✅ تم الحفظ','success'); closeModal(); await render(); }
+    else toast('فشل الحفظ','error');
+  } catch(e) { toast('حدث خطأ','error'); }
+  finally { window.__dp_isSavingSubzone = false; hideLoader(); }
+};
+
+window.dp_confirmDeleteSubzone = function(id, name) {
+  if (!confirm(`حذف العنوان "${name}"؟`)) return;
+  dp_deleteSubzone(id).then(ok => {
+    if (ok) { toast('✅ تم الحذف','success'); render(); }
+    else toast('فشل الحذف','error');
+  });
+};
+
+// ══════════════════════════════════════════════════════════════════
+//  نوافذ: المسارات والأسعار
+// ══════════════════════════════════════════════════════════════════
+function _buildRouteModal(zoneId, vehicleTypeId, r=null, fixedSubzoneId=null) {
+  const subzones = (AppData.deliverySubzones||[]).filter(s => s.zoneId === zoneId && s.active !== false);
+  const vt       = (AppData.deliveryVehicleTypes||[]).find(v => v.id === vehicleTypeId);
+
   let fromArea = r?.fromArea || '';
-  if (fixedFromSubzoneId) {
-    const fixedSz = subzones.find(sz => sz.id === fixedFromSubzoneId);
+  if (fixedSubzoneId && !r) {
+    const fixedSz = subzones.find(s => s.id === fixedSubzoneId);
     if (fixedSz) fromArea = fixedSz.name;
   }
-  const toArea = r?.toArea || '';
-  const checklistSubzones = subzones;
 
   return `
-    <style>
-      .dp-toggle-card {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        background: rgba(255,255,255,0.02);
-        border: 1px solid var(--border);
-        border-radius: 14px;
-        padding: 14px 18px;
-        transition: all 0.25s ease;
-        margin-top: 8px;
-      }
-      .dp-toggle-card:hover {
-        background: rgba(255,255,255,0.04);
-        border-color: rgba(139,92,246,0.3);
-      }
-      .dp-switch {
-        position: relative;
-        display: inline-block;
-        width: 44px;
-        height: 24px;
-        flex-shrink: 0;
-        margin: 0;
-      }
-      .dp-switch input {
-        opacity: 0;
-        width: 0;
-        height: 0;
-      }
-      .dp-slider {
-        position: absolute;
-        cursor: pointer;
-        top: 0; left: 0; right: 0; bottom: 0;
-        background-color: rgba(255,255,255,0.08);
-        border: 1px solid var(--border);
-        transition: .25s ease;
-        border-radius: 24px;
-      }
-      .dp-slider:before {
-        position: absolute;
-        content: "";
-        height: 16px;
-        width: 16px;
-        left: 3px;
-        bottom: 3px;
-        background-color: #fff;
-        transition: .25s ease;
-        border-radius: 50%;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      }
-      .dp-switch input:checked + .dp-slider {
-        background-color: var(--primary);
-        border-color: var(--primary);
-      }
-      .dp-switch input:checked + .dp-slider:before {
-        transform: translateX(20px);
-      }
-    </style>
-    <div class="modal-header">
-      <h2 class="modal-title">${r?'✏️ تعديل مسار':'🛣️ إضافة مسار توصيل'}</h2>
-      <button class="modal-close" onclick="closeModal()">✕</button>
+  <style>
+    .dp-sz-check { display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:10px 8px;border:2px solid var(--border);border-radius:12px;cursor:pointer;transition:all .15s;text-align:center;min-height:65px;background:rgba(255,255,255,0.02);font-size:13px;font-weight:700 }
+    .dp-sz-check:hover { border-color:rgba(139,92,246,0.4);transform:translateY(-2px) }
+    .dp-sz-check.sel { border-color:var(--primary);background:rgba(139,92,246,0.1);color:var(--primary) }
+    .dp-sz-check input { display:none }
+  </style>
+  <div class="modal-header">
+    <h2 class="modal-title">${r?'✏️ تعديل مسار':'🛣️ إضافة مسار توصيل'}</h2>
+    <button class="modal-close" onclick="closeModal()">✕</button>
+  </div>
+  <div style="padding:20px;display:flex;flex-direction:column;gap:16px;overflow-y:auto;max-height:75vh">
+    <input type="hidden" id="dp-route-vtid" value="${escAttr(vehicleTypeId)}">
+    <input type="hidden" id="dp-route-zone" value="${escAttr(zoneId)}">
+
+    ${vt ? `
+    <div style="background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--text-muted);display:flex;align-items:center;gap:8px">
+      <span style="font-size:18px">${escHtml(vt.icon||'🚗')}</span>
+      <span>نوع المركبة: <strong style="color:var(--text-main)">${escHtml(vt.name)}</strong></span>
+    </div>` : ''}
+
+    <div class="form-group">
+      <label class="form-label">📤 من (نقطة الاستلام) <span style="color:#ef4444">*</span></label>
+      ${fixedSubzoneId && !r ? `
+      <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:8px">
+        <span style="font-size:16px">🏠</span>
+        <strong style="color:var(--primary)">${escHtml(fromArea)}</strong>
+        <input type="hidden" id="dp-route-from" value="${escAttr(fromArea)}">
+        <span style="font-size:11px;color:var(--text-muted);margin-right:auto">(محددة مسبقاً)</span>
+      </div>` : `
+      ${subzones.length > 0 ? `
+        <select class="form-control" id="dp-route-from">
+          <option value="" disabled ${!fromArea?'selected':''}>اختر العنوان...</option>
+          ${subzones.map(s=>`<option value="${escAttr(s.name)}" ${fromArea===s.name?'selected':''}>🏠 ${escHtml(s.name)}</option>`).join('')}
+        </select>` : `
+        <input class="form-control" id="dp-route-from" placeholder="اكتب العنوان..." value="${escHtml(fromArea)}">`}
+      `}
     </div>
-    <div style="padding:20px;display:flex;flex-direction:column;gap:16px">
-      <input type="hidden" id="dp-route-vehicle-type" value="${escAttr(vt)}">
-      <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--text-muted)">
-        نوع المركبة: <strong style="color:var(--text-main)">${vtLabel}</strong>
-      </div>
-      ${!fixedFromSubzoneId && !r ? `
-      <div class="form-group">
-        <label class="form-label">المنطقة الرئيسية</label>
-        <select class="form-control" id="dp-route-zone" onchange="window.__dp_lastZoneId=this.value; dp_openAddRouteModal(this.value)">
-          ${zones.map(z=>`<option value="${z.id}" ${(r?.zoneId||zoneId)===z.id?'selected':''}>${escHtml(z.name)}</option>`).join('')}
-        </select>
-      </div>` : `<input type="hidden" id="dp-route-zone" value="${escAttr(zoneId)}">`}
 
-      <div class="form-group">
-        <label class="form-label">📤 من (نقطة الاستلام / موقع المحل) <span style="color:#ef4444">*</span></label>
-        ${fixedFromSubzoneId || r ? `
-          <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:10px">
-            <span style="font-size:18px">🏠</span>
-            <strong style="color:var(--accent-purple);font-size:15px">${escHtml(fromArea)}</strong>
-            <input type="hidden" id="dp-route-from" value="${escAttr(fromArea)}">
-            <span style="font-size:11px;color:var(--text-muted);margin-right:auto">(محددة مسبقاً)</span>
+    <div class="form-group">
+      <label class="form-label" style="display:flex;justify-content:space-between;align-items:center">
+        <span>📥 إلى (وجهة العميل) <span style="color:#ef4444">*</span></span>
+        ${!r && subzones.length > 0 ? `
+        <div style="display:flex;gap:5px">
+          <button type="button" class="btn btn-sm btn-secondary" style="font-size:11px;padding:2px 8px" onclick="dp_toggleAllRouteSubzones(true)">تحديد الكل</button>
+          <button type="button" class="btn btn-sm btn-secondary" style="font-size:11px;padding:2px 8px" onclick="dp_toggleAllRouteSubzones(false)">إلغاء الكل</button>
+        </div>` : ''}
+      </label>
+      ${r ? `
+        <input class="form-control" id="dp-route-to" value="${escHtml(r.toArea||'')}" style="opacity:0.8" readonly>
+      ` : `
+        ${subzones.length > 0 ? `
+        <div style="margin-bottom:8px">
+          <input type="text" id="dp-modal-sz-search" placeholder="🔍 بحث سريع في العناوين..."
+                 oninput="dp_filterModalSubzones()"
+                 style="width:100%;padding:7px 12px;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:8px;color:var(--text-main);font-family:'Cairo',sans-serif;font-size:12px">
+        </div>
+        <div style="background:rgba(255,255,255,0.01);border:1px solid var(--border);border-radius:12px;padding:14px;max-height:200px;overflow-y:auto">
+          <div id="dp-modal-sz-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px">
+            ${subzones.map(s => `
+            <label class="dp-sz-check" data-name="${escAttr(s.name)}"
+                   onmouseenter="if(!this.querySelector('input').checked)this.style.borderColor='rgba(139,92,246,0.4)'"
+                   onmouseleave="if(!this.querySelector('input').checked)this.style.borderColor='var(--border)'">
+              <input type="checkbox" name="dp-to-sz" value="${escAttr(s.name)}"
+                     onchange="this.parentElement.classList.toggle('sel',this.checked)">
+              <span>🏠</span>
+              <span>${escHtml(s.name)}</span>
+            </label>`).join('')}
           </div>
-        ` : `
-          ${subzones.length > 0 ? `
-            <select class="form-control" id="dp-route-from">
-              <option value="" disabled ${!fromArea?'selected':''}>اختر المنطقة الفرعية...</option>
-              ${subzones.map(sz => `<option value="${escAttr(sz.name)}" ${fromArea===sz.name?'selected':''}>🏠 ${escHtml(sz.name)}</option>`).join('')}
-            </select>
-          ` : `
-            <input class="form-control" id="dp-route-from" placeholder="مثال: روكب" value="${escHtml(fromArea)}">
-          `}
-        `}
-      </div>
+        </div>` : `
+        <input class="form-control" id="dp-route-to" placeholder="اكتب العنوان...">`}
+      `}
+    </div>
 
-      <div class="form-group">
-        <label class="form-label" style="display:flex;justify-content:space-between;align-items:center">
-          <span>📥 إلى (موقع العميل) <span style="color:#ef4444">*</span></span>
-          ${checklistSubzones.length > 0 && !r ? `
-            <div style="display:flex;gap:6px">
-              <button class="btn btn-sm btn-secondary" style="font-size:11px;padding:2px 8px" onclick="dp_toggleAllToSubzones(true)">تحديد الكل</button>
-              <button class="btn btn-sm btn-secondary" style="font-size:11px;padding:2px 8px" onclick="dp_toggleAllToSubzones(false)">إلغاء الكل</button>
-            </div>
-          ` : ''}
-        </label>
-        ${r ? `
-          <input class="form-control" id="dp-route-to" placeholder="مثال: بويش" value="${escHtml(toArea)}" readonly style="opacity:0.8">
-        ` : `
-          ${checklistSubzones.length > 0 ? `
-            <!-- Search box inside checklist -->
-            <div style="position:relative;margin-bottom:10px">
-              <input type="text" id="dp-modal-subzone-search" placeholder="🔍 ابحث عن عنوان لتحديده سريعاً..." 
-                     oninput="dp_filterModalSubzonesChecklist()"
-                     style="width:100%;padding:8px 12px 8px 30px;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:10px;color:var(--text-main);font-family:'Cairo',sans-serif;font-size:12px;transition:all 0.2s ease"
-                     onfocus="this.style.borderColor='var(--primary)'"
-                     onblur="this.style.borderColor='var(--border)'">
-            </div>
+    <div class="form-group">
+      <label class="form-label">💰 سعر التوصيل (ريال) <span style="color:#ef4444">*</span></label>
+      <input class="form-control" id="dp-route-price" type="number" min="0" placeholder="مثال: 1000" value="${r?.price||''}">
+    </div>
 
-            <div style="background:rgba(255,255,255,0.01);border:1px solid var(--border);border-radius:14px;padding:16px;max-height:220px;overflow-y:auto">
-              <div id="dp-subzones-checklist" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(110px, 1fr));gap:10px">
-                ${checklistSubzones.map(sz => {
-                  const isChecked = toArea.split(',').includes(sz.name);
-                  const isSame = sz.name === fromArea;
-                  const initialBorder = isChecked ? 'var(--primary)' : 'var(--border)';
-                  const initialBg = isChecked ? 'rgba(139,92,246,0.1)' : 'rgba(255,255,255,0.02)';
-                  const initialColor = isChecked ? 'var(--primary)' : 'var(--text-main)';
-                  return `
-                  <label class="subzone-checkbox-card" data-name="${escAttr(sz.name)}" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:10px;border:1px solid ${initialBorder};border-radius:12px;background:${initialBg};color:${initialColor};cursor:pointer;transition:all 0.2s ease;position:relative;text-align:center;min-height:70px"
-                         onmouseenter="if(!this.querySelector('input').checked) { this.style.borderColor = 'rgba(139,92,246,0.4)'; this.style.transform = 'translateY(-2px)' }"
-                         onmouseleave="if(!this.querySelector('input').checked) { this.style.borderColor = 'var(--border)'; this.style.transform = 'none' } else { this.style.transform = 'none' }">
-                    <input type="checkbox" name="dp-to-subzone" value="${escAttr(sz.name)}" ${isChecked?'checked':''} style="display:none" onchange="this.parentElement.style.borderColor = this.checked ? 'var(--primary)' : 'var(--border)'; this.parentElement.style.background = this.checked ? 'rgba(139,92,246,0.1)' : 'rgba(255,255,255,0.02)'; this.parentElement.style.color = this.checked ? 'var(--primary)' : 'var(--text-main)'">
-                    <span style="font-size:16px">🏠</span>
-                    <span style="font-size:12px;font-weight:700">${escHtml(sz.name)}</span>
-                    ${isSame ? `<span style="font-size:9px;color:var(--accent-purple);font-weight:bold;margin-top:2px">(توصيل داخلي)</span>` : ''}
-                  </label>
-                  `;
-                }).join('')}
-              </div>
-            </div>
-          ` : `
-            <input class="form-control" id="dp-route-to" placeholder="مثال: بويش" value="${escHtml(toArea)}">
-          `}
-        `}
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">💰 سعر التوصيل (ريال) <span style="color:#ef4444">*</span></label>
-        <input class="form-control" id="dp-route-price" type="number" min="0" placeholder="مثال: 1000" value="${r?.price||''}">
-      </div>
-
-      <div class="dp-toggle-card" style="margin-top:0px">
-        <div style="display:flex;flex-direction:column;gap:4px;text-align:right">
-          <span style="font-weight:700;font-size:14px;color:var(--text-main)">الحالة: مسار فعّال</span>
-          <span style="font-size:12px;color:var(--text-muted)">تمكين التوصيل وتسعير هذا المسار للعملاء</span>
-        </div>
-        <label class="dp-switch">
-          <input type="checkbox" id="dp-route-active" ${r?.active!==false?'checked':''}>
-          <span class="dp-slider"></span>
-        </label>
-      </div>
-
-      ${r && fromArea !== toArea ? `
-      <div style="background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:12px;padding:12px 16px;margin-top:4px">
-        <label class="form-label" style="margin-bottom:8px">⚙️ خيارات حفظ التعديل</label>
-        <div style="display:flex;gap:20px;align-items:center">
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text-main);font-family:'Cairo',sans-serif">
-            <input type="radio" name="dp-edit-mode" value="individual" checked style="accent-color:var(--primary);width:16px;height:16px">
-            ✏️ تعديل فردي (هذا الاتجاه فقط)
-          </label>
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text-main);font-family:'Cairo',sans-serif">
-            <input type="radio" name="dp-edit-mode" value="global" style="accent-color:var(--primary);width:16px;height:16px">
-            🌐 تعديل شامل (الذهاب والإياب معاً)
-          </label>
-        </div>
-      </div>
-      ` : ''}
-
-      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:10px">
-        <button class="btn btn-secondary" onclick="closeModal()">إلغاء</button>
-        <button class="btn btn-primary" onclick="dp_submitRoute(${r?`'${r.id}'`:'null'})">✅ حفظ المسار</button>
-      </div>
-    </div>`;
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:4px">
+      <button class="btn btn-secondary" onclick="closeModal()">إلغاء</button>
+      <button class="btn btn-primary" onclick="dp_submitRoute(${r?`'${r.id}'`:'null'})">✅ حفظ المسار</button>
+    </div>
+  </div>`;
 }
 
-window.dp_toggleAllToSubzones = function(val) {
-  const checks = document.getElementsByName('dp-to-subzone');
-  checks.forEach(c => {
+window.dp_toggleAllRouteSubzones = function(val) {
+  document.getElementsByName('dp-to-sz').forEach(c => {
     c.checked = val;
-    c.dispatchEvent(new Event('change'));
+    c.parentElement.classList.toggle('sel', val);
   });
 };
 
-window.dp_filterModalSubzonesChecklist = function() {
-  const query = document.getElementById('dp-modal-subzone-search')?.value?.trim()?.toLowerCase() || '';
-  const labels = document.querySelectorAll('.subzone-checkbox-card');
-  labels.forEach(label => {
-    const name = label.getAttribute('data-name')?.toLowerCase() || '';
-    if (name.includes(query)) {
-      label.style.display = 'flex';
-    } else {
-      label.style.display = 'none';
-    }
+window.dp_filterModalSubzones = function() {
+  const q = (document.getElementById('dp-modal-sz-search')?.value || '').trim().toLowerCase();
+  document.querySelectorAll('#dp-modal-sz-grid label').forEach(l => {
+    const n = (l.getAttribute('data-name') || '').toLowerCase();
+    l.style.display = n.includes(q) ? '' : 'none';
   });
 };
 
-window.dp_openAddRouteModal = function(zoneId) {
-  openModal(_buildRouteModal(zoneId));
+window.dp_openAddRouteModal = function(zoneId, vehicleTypeId) {
+  openModal(_buildRouteModal(zoneId, vehicleTypeId));
 };
 
-window.dp_openAddRouteModalForSubzone = function(zoneId, subzoneId, vehicleType) {
-  openModal(_buildRouteModal(zoneId, null, subzoneId, vehicleType || window.__dp_selectedVehicle));
-};
-
-window.dp_openAddRouteFromMissing = function(fromArea, toArea, missingId) {
-  const firstZone = (AppData.deliveryZones||[])[0]?.id || '';
-  window.__dp_selectedZone = window.__dp_selectedZone || firstZone;
-  openModal(_buildRouteModal(window.__dp_selectedZone, { fromArea, toArea }));
-  // بعد الحفظ سنحل المسار المفقود تلقائياً
-  window.__dp_resolveMissingId = missingId;
+window.dp_openAddRouteModalForSubzone = function(zoneId, subzoneId, vehicleTypeId) {
+  const vtid = vehicleTypeId || window.__dp_selectedVehicleType;
+  openModal(_buildRouteModal(zoneId, vtid, null, subzoneId));
 };
 
 window.dp_openEditRouteModal = function(id) {
   const r = (AppData.deliveryRoutes||[]).find(r=>r.id===id);
   if (!r) return;
-  openModal(_buildRouteModal(r.zoneId, r));
+  openModal(_buildRouteModal(r.zoneId, r.vehicleTypeId, r));
 };
 
 window.dp_submitRoute = async function(id=null) {
   if (window.__dp_isSavingRoute) return;
+  const zoneId       = document.getElementById('dp-route-zone')?.value;
+  const vehicleTypeId = document.getElementById('dp-route-vtid')?.value;
+  const fromArea     = document.getElementById('dp-route-from')?.value?.trim();
+  const price        = document.getElementById('dp-route-price')?.value;
 
-  const zoneId      = document.getElementById('dp-route-zone')?.value;
-  const fromArea    = document.getElementById('dp-route-from')?.value?.trim();
-  const price       = document.getElementById('dp-route-price')?.value;
-  const active      = document.getElementById('dp-route-active')?.checked ?? true;
-  const vehicleType = document.getElementById('dp-route-vehicle-type')?.value || window.__dp_selectedVehicle || 'motorcycle';
-
-  // الحصول على الوجهات المحددة (سواء كان إدخال يدوي أو قائمة تشيك بوكس)
   let toAreas = [];
-  const checks = document.getElementsByName('dp-to-subzone');
+  const checks = document.getElementsByName('dp-to-sz');
   if (checks.length > 0) {
     checks.forEach(c => { if (c.checked) toAreas.push(c.value); });
   } else {
@@ -1826,64 +1874,32 @@ window.dp_submitRoute = async function(id=null) {
     if (to) toAreas.push(to);
   }
 
-  if (!fromArea || toAreas.length === 0) { toast('يرجى إدخال نقطة الاستلام ووجهة واحدة على الأقل','warning'); return; }
+  if (!fromArea || toAreas.length === 0) { toast('يرجى تحديد نقطة الانطلاق ووجهة واحدة على الأقل','warning'); return; }
   if (!price || Number(price) < 0) { toast('يرجى إدخال سعر صحيح','warning'); return; }
 
   window.__dp_isSavingRoute = true;
   showLoader('جاري حفظ المسارات...');
   try {
-    // إذا كان تعديل، نعدل السجل نفسه
-    if (id) {
-      await dp_saveRoute({ zoneId, fromArea, toArea: toAreas[0], price, active }, id);
-      
-      // قراءة نوع التعديل (فردي أم شامل للاتجاهين معاً)
-      const editMode = document.querySelector('input[name="dp-edit-mode"]:checked')?.value || 'individual';
-      if (editMode === 'global') {
-        const to = toAreas[0];
-        if (fromArea !== to) {
-          const reverseRoute = (AppData.deliveryRoutes || []).find(r => r.zoneId === zoneId && r.fromArea === to && r.toArea === fromArea);
-          if (reverseRoute) {
-            await dp_saveRoute({ zoneId, fromArea: to, toArea: fromArea, price, active }, reverseRoute.id);
-          }
-        }
-      }
+    if (id && id !== 'null') {
+      await dp_saveRoute({ vehicleTypeId, zoneId, fromArea, toArea: toAreas[0], price, active: true }, id);
     } else {
-      // إضافة المسارات بالاتجاهين تلقائياً (من A إلى B ومن B إلى A)
-      const existingRoutes = AppData.deliveryRoutes || [];
+      const existing = AppData.deliveryRoutes || [];
       const promises = [];
-      
       toAreas.forEach(to => {
-        // 1. إضافة الاتجاه الرئيسي (A → B) إذا لم يكن موجوداً
-        const exists1 = existingRoutes.some(r => r.zoneId === zoneId && r.fromArea === fromArea && r.toArea === to && r.vehicleType === vehicleType);
-        if (!exists1) {
-          promises.push(dp_saveRoute({ zoneId, fromArea, toArea: to, price, active, vehicleType }));
-        }
-        
-        // 2. إضافة الاتجاه العكسي (B → A) إذا لم يكن نفس المنطقة ولم يكن موجوداً بالفعل
+        const exists1 = existing.some(r => r.vehicleTypeId===vehicleTypeId && r.zoneId===zoneId && r.fromArea===fromArea && r.toArea===to);
+        if (!exists1) promises.push(dp_saveRoute({ vehicleTypeId, zoneId, fromArea, toArea: to, price, active: true }));
         if (fromArea !== to) {
-          const exists2 = existingRoutes.some(r => r.zoneId === zoneId && r.fromArea === to && r.toArea === fromArea && r.vehicleType === vehicleType);
-          if (!exists2) {
-            promises.push(dp_saveRoute({ zoneId, fromArea: to, toArea: fromArea, price, active, vehicleType }));
-          }
+          const exists2 = existing.some(r => r.vehicleTypeId===vehicleTypeId && r.zoneId===zoneId && r.fromArea===to && r.toArea===fromArea);
+          if (!exists2) promises.push(dp_saveRoute({ vehicleTypeId, zoneId, fromArea: to, toArea: fromArea, price, active: true }));
         }
       });
-      
       await Promise.all(promises);
     }
-    
-    toast(`✅ تم الحفظ بنجاح`,'success');
-    if (window.__dp_resolveMissingId) {
-      await dp_resolveMissingRoute(window.__dp_resolveMissingId);
-      window.__dp_resolveMissingId = null;
-    }
+    toast('✅ تم حفظ المسارات بنجاح','success');
     closeModal();
     await render();
-  } catch(e) {
-    toast('حدث خطأ أثناء الحفظ','error');
-  } finally {
-    window.__dp_isSavingRoute = false;
-    hideLoader();
-  }
+  } catch(e) { toast('حدث خطأ أثناء الحفظ','error'); }
+  finally { window.__dp_isSavingRoute = false; hideLoader(); }
 };
 
 window.dp_confirmDeleteRoute = function(id, from, to) {
@@ -1893,7 +1909,6 @@ window.dp_confirmDeleteRoute = function(id, from, to) {
     else toast('فشل الحذف','error');
   });
 };
-
 // Final override after load: ensure our admin renderers and tab setter persist
 try {
   window.addEventListener && window.addEventListener('load', function () {
