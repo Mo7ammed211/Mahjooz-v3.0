@@ -990,6 +990,7 @@ async function doSignup() {
       isActivePending: true,
       createdAt: new Date(),
       firstLogin: false,
+      onboardingSeen: false,
       geoLocation: SignupState.geo || null,
       housePics: SignupState.housePics || []
     };

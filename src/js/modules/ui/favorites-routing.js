@@ -454,11 +454,14 @@
     document.body.appendChild(chip);
   }
 
-  // Onboarding (3 slides on first visit).
+  // Onboarding — shows ONLY once after first signup (tracked in Firestore).
   function maybeShowOnboarding() {
-    if (localStorage.getItem('ph18_onboarded') === '1') return;
-    if (!State.currentUser) return; // wait until logged in / guest
-    localStorage.setItem('ph18_onboarded', '1');
+    if (!State.currentUser) return;
+    // Only show for newly registered users (onboardingSeen === false, not undefined)
+    if (State.currentUser.onboardingSeen !== false) return;
+    // Mark as seen immediately (Firestore + local) so it never shows again
+    fsUpdate('users', State.currentUser.uid, { onboardingSeen: true }).catch(() => {});
+    State.currentUser.onboardingSeen = true;
     const slides = [
       { ic:'🏨', t:'احجز ما تريد في ثوانٍ', s:'فنادق، سيارات، رحلات، صحة، أعراس، خدمات مهنية، صيدليات — كلها في تطبيق واحد.' },
       { ic:'🚦', t:'توصيل ذكي بأقرب مزوّد', s:'نظامنا يوصل طلبك أوتوماتيكياً لأقرب مزوّد ثم لأقرب مندوب — توفير وقت وجودة.' },
