@@ -343,4 +343,214 @@ window.ph_staffRejectOrder = async function (orderId) {
   } catch (e) { toast('خطأ: ' + e.message, 'error'); } finally { hideLoader(); }
 };
 
+// ─── لوحة مقارنة أداء الموظفين (للمدير) ──────────────────────
+window.renderStaffPerformance = function () {
+  const staffList = (AppData.users || []).filter(u => u.role === 'staff');
+  const allOrders = AppData.orders || [];
+  const now       = new Date();
+
+  // بناء إحصاءات كل موظف
+  const stats = staffList.map(u => {
+    const assigned = ph_filterOrdersByAssignment(allOrders, u);
+
+    const pending     = assigned.filter(o => ['pending','pending_admin'].includes(o.status));
+    const inProgress  = assigned.filter(o => ['approved','in_progress','pending_provider'].includes(o.status));
+    const done        = assigned.filter(o => ['completed','delivered'].includes(o.status));
+    const cancelled   = assigned.filter(o => ['cancelled','rejected'].includes(o.status));
+    const reviewed    = assigned.filter(o => o.approvedBy === u.uid || o.rejectedBy === u.uid);
+
+    // متوسط وقت الاستجابة (بالساعات)
+    const responseTimes = reviewed.map(o => {
+      const created  = o.createdAt  ? (o.createdAt.toDate  ? o.createdAt.toDate()  : new Date(o.createdAt))  : null;
+      const resolved = o.approvedAt ? (o.approvedAt.toDate ? o.approvedAt.toDate() : new Date(o.approvedAt)) :
+                       o.rejectedAt ? (o.rejectedAt.toDate ? o.rejectedAt.toDate() : new Date(o.rejectedAt)) : null;
+      return created && resolved ? (resolved - created) / 3600000 : null;
+    }).filter(t => t !== null);
+    const avgResponseHrs = responseTimes.length
+      ? Math.round((responseTimes.reduce((a,b) => a+b, 0) / responseTimes.length) * 10) / 10
+      : null;
+
+    const approvedByMe = assigned.filter(o => o.approvedBy === u.uid).length;
+    const rejectedByMe = assigned.filter(o => o.rejectedBy === u.uid).length;
+    const totalReviewed = approvedByMe + rejectedByMe;
+    const approvalRate  = totalReviewed > 0 ? Math.round((approvedByMe / totalReviewed) * 100) : null;
+
+    const secLabels = (u.assignedSections || []).map(k => PH_ASSIGN_SECTIONS.find(s => s.k === k)?.l || k);
+
+    return { u, assigned, pending, inProgress, done, cancelled, reviewed,
+             avgResponseHrs, approvedByMe, rejectedByMe, totalReviewed, approvalRate, secLabels };
+  });
+
+  // ترتيب حسب عدد الطلبات المنجزة
+  stats.sort((a, b) => (b.done.length + b.reviewed.length) - (a.done.length + a.reviewed.length));
+
+  const perfColor = (rate) => rate === null ? '#8b5cf6' : rate >= 70 ? '#10b981' : rate >= 40 ? '#f59e0b' : '#ef4444';
+  const perfLabel = (rate) => rate === null ? 'لا يوجد بيانات' : rate >= 70 ? 'ممتاز' : rate >= 40 ? 'جيد' : 'يحتاج متابعة';
+
+  const renderCard = (s) => {
+    const pc = perfColor(s.approvalRate);
+    const pl = perfLabel(s.approvalRate);
+    const sus = !!s.u.suspended;
+    return `
+    <div style="background:var(--bg-card);border:1px solid var(--glass-border);border-radius:18px;padding:20px;position:relative;overflow:hidden;${sus ? 'opacity:0.55' : ''}">
+      <div style="position:absolute;top:0;right:0;width:4px;height:100%;background:${pc};border-radius:0 18px 18px 0"></div>
+
+      <!-- رأس البطاقة -->
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+        <div style="width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,${pc}33,${pc}11);border:2px solid ${pc}55;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:${pc};flex-shrink:0">
+          ${(s.u.name || '؟')[0].toUpperCase()}
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:800;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(s.u.name || '—')}</div>
+          <div style="font-size:11px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(s.u.email || '—')}</div>
+          <span style="font-size:11px;font-weight:700;background:${pc}18;color:${pc};border:1px solid ${pc}33;border-radius:99px;padding:1px 8px;display:inline-block;margin-top:3px">${pl}</span>
+        </div>
+        <button onclick="ph_openAssignModal('${s.u.id}')" title="تعيين الأقسام" style="background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.3);color:var(--primary);border-radius:10px;padding:6px 10px;font-size:12px;cursor:pointer;font-weight:700;white-space:nowrap">📋 تعيين</button>
+      </div>
+
+      <!-- شارات الأقسام -->
+      <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:14px">
+        ${s.secLabels.length
+          ? s.secLabels.map(l => `<span style="background:rgba(139,92,246,0.10);border:1px solid rgba(139,92,246,0.25);color:var(--primary);border-radius:99px;padding:2px 8px;font-size:11px;font-weight:700">${l}</span>`).join('')
+          : '<span style="background:rgba(107,114,128,0.1);color:var(--text-muted);border-radius:99px;padding:2px 8px;font-size:11px">جميع الأقسام</span>'}
+        ${(s.u.assignedCatIds||[]).length ? `<span style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);color:#10b981;border-radius:99px;padding:2px 8px;font-size:11px;font-weight:700">📂 ${s.u.assignedCatIds.length} تصنيف</span>` : ''}
+        ${(s.u.assignedRegionIds||[]).length ? `<span style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.25);color:#3b82f6;border-radius:99px;padding:2px 8px;font-size:11px;font-weight:700">📍 ${s.u.assignedRegionIds.length} منطقة</span>` : ''}
+      </div>
+
+      <!-- إحصاءات الطلبات -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px">
+        ${[
+          { n: s.pending.length,    l: 'معلقة',   c: '#f59e0b' },
+          { n: s.inProgress.length, l: 'جارية',   c: '#8b5cf6' },
+          { n: s.done.length,       l: 'منجزة',   c: '#10b981' },
+          { n: s.cancelled.length,  l: 'ملغية',   c: '#ef4444' },
+        ].map(st => `
+          <div style="background:${st.c}10;border:1px solid ${st.c}28;border-radius:10px;padding:8px;text-align:center">
+            <div style="font-size:18px;font-weight:900;color:${st.c}">${st.n}</div>
+            <div style="font-size:10px;color:var(--text-muted);margin-top:1px">${st.l}</div>
+          </div>`).join('')}
+      </div>
+
+      <!-- مؤشرات الأداء -->
+      <div style="border-top:1px solid var(--glass-border);padding-top:12px;display:flex;flex-direction:column;gap:8px">
+
+        <!-- نسبة الموافقة -->
+        <div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+            <span style="font-size:12px;color:var(--text-muted)">نسبة الموافقة</span>
+            <span style="font-size:12px;font-weight:700;color:${pc}">${s.approvalRate !== null ? s.approvalRate + '%' : '—'}</span>
+          </div>
+          <div style="height:6px;background:var(--glass-border);border-radius:99px;overflow:hidden">
+            <div style="height:100%;width:${s.approvalRate || 0}%;background:${pc};border-radius:99px;transition:width 0.5s"></div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:12px;font-size:12px">
+          <span style="color:var(--text-muted)">⏱️ متوسط الاستجابة: <b style="color:var(--text-main)">${s.avgResponseHrs !== null ? s.avgResponseHrs + ' ساعة' : '—'}</b></span>
+          <span style="color:var(--text-muted)">✅ <b style="color:#10b981">${s.approvedByMe}</b> / ❌ <b style="color:#ef4444">${s.rejectedByMe}</b></span>
+        </div>
+      </div>
+    </div>`;
+  };
+
+  // إحصاءات إجمالية
+  const totalStaff    = staffList.length;
+  const totalPending  = allOrders.filter(o => ['pending','pending_admin'].includes(o.status)).length;
+  const totalDone     = allOrders.filter(o => ['completed','delivered'].includes(o.status)).length;
+  const unassigned    = staffList.filter(u => !(u.assignedSections||[]).length).length;
+
+  return `
+  <div style="padding:16px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+      <div>
+        <h2 style="margin:0;font-size:22px;font-weight:800">📊 مقارنة أداء الموظفين</h2>
+        <p style="color:var(--text-muted);margin:4px 0 0;font-size:13px">عرض مقارن لأداء الفريق وتوزيع الأعباء والطلبات</p>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="setAdminTab('permissions')">👥 إدارة الموظفين</button>
+    </div>
+
+    <!-- ملخص سريع -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:24px">
+      ${[
+        { n: totalStaff,   l: 'إجمالي الموظفين', c: 'var(--primary)' },
+        { n: unassigned,   l: 'بدون تعيين قسم',  c: '#f59e0b' },
+        { n: totalPending, l: 'طلبات معلقة',      c: '#ef4444' },
+        { n: totalDone,    l: 'طلبات منجزة',      c: '#10b981' },
+      ].map(s => `
+        <div style="background:var(--bg-card);border:1px solid var(--glass-border);border-radius:14px;padding:14px;text-align:center">
+          <div style="font-size:28px;font-weight:900;color:${s.c}">${s.n}</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${s.l}</div>
+        </div>`).join('')}
+    </div>
+
+    ${stats.length ? `
+      <!-- شبكة بطاقات الموظفين -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px">
+        ${stats.map(renderCard).join('')}
+      </div>
+
+      <!-- جدول مقارنة مختصر -->
+      <div style="margin-top:28px">
+        <h3 style="font-size:16px;font-weight:800;margin-bottom:12px">📋 جدول المقارنة التفصيلي</h3>
+        <div class="table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>الموظف</th>
+                <th>الأقسام</th>
+                <th>معلقة</th>
+                <th>جارية</th>
+                <th>منجزة</th>
+                <th>ملغية</th>
+                <th>نسبة الموافقة</th>
+                <th>متوسط الاستجابة</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              ${stats.map(s => {
+                const pc = perfColor(s.approvalRate);
+                return `
+                <tr>
+                  <td>
+                    <div style="font-weight:700">${escHtml(s.u.name || '—')}</div>
+                    <div style="font-size:11px;color:var(--text-muted)">${s.u.suspended ? '⏸️ معلق' : '✅ نشط'}</div>
+                  </td>
+                  <td>
+                    ${s.secLabels.length
+                      ? `<div style="font-size:11px;color:var(--primary);font-weight:700">${s.secLabels.join(' | ')}</div>`
+                      : '<span style="color:var(--text-muted);font-size:11px">الكل</span>'}
+                  </td>
+                  <td style="color:#f59e0b;font-weight:700">${s.pending.length}</td>
+                  <td style="color:#8b5cf6;font-weight:700">${s.inProgress.length}</td>
+                  <td style="color:#10b981;font-weight:700">${s.done.length}</td>
+                  <td style="color:#ef4444;font-weight:700">${s.cancelled.length}</td>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:6px">
+                      <div style="flex:1;height:6px;background:var(--glass-border);border-radius:99px;overflow:hidden;min-width:50px">
+                        <div style="height:100%;width:${s.approvalRate||0}%;background:${pc}"></div>
+                      </div>
+                      <span style="font-size:12px;font-weight:700;color:${pc}">${s.approvalRate !== null ? s.approvalRate + '%' : '—'}</span>
+                    </div>
+                  </td>
+                  <td style="font-size:12px">${s.avgResponseHrs !== null ? s.avgResponseHrs + ' ساعة' : '—'}</td>
+                  <td>
+                    <button class="btn btn-sm btn-secondary" onclick="ph_openAssignModal('${s.u.id}')">📋 تعيين</button>
+                  </td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    ` : `
+    <div class="empty-state">
+      <div class="empty-icon">👥</div>
+      <div class="empty-title">لا يوجد موظفون بعد</div>
+      <div class="empty-desc">أضف موظفين من قسم المستخدمين لعرض بيانات الأداء</div>
+      <button class="btn btn-primary" style="margin-top:16px" onclick="setAdminTab('users')">➕ إضافة موظف</button>
+    </div>`}
+  </div>`;
+};
+
 console.log('[Staff Assignments] نظام تعيين الأقسام والمناطق جاهز ✅');

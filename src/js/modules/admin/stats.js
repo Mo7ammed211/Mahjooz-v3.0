@@ -428,6 +428,7 @@ function __legacy_renderAdmin() {
       { k:'users',        ic:'👥', l:t('admin_tab_users') || 'المستخدمين', perm:'view_users', adminOnly:false },
       { k:'users',        ic:'⌛', l:`حسابات معلقة${pendingUsersCount?` <span class="badge badge-gold" style="font-size:10px;padding:2px 6px">${pendingUsersCount}</span>`:''}`, perm:null, adminOnly:true },
       { k:'permissions',  ic:'🛡️', l:t('admin_tab_permissions') || 'الصلاحيات', perm:null, adminOnly:true },
+      { k:'staff_performance', ic:'📊', l:'أداء الموظفين', perm:null, adminOnly:true },
       { k:'orders',       ic:'📋', l:`إدارة الطلبات${pendingOrdersCount?` <span class="badge badge-gold" style="font-size:10px;padding:2px 6px">${pendingOrdersCount}</span>`:''}`, perm:'view_orders' },
       { k:'live_tracking',ic:'📍', l:'التتبع المباشر', perm:null, adminOnly:true },
       { k:'ads',          ic:'🏷️', l:'الكوبونات والعروض', perm:null, adminOnly:true },
@@ -471,6 +472,7 @@ function __legacy_renderAdmin() {
     if (adminTab==='dashboard')        content = typeof renderAdminDash === 'function' ? renderAdminDash() : fallback('renderAdminDash');
     else if (adminTab==='users')       content = typeof renderAdminUsers === 'function' ? renderAdminUsers() : fallback('renderAdminUsers');
     else if (adminTab==='permissions') content = typeof renderAdminPermissions === 'function' ? renderAdminPermissions() : fallback('renderAdminPermissions');
+    else if (adminTab==='staff_performance') content = typeof renderStaffPerformance === 'function' ? renderStaffPerformance() : fallback('renderStaffPerformance');
     else if (adminTab==='cats')        content = typeof renderAdminCats === 'function' ? renderAdminCats() : fallback('renderAdminCats');
     else if (adminTab==='services')    content = typeof renderAdminServices === 'function' ? renderAdminServices() : fallback('renderAdminServices');
     else if (adminTab==='sys_bookings')   content = typeof renderAdminSystem === 'function' ? renderAdminSystem('bookings') : fallback('renderAdminSystem');

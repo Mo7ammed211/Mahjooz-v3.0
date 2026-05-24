@@ -116,7 +116,8 @@ window.renderAdmin = function () {
       items: [
         { k: 'users',       icon: '👤', label: 'كل المستخدمين', desc: 'عرض وإدارة حسابات المنصة',       badge: (AppData.users||[]).length || null },
         { k: 'users',       icon: '⏳', label: 'حسابات معلقة',  desc: 'حسابات تنتظر الموافقة',           badge: pendingUsers || null, urgent: pendingUsers > 0 },
-        { k: 'permissions', icon: '🔑', label: 'الصلاحيات',     desc: 'أدوار وصلاحيات الموظفين' },
+        { k: 'permissions',       icon: '🔑', label: 'الصلاحيات',     desc: 'أدوار وصلاحيات الموظفين' },
+        { k: 'staff_performance', icon: '📊', label: 'أداء الموظفين', desc: 'مقارنة أداء الفريق وتوزيع الأقسام' },
       ]
     },
     {

@@ -398,6 +398,10 @@ function renderNavbar() {
         { k:'sys_services', l:'خدمات أخرى' },
         { k:'sys_offers', l:'🏷️ العروض والخصومات' },
       ]},
+      { g:'إدارة الموظفين', items:[
+        { k:'permissions',       l:'🔑 الصلاحيات' },
+        { k:'staff_performance', l:'📊 أداء الموظفين' },
+      ]},
       { g:'إدارة المحتوى', items:[
         { k:'provider_svcs', l:`خدمات المزودين${pendingSvcsCount?` <span class="badge badge-gold" style="font-size:10px;padding:2px 6px">${pendingSvcsCount}</span>`:''}` },
       ]},
