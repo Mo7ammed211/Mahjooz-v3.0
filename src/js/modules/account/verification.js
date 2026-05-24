@@ -6,7 +6,7 @@ let VerificationState = {
   targetValue: null
 };
 
-window.startVerification = function(type) {
+window.startVerification = async function(type) {
   const u = State.currentUser;
   if (!u) return;
 
@@ -25,15 +25,9 @@ window.startVerification = function(type) {
   VerificationState.pendingOTP = String(Math.floor(1000 + Math.random() * 9000));
   VerificationState.targetValue = type === 'phone' ? u.phone : u.email;
 
-  // Simulate sending
   showLoader('جاري إرسال رمز التحقق...');
-  
-  setTimeout(() => {
-    hideLoader();
-    const typeLabel = type === 'phone' ? 'رسالة نصية (SMS)' : 'البريد الإلكتروني';
-    
-    toast(`تم إرسال الرمز عبر ${typeLabel}.`, 'info');
-    
+
+  const _showOTPModal = (target) => {
     openModal(`
       <div class="modal-header">
         <h2 class="modal-title">🔐 توثيق الحساب</h2>
@@ -42,7 +36,7 @@ window.startVerification = function(type) {
       <div style="text-align:center; padding: 20px 0;">
         <p style="color:var(--text-secondary); margin-bottom:20px;">
           الرجاء إدخال رمز التحقق المكون من 4 أرقام المرسل إلى:
-          <br><strong style="color:var(--text-primary); font-size:18px;">${VerificationState.targetValue}</strong>
+          <br><strong style="color:var(--text-primary); font-size:18px;">${target}</strong>
         </p>
         <div class="form-group">
           <input id="verification-otp-input" class="form-control" type="number" placeholder="••••" style="text-align:center; font-size:24px; letter-spacing:8px; font-weight:bold" maxlength="4">
@@ -53,7 +47,38 @@ window.startVerification = function(type) {
         <p id="verification-error" style="color:var(--rose); margin-top:12px; display:none;">❌ الرمز غير صحيح، حاول مجدداً</p>
       </div>
     `);
-  }, 1000);
+  };
+
+  if (type === 'email') {
+    // Send real email via EmailJS
+    const EJS_SERVICE  = 'service_tn2f0ml';
+    const EJS_TEMPLATE = 'template_0new8ul';
+    const EJS_KEY      = 'yoRVnRbtNtg1vaN-y';
+    try {
+      if (typeof emailjs !== 'undefined') {
+        emailjs.init({ publicKey: EJS_KEY });
+        await emailjs.send(EJS_SERVICE, EJS_TEMPLATE, {
+          to_email: u.email,
+          to_name:  u.name || 'مستخدم محجوز',
+          otp_code: VerificationState.pendingOTP,
+        });
+      } else {
+        throw new Error('EmailJS غير محمّل');
+      }
+      hideLoader();
+      toast(`📧 تم إرسال رمز التحقق إلى ${u.email}`, 'success');
+      _showOTPModal(u.email);
+    } catch (err) {
+      hideLoader();
+      console.warn('Verification EmailJS error:', err);
+      toast('❌ تعذّر إرسال رمز التحقق، تحقق من اتصالك وحاول مجدداً.', 'error');
+    }
+  } else {
+    // Phone — no real SMS gateway yet, just open modal
+    hideLoader();
+    toast('تم إرسال الرمز عبر رسالة نصية.', 'info');
+    _showOTPModal(u.phone);
+  }
 };
 
 window.confirmVerificationOTP = async function() {
