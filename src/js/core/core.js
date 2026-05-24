@@ -396,6 +396,7 @@ function renderNavbar() {
         { k:'sys_professions', l:'نظام المهن' },
         { k:'sys_stores', l:'نظام المتاجر' },
         { k:'sys_services', l:'خدمات أخرى' },
+        { k:'sys_offers', l:'🏷️ العروض والخصومات' },
       ]},
       { g:'إدارة المحتوى', items:[
         { k:'provider_svcs', l:`خدمات المزودين${pendingSvcsCount?` <span class="badge badge-gold" style="font-size:10px;padding:2px 6px">${pendingSvcsCount}</span>`:''}` },
@@ -469,6 +470,10 @@ function renderNavbar() {
         <button class="bn-item" onclick="typeof ph8_openSearch === 'function' ? ph8_openSearch() : navigate('home')">
           <span class="bn-icon">🔍</span>
           <span class="bn-label">البحث</span>
+        </button>
+        <button class="bn-item ${isActive('offers') ? 'active' : ''}" onclick="navigate('offers')" style="${isActive('offers') ? '' : ''}">
+          <span class="bn-icon">🏷️</span>
+          <span class="bn-label" style="${isActive('offers') ? 'color:#ef4444' : ''}">العروض</span>
         </button>
       ` : ''}
       <button class="bn-item ${isActive('orders') || isActive('driver') || isActive('provider') || isActive('admin') || isActive('staff') ? 'active' : ''}" onclick="navigate('${u.role === 'driver' ? 'driver' : u.role === 'provider' ? 'provider' : u.role === 'admin' ? 'admin' : u.role === 'staff' ? 'staff' : 'orders'}')">
@@ -967,6 +972,7 @@ async function render() {
     admin: renderAdmin, staff: renderStaff,
     vendor: renderVendor, driver: renderDriver,
     page: renderStaticPage, // Dynamic static pages
+    offers: () => typeof ph_offersRenderPage === 'function' ? ph_offersRenderPage() : '<div style="padding:60px;text-align:center">جاري تحميل العروض...</div>',
     store: () => typeof ph43_renderStorePage === 'function' ? ph43_renderStorePage() : '<div style="padding:60px;text-align:center">جاري تحميل المتجر...</div>',
     rentalstore: () => typeof window.ph_rentalRenderStorePage === 'function' ? window.ph_rentalRenderStorePage() : '<div style="padding:60px;text-align:center">جاري تحميل المتجر...</div>',
     provider: () => typeof renderProviderDashboard === 'function' ? renderProviderDashboard() : '<div style="padding:60px;text-align:center">جاري التحميل...</div>',

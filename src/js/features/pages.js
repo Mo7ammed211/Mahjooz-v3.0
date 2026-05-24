@@ -51,6 +51,12 @@ function renderHome() {
           <div class="hub-desc">صيدليات ومنتجات طبية مع توصيل</div>
           <span class="badge badge-gold">${(AppData.stores||[]).length} متجر متاح</span>
         </div>
+        <div class="hub-card" onclick="navigate('offers')" style="position:relative;overflow:hidden">
+          <div style="position:absolute;inset:0;background:linear-gradient(135deg,rgba(239,68,68,0.08),rgba(245,158,11,0.06));border-radius:inherit;pointer-events:none"></div>
+          <span class="hub-icon">🏷️</span><div class="hub-title" style="color:#ef4444">العروض والخصومات</div>
+          <div class="hub-desc">أفضل العروض من جميع الأقسام في مكان واحد</div>
+          <span class="badge" style="background:linear-gradient(135deg,#ef4444,#f59e0b);color:#fff">${(()=>{const now=new Date();return(AppData.offers||[]).filter(o=>o.active&&(!o.expiresAt||(o.expiresAt.toDate?o.expiresAt.toDate():new Date(o.expiresAt))>now)).length})()}&nbsp;عرض نشط</span>
+        </div>
       </div>
     </div>
     ${featured.length ? `

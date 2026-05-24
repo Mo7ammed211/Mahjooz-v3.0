@@ -83,6 +83,9 @@ window.renderAdmin = function () {
         { k: 'sys_stores',      icon: '🏪', label: 'نظام المتاجر',     desc: 'منتجات وتسوق إلكتروني' },
         { k: 'sys_digital',     icon: '🛒', label: 'المتاجر الرقمية',   desc: 'بيع بطاقات شبكة وأكواد رقمية' },
         { k: 'sys_services',    icon: '🛠️', label: 'الخدمات العامة',   desc: 'خدمات متنوعة وعامة' },
+        { k: 'sys_offers',      icon: '🏷️', label: 'العروض والخصومات', desc: 'إدارة عروض الأقسام الثلاثة',
+          badge: (() => { try { const now=new Date(); return (AppData.offers||[]).filter(o=>o.active&&(!o.expiresAt||(o.expiresAt.toDate?o.expiresAt.toDate():new Date(o.expiresAt))>now)).length || null; } catch(e){ return null; } })()
+        },
       ]
     },
     {
@@ -209,6 +212,7 @@ window.renderAdmin = function () {
           ${activeTab === 'sys_services'        ? renderAdminSystem('services') : ''}
           ${activeTab === 'sys_stores'          ? (typeof ph43_renderAdminStores === 'function' ? ph43_renderAdminStores() : renderAdminSystem('stores')) : ''}
           ${activeTab === 'sys_digital'         ? (typeof ph45_renderAdminDigitalStores === 'function' ? ph45_renderAdminDigitalStores() : 'جاري التحميل...') : ''}
+          ${activeTab === 'sys_offers'          ? (typeof renderAdminOffers === 'function' ? renderAdminOffers() : '<div style="padding:40px;text-align:center;color:var(--text-muted)">⏳ جاري تحميل نظام العروض...</div>') : ''}
           ${activeTab.startsWith('rental_stores_') ? _renderRentalStoresTab(activeTab.replace('rental_stores_', '')) : ''}
           ${activeTab === 'orders'              ? renderAdminOrders() : ''}
           ${activeTab === 'ads'                 ? renderAdminAds() : ''}
@@ -1174,6 +1178,27 @@ window.ph21_updateFinalPrice = function() {
   }
 };
 
+// ─── دوال مساعدة لحقول العروض في مودال الخدمة ──────────
+window.ph_toggleOfferFields = function (show) {
+  const wrap = document.getElementById('offer-fields-wrap');
+  if (wrap) wrap.style.display = show ? 'block' : 'none';
+};
+
+window.ph_offerFieldsCalc = function () {
+  const price = parseFloat(document.getElementById('svc-price')?.value) || parseFloat(document.getElementById('ph21-final-price-disp')?.textContent?.replace(/\D/g,'')) || 0;
+  const pct   = parseFloat(document.getElementById('svc-offer-pct')?.value) || 0;
+  if (price > 0 && pct > 0) {
+    const discounted = Math.round(price * (1 - pct / 100));
+    const el = document.getElementById('svc-offer-discounted');
+    if (el) el.value = discounted;
+    const preview = document.getElementById('offer-price-preview');
+    if (preview) {
+      preview.style.display = 'block';
+      preview.textContent = `💰 السعر الأصلي: ${price.toLocaleString('ar-SA')} ريال  →  السعر بعد الخصم: ${discounted.toLocaleString('ar-SA')} ريال  (وفّر ${(price - discounted).toLocaleString('ar-SA')} ريال)`;
+    }
+  }
+};
+
 // --- Service Modal Custom Patches Removed & Integrated ---
 
 function showAddSvcModal() {
@@ -1201,8 +1226,31 @@ window.saveNewSvc = async function() {
 
   showLoader();
   try {
-    await fsAdd('services', { catId, sectionId, name, provider, desc, price, commission, tax, finalPrice, order, assignedVendors, multiVendors, icon: '🔷', commonIssues: issues, status: 'active', createdAt: new Date() });
-    closeModal(); toast('تم إضافة الخدمة ✅','success'); await render();
+    const svcId = await fsAdd('services', { catId, sectionId, name, provider, desc, price, commission, tax, finalPrice, order, assignedVendors, multiVendors, icon: '🔷', commonIssues: issues, status: 'active', createdAt: new Date() });
+
+    const addToOffers = document.getElementById('svc-add-to-offers')?.checked;
+    if (addToOffers && typeof ph_saveOfferFromSource === 'function') {
+      const offerPct  = parseFloat(document.getElementById('svc-offer-pct')?.value) || 0;
+      const offerDisc = parseFloat(document.getElementById('svc-offer-discounted')?.value) || 0;
+      const expStr    = document.getElementById('svc-offer-expires')?.value || '';
+      const cat       = AppData.cats.find(c => c.id === catId);
+      const srcSec    = cat?.section === 'bookings' ? 'bookings' : (cat?.section === 'professions' || cat?.section === 'services') ? 'services' : 'bookings';
+      if (offerPct > 0 && (price || finalPrice)) {
+        await ph_saveOfferFromSource({
+          title: name, desc, sourceType: 'service', sourceId: svcId,
+          sourceSection: srcSec, originalPrice: finalPrice || price,
+          discountPercent: offerPct, imageBase64: null,
+          expiresStr: expStr
+        });
+        toast('✅ تمت إضافة الخدمة والعرض بنجاح', 'success');
+      } else {
+        toast('تم إضافة الخدمة ✅ (يرجى إدخال نسبة الخصم لإضافة العرض)', 'warning');
+      }
+    } else {
+      toast('تم إضافة الخدمة ✅','success');
+    }
+
+    closeModal(); await render();
   } catch (e) {
     console.error('Save Service Error:', e);
     toast('❌ فشل الحفظ: السيرفر يرفض الطلب حالياً', 'error');
@@ -2553,7 +2601,40 @@ window._svcModalBody = function(s = {}, section = null) {
       </div>
     </div>
 
-    <!-- 6. إعدادات التوجيه التلقائي للمزودين -->
+    <!-- 6. إضافة إلى قسم العروض والخصومات -->
+    <div class="admin-modal-card" style="border:1px solid rgba(239,68,68,0.25);background:linear-gradient(135deg,rgba(239,68,68,0.04),rgba(245,158,11,0.03))">
+      <div class="admin-modal-card-title" style="color:#ef4444">🏷️ قسم العروض والخصومات</div>
+
+      <div class="form-group">
+        <label class="form-label" style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 14px;background:rgba(239,68,68,0.06);border:1px dashed rgba(239,68,68,0.3);border-radius:12px">
+          <input type="checkbox" id="svc-add-to-offers" ${s.offerId ? 'checked' : ''} onchange="ph_toggleOfferFields(this.checked)" style="width:20px;height:20px;accent-color:#ef4444">
+          <div>
+            <div style="font-weight:700;font-size:14px">إضافة هذه الخدمة إلى قسم العروض والخصومات</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:2px">ستظهر الخدمة للعملاء في قسم مخصص بسعر مخفض</div>
+          </div>
+        </label>
+      </div>
+
+      <div id="offer-fields-wrap" style="display:${s.offerId ? 'block' : 'none'};margin-top:14px">
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">نسبة الخصم (%) *</label>
+            <input class="form-control" id="svc-offer-pct" type="number" min="1" max="99" value="${s.offerDiscountPct || ''}" placeholder="مثال: 20" oninput="ph_offerFieldsCalc()">
+          </div>
+          <div class="form-group">
+            <label class="form-label">السعر بعد الخصم (ريال)</label>
+            <input class="form-control" id="svc-offer-discounted" type="number" value="${s.offerDiscountedPrice || ''}" placeholder="يُحسب تلقائياً">
+          </div>
+        </div>
+        <div class="form-group" style="margin-top:10px">
+          <label class="form-label">تاريخ انتهاء العرض (اختياري — فارغ = دائم)</label>
+          <input class="form-control" id="svc-offer-expires" type="date" value="${s.offerExpiresAt ? (s.offerExpiresAt.toDate ? s.offerExpiresAt.toDate() : new Date(s.offerExpiresAt)).toISOString().split('T')[0] : ''}">
+        </div>
+        <div id="offer-price-preview" style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);border-radius:10px;padding:10px 14px;margin-top:10px;display:none;font-size:13px;color:#10b981;font-weight:700"></div>
+      </div>
+    </div>
+
+    <!-- 7. إعدادات التوجيه التلقائي للمزودين -->
     <div class="admin-modal-card">
       <div class="admin-modal-card-title">⚙️ إعدادات التوجيه التلقائي للمزودين</div>
       

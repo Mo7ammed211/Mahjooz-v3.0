@@ -436,6 +436,7 @@ function __legacy_renderAdmin() {
       { k:'sys_stores',   ic:'🏪', l:'نظام المتاجر', perm:null, adminOnly:true },
       { k:'sys_digital',  ic:'🛒', l:'المتاجر الرقمية', perm:null, adminOnly:true },
       { k:'sys_services', ic:'🛎️', l:'خدمات أخرى', perm:null, adminOnly:true },
+      { k:'sys_offers',   ic:'🏷️', l:'العروض والخصومات', perm:null, adminOnly:true },
       { k:'provider_svcs',ic:'💼', l:`خدمات المزودين${pendingSvcsCount?` <span class="badge badge-gold" style="font-size:10px;padding:2px 6px">${pendingSvcsCount}</span>`:''}`, perm:null, adminOnly:true },
       { k:'wallet',       ic:'💰', l:'المحافظ الإلكترونية', perm:'view_wallets' },
       { k:'wallet',       ic:'📥', l:'طلبات الإيداع', perm:'view_wallets' },
@@ -477,6 +478,7 @@ function __legacy_renderAdmin() {
     else if (adminTab==='sys_stores')     content = typeof ph43_renderAdminStores === 'function' ? ph43_renderAdminStores() : (typeof renderAdminSystem === 'function' ? renderAdminSystem('stores') : fallback('renderAdminSystem'));
     else if (adminTab==='sys_digital')    content = typeof ph45_renderAdminDigitalStores === 'function' ? ph45_renderAdminDigitalStores() : fallback('ph45_renderAdminDigitalStores');
     else if (adminTab==='sys_services')   content = typeof renderAdminSystem === 'function' ? renderAdminSystem('services') : fallback('renderAdminSystem');
+    else if (adminTab==='sys_offers')     content = typeof renderAdminOffers === 'function' ? renderAdminOffers() : fallback('renderAdminOffers');
     else if (adminTab==='provider_svcs') content = typeof renderAdminPendingSvcs === 'function' ? renderAdminPendingSvcs() : fallback('renderAdminPendingSvcs');
     else if (adminTab==='regions')     content = typeof renderAdminRegions === 'function' ? renderAdminRegions() : fallback('renderAdminRegions');
     else if (adminTab==='banks')       content = typeof renderAdminBanks === 'function' ? renderAdminBanks() : fallback('renderAdminBanks');
