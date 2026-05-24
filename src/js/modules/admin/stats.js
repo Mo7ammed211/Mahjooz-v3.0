@@ -451,8 +451,9 @@ function __legacy_renderAdmin() {
       { k:'regions',      ic:'📍', l:'المناطق والمدن', perm:null, adminOnly:true },
       { k:'cms_texts',    ic:'🔤', l:'النصوص والأيقونات', perm:null, adminOnly:true },
       { k:'cms_pages',    ic:'📄', l:'الصفحات الثابتة', perm:null, adminOnly:true },
-      { k:'delivery_pricing', ic:'🚚', l:'أسعار التوصيل', perm:null, adminOnly:true },
-      { k:'direct_routing',   ic:'🚦', l:'التوجيه المباشر', perm:null, adminOnly:true },
+      { k:'delivery_pricing',   ic:'🚚', l:'أسعار التوصيل', perm:null, adminOnly:true },
+      { k:'delivery_addresses', ic:'🗺️', l:'قاعدة العناوين', perm:null, adminOnly:true },
+      { k:'direct_routing',     ic:'🚦', l:'التوجيه المباشر', perm:null, adminOnly:true },
     ];
 
     const tabs = allTabs.filter(t => {
@@ -488,8 +489,9 @@ function __legacy_renderAdmin() {
     else if (adminTab==='ads')         content = typeof renderAdminAds === 'function' ? renderAdminAds() : fallback('renderAdminAds');
     else if (adminTab==='wallet')      content = typeof renderAdminWallet === 'function' ? renderAdminWallet() : fallback('renderAdminWallet');
     else if (adminTab==='reports')     content = typeof renderAdminReports === 'function' ? renderAdminReports() : fallback('renderAdminReports');
-    else if (adminTab==='delivery_pricing') content = typeof renderAdminDeliveryPricing === 'function' ? renderAdminDeliveryPricing() : fallback('renderAdminDeliveryPricing');
-    else if (adminTab==='direct_routing') content = typeof renderAdminDirectRouting === 'function' ? renderAdminDirectRouting() : fallback('renderAdminDirectRouting');
+    else if (adminTab==='delivery_pricing')   content = typeof renderAdminDeliveryPricing   === 'function' ? renderAdminDeliveryPricing()   : fallback('renderAdminDeliveryPricing');
+    else if (adminTab==='delivery_addresses') content = typeof renderAdminDeliveryAddresses === 'function' ? renderAdminDeliveryAddresses() : fallback('renderAdminDeliveryAddresses');
+    else if (adminTab==='direct_routing')     content = typeof renderAdminDirectRouting     === 'function' ? renderAdminDirectRouting()     : fallback('renderAdminDirectRouting');
     else if (adminTab.startsWith('rental_stores_')) content = typeof _renderRentalStoresTab === 'function' ? _renderRentalStoresTab(adminTab.replace('rental_stores_','')) : fallback('_renderRentalStoresTab');
     else                               content = typeof renderAdminDash === 'function' ? renderAdminDash() : 'Dashboard Error';
 
@@ -1909,6 +1911,293 @@ window.dp_confirmDeleteRoute = function(id, from, to) {
     else toast('فشل الحذف','error');
   });
 };
+
+// ══════════════════════════════════════════════════════════════════
+//  قاعدة العناوين — صفحة إدارة مستقلة شاملة
+// ══════════════════════════════════════════════════════════════════
+window.__da_expandedZones  = window.__da_expandedZones  || {};
+window.__da_searchQuery    = window.__da_searchQuery    || '';
+window.__da_activeFilter   = window.__da_activeFilter   || 'all'; // 'all' | 'active' | 'inactive'
+
+window.renderAdminDeliveryAddresses = function() {
+  const zones    = AppData.deliveryZones    || [];
+  const subzones = AppData.deliverySubzones || [];
+  const routes   = AppData.deliveryRoutes   || [];
+
+  const q      = (window.__da_searchQuery || '').trim().toLowerCase();
+  const filter = window.__da_activeFilter || 'all';
+
+  const totalSubzones = subzones.length;
+  const totalRoutes   = routes.length;
+  const activeZones   = zones.filter(z => z.active !== false).length;
+
+  // تصفية المناطق
+  let filteredZones = zones;
+  if (filter === 'active')   filteredZones = zones.filter(z => z.active !== false);
+  if (filter === 'inactive') filteredZones = zones.filter(z => z.active === false);
+  if (q) filteredZones = filteredZones.filter(z =>
+    (z.name || '').toLowerCase().includes(q) ||
+    subzones.filter(s => s.zoneId === z.id).some(s => (s.name||'').toLowerCase().includes(q))
+  );
+
+  return `
+  <style>
+    .da-stat-card {
+      background: var(--glass-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex: 1;
+      min-width: 140px;
+    }
+    .da-stat-icon {
+      width: 48px; height: 48px; border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; flex-shrink: 0;
+    }
+    .da-zone-card {
+      background: var(--glass-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+    .da-zone-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 18px; cursor: pointer; user-select: none;
+      transition: background 0.15s;
+    }
+    .da-zone-header:hover { background: rgba(255,255,255,0.03); }
+    .da-zone-body {
+      padding: 0 16px 16px;
+      border-top: 1px solid var(--border);
+    }
+    .da-sz-chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 12px; border-radius: 10px;
+      font-size: 13px; font-weight: 600;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.02);
+      transition: all 0.15s;
+      font-family: 'Cairo', sans-serif;
+    }
+    .da-sz-chip:hover { border-color: var(--primary); background: rgba(139,92,246,0.06); }
+    .da-filter-btn {
+      padding: 7px 16px; border-radius: 10px; font-size: 13px; font-weight: 700;
+      border: 1px solid var(--border); background: transparent;
+      color: var(--text-muted); cursor: pointer; transition: all 0.15s;
+      font-family: 'Cairo', sans-serif;
+    }
+    .da-filter-btn.active {
+      background: var(--primary); border-color: var(--primary);
+      color: #fff; box-shadow: 0 3px 12px rgba(139,92,246,0.3);
+    }
+  </style>
+
+  <!-- ─── العنوان والإحصائيات ─────────────────────────── -->
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;flex-wrap:wrap;gap:12px">
+    <div>
+      <h2 style="margin:0;font-family:'Cairo',sans-serif;font-weight:800;font-size:22px">🗺️ قاعدة بيانات العناوين</h2>
+      <p style="color:var(--text-muted);font-size:13px;margin:5px 0 0">إدارة موحّدة لجميع المناطق والعناوين الفرعية — مشتركة بين جميع أنواع المركبات</p>
+    </div>
+    <button class="btn btn-primary" onclick="dp_openAddZoneModal();window.__da_refreshOnClose=true">
+      + إضافة منطقة رئيسية
+    </button>
+  </div>
+
+  <!-- إحصائيات سريعة -->
+  <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:24px">
+    <div class="da-stat-card">
+      <div class="da-stat-icon" style="background:rgba(59,130,246,0.12);color:#3b82f6">🗺️</div>
+      <div>
+        <div style="font-size:24px;font-weight:900;font-family:'Cairo',sans-serif">${zones.length}</div>
+        <div style="font-size:12px;color:var(--text-muted)">إجمالي المناطق</div>
+      </div>
+    </div>
+    <div class="da-stat-card">
+      <div class="da-stat-icon" style="background:rgba(16,185,129,0.12);color:#10b981">✅</div>
+      <div>
+        <div style="font-size:24px;font-weight:900;font-family:'Cairo',sans-serif">${activeZones}</div>
+        <div style="font-size:12px;color:var(--text-muted)">مناطق مفعّلة</div>
+      </div>
+    </div>
+    <div class="da-stat-card">
+      <div class="da-stat-icon" style="background:rgba(139,92,246,0.12);color:#8b5cf6">🏠</div>
+      <div>
+        <div style="font-size:24px;font-weight:900;font-family:'Cairo',sans-serif">${totalSubzones}</div>
+        <div style="font-size:12px;color:var(--text-muted)">عنوان فرعي</div>
+      </div>
+    </div>
+    <div class="da-stat-card">
+      <div class="da-stat-icon" style="background:rgba(249,115,22,0.12);color:#f97316">🛣️</div>
+      <div>
+        <div style="font-size:24px;font-weight:900;font-family:'Cairo',sans-serif">${totalRoutes}</div>
+        <div style="font-size:12px;color:var(--text-muted)">مسار توصيل</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── شريط البحث والفلتر ──────────────────────────── -->
+  <div style="display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap">
+    <div style="position:relative;flex:1;min-width:200px">
+      <span style="position:absolute;top:50%;transform:translateY(-50%);right:14px;font-size:15px;pointer-events:none">🔍</span>
+      <input type="text" id="da-search-input"
+             placeholder="ابحث عن منطقة أو عنوان فرعي..."
+             value="${escHtml(window.__da_searchQuery||'')}"
+             oninput="window.__da_searchQuery=this.value;da_filterInPlace()"
+             style="width:100%;padding:11px 40px 11px 16px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:12px;color:var(--text-main);font-family:'Cairo',sans-serif;font-size:14px;box-sizing:border-box;transition:all 0.2s"
+             onfocus="this.style.borderColor='var(--primary)';this.style.boxShadow='0 0 0 3px rgba(139,92,246,0.12)'"
+             onblur="this.style.borderColor='var(--border)';this.style.boxShadow='none'">
+    </div>
+    <div style="display:flex;gap:6px;align-items:center">
+      <button class="da-filter-btn ${filter==='all'?'active':''}"     onclick="window.__da_activeFilter='all';render()">الكل (${zones.length})</button>
+      <button class="da-filter-btn ${filter==='active'?'active':''}"  onclick="window.__da_activeFilter='active';render()">مفعّل (${activeZones})</button>
+      <button class="da-filter-btn ${filter==='inactive'?'active':''}" onclick="window.__da_activeFilter='inactive';render()">معطّل (${zones.length-activeZones})</button>
+    </div>
+    <button class="btn btn-secondary btn-sm" onclick="da_expandAll()" title="فتح الكل" style="padding:8px 14px">📂 فتح الكل</button>
+    <button class="btn btn-secondary btn-sm" onclick="da_collapseAll()" title="طي الكل" style="padding:8px 14px">📁 طي الكل</button>
+  </div>
+
+  <!-- ─── قائمة المناطق ───────────────────────────────── -->
+  ${filteredZones.length === 0 ? `
+    <div style="text-align:center;padding:70px 20px;background:rgba(139,92,246,0.03);border:2px dashed rgba(139,92,246,0.15);border-radius:20px">
+      <div style="font-size:48px;margin-bottom:14px">🗺️</div>
+      <h3 style="color:var(--text-secondary);font-family:'Cairo',sans-serif">
+        ${q ? `لا توجد نتائج لـ "${escHtml(q)}"` : 'لا توجد مناطق بعد'}
+      </h3>
+      ${!q ? `
+      <p style="color:var(--text-muted)">ابدأ بإضافة منطقة رئيسية لبناء قاعدة بيانات العناوين</p>
+      <button class="btn btn-primary" onclick="dp_openAddZoneModal()">+ إضافة أول منطقة</button>` : `
+      <button class="btn btn-secondary btn-sm" onclick="window.__da_searchQuery='';document.getElementById('da-search-input').value='';da_filterInPlace()">مسح البحث</button>`}
+    </div>` : `
+  <div id="da-zones-list" style="display:flex;flex-direction:column;gap:12px">
+    ${filteredZones.map(z => {
+      const zSubzones  = subzones.filter(s => s.zoneId === z.id);
+      const zRoutes    = routes.filter(r => r.zoneId === z.id);
+      const isExpanded = window.__da_expandedZones[z.id] !== false;
+      const isActive   = z.active !== false;
+      const qLow       = q;
+
+      const filteredSz = qLow
+        ? zSubzones.filter(s => (s.name||'').toLowerCase().includes(qLow))
+        : zSubzones;
+
+      return `
+      <div class="da-zone-card" id="da-zone-${z.id}" style="border-color:${isActive?'var(--border)':'rgba(239,68,68,0.25)'}">
+        <div class="da-zone-header" onclick="da_toggleZone('${z.id}')">
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="width:10px;height:10px;border-radius:50%;background:${isActive?'#10b981':'#ef4444'};flex-shrink:0;box-shadow:0 0 0 3px ${isActive?'rgba(16,185,129,0.15)':'rgba(239,68,68,0.15)'}"></div>
+            <div>
+              <div style="font-size:16px;font-weight:800;font-family:'Cairo',sans-serif;color:var(--text-main)">
+                📍 ${escHtml(z.name)}
+                <span style="font-size:11px;font-weight:500;color:var(--text-muted);margin-right:6px">(${zSubzones.length} عنوان · ${zRoutes.length} مسار)</span>
+              </div>
+              ${!isActive ? `<div style="font-size:11px;color:#ef4444;margin-top:2px">معطّلة — لن تظهر في أسعار التوصيل</div>` : ''}
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px" onclick="event.stopPropagation()">
+            <button class="btn btn-sm btn-secondary" onclick="dp_openAddSubzoneModal('${z.id}')" title="إضافة عنوان فرعي" style="padding:5px 10px;font-size:12px">+ عنوان</button>
+            <button class="btn btn-sm btn-secondary" onclick="dp_openEditZoneModal('${z.id}')" title="تعديل المنطقة" style="padding:5px 10px;font-size:12px">✏️</button>
+            <button class="btn btn-sm btn-danger" onclick="dp_confirmDeleteZone('${z.id}','${escHtml(z.name)}')" title="حذف المنطقة" style="padding:5px 10px;font-size:12px">🗑️</button>
+            <div style="color:var(--text-muted);font-size:18px;transition:transform 0.2s;transform:rotate(${isExpanded?'180':'0'}deg)" id="da-arrow-${z.id}">⌄</div>
+          </div>
+        </div>
+
+        ${isExpanded ? `
+        <div class="da-zone-body">
+          ${filteredSz.length === 0 ? `
+          <div style="text-align:center;padding:20px;color:var(--text-muted);font-size:13px">
+            ${qLow ? `لا توجد نتائج في هذه المنطقة لـ "${escHtml(qLow)}"` : 'لا توجد عناوين فرعية بعد'}
+            ${!qLow ? `<br><button class="btn btn-sm btn-primary" style="margin-top:8px" onclick="dp_openAddSubzoneModal('${z.id}')">+ إضافة عنوان فرعي</button>` : ''}
+          </div>` : `
+          <div style="display:flex;flex-wrap:wrap;gap:8px;padding-top:14px">
+            ${filteredSz.map(sz => {
+              const szRoutes  = routes.filter(r => r.fromArea === sz.name && r.zoneId === z.id).length;
+              const szActive  = sz.active !== false;
+              return `
+              <div class="da-sz-chip" style="${!szActive?'opacity:0.5;':''}">
+                <span style="color:${szActive?'#10b981':'#ef4444'};font-size:9px">●</span>
+                <span>${escHtml(sz.name)}</span>
+                ${szRoutes > 0 ? `<span style="font-size:10px;background:rgba(139,92,246,0.15);color:var(--primary);padding:1px 5px;border-radius:6px;font-weight:700">${szRoutes}</span>` : ''}
+                <span style="display:flex;gap:3px;margin-right:2px">
+                  <button onclick="dp_openEditSubzoneModal('${sz.id}')" style="background:none;border:none;cursor:pointer;font-size:12px;padding:0;color:var(--text-muted)" title="تعديل">✏️</button>
+                  <button onclick="dp_confirmDeleteSubzone('${sz.id}','${escHtml(sz.name)}')" style="background:none;border:none;cursor:pointer;font-size:12px;padding:0;color:var(--text-muted)" title="حذف">🗑️</button>
+                </span>
+              </div>`;
+            }).join('')}
+            <button class="da-sz-chip" onclick="dp_openAddSubzoneModal('${z.id}')"
+                    style="border-style:dashed;color:var(--primary);border-color:rgba(139,92,246,0.3);background:rgba(139,92,246,0.04)"
+                    onmouseenter="this.style.background='rgba(139,92,246,0.1)'"
+                    onmouseleave="this.style.background='rgba(139,92,246,0.04)'">
+              <span style="font-size:16px;font-weight:500">+</span> إضافة عنوان
+            </button>
+          </div>`}
+        </div>` : ''}
+      </div>`;
+    }).join('')}
+  </div>
+  `}
+
+  <!-- ─── رابط سريع لأسعار التوصيل ─────────────────────── -->
+  <div style="margin-top:24px;padding:16px 20px;background:rgba(59,130,246,0.05);border:1px solid rgba(59,130,246,0.2);border-radius:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="font-size:20px">💡</span>
+      <div style="font-size:13px">
+        <strong>هذه العناوين مشتركة بين جميع أنواع المركبات.</strong>
+        <span style="color:var(--text-muted)"> لضبط أسعار التوصيل لكل مسار، اذهب إلى قسم أسعار التوصيل.</span>
+      </div>
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="setAdminTab('delivery_pricing')">🚚 أسعار التوصيل ←</button>
+  </div>
+  `;
+};
+
+// ─── مساعدات قاعدة العناوين ──────────────────────────────────────
+window.da_toggleZone = function(id) {
+  const wasExpanded = window.__da_expandedZones[id] !== false;
+  window.__da_expandedZones[id] = !wasExpanded;
+
+  const card  = document.getElementById(`da-zone-${id}`);
+  const arrow = document.getElementById(`da-arrow-${id}`);
+  if (!card) return;
+
+  if (!wasExpanded) {
+    // فتح: أعد رسم بسيط
+    render();
+  } else {
+    // إغلاق: أعد رسم بسيط
+    render();
+  }
+};
+
+window.da_expandAll = function() {
+  (AppData.deliveryZones || []).forEach(z => { window.__da_expandedZones[z.id] = true; });
+  render();
+};
+window.da_collapseAll = function() {
+  (AppData.deliveryZones || []).forEach(z => { window.__da_expandedZones[z.id] = false; });
+  render();
+};
+
+window.da_filterInPlace = function() {
+  const q = (window.__da_searchQuery || '').trim().toLowerCase();
+  const zones    = AppData.deliveryZones    || [];
+  const subzones = AppData.deliverySubzones || [];
+
+  document.querySelectorAll('.da-zone-card').forEach(card => {
+    const zId   = card.id.replace('da-zone-','');
+    const zone  = zones.find(z => z.id === zId);
+    if (!zone) return;
+    const zoneName = (zone.name || '').toLowerCase();
+    const szNames  = subzones.filter(s => s.zoneId === zId).map(s => (s.name||'').toLowerCase());
+    const matches  = !q || zoneName.includes(q) || szNames.some(n => n.includes(q));
+    card.style.display = matches ? '' : 'none';
+  });
+};
+
 // Final override after load: ensure our admin renderers and tab setter persist
 try {
   window.addEventListener && window.addEventListener('load', function () {
