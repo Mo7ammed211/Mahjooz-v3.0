@@ -299,7 +299,7 @@ async function loadAllData() {
       console.error('[Migration] Category migration failed:', err);
     }
 
-    const [catsBookings,catsProfs,cities,services,orders,users,ads,ratings,rr,wr,tr, dictionarySnap, banners, pages, stores, storeCats, storeProducts, svcSections, deliveryZones, deliveryRoutes, rentalStores, rentalSubCats, rentalProducts, catalogCats, catalogItems] = await Promise.all([
+    const [catsBookings,catsProfs,cities,services,orders,users,ads,ratings,rr,wr,tr, dictionarySnap, banners, pages, stores, storeCats, storeProducts, svcSections, deliveryZones, deliveryRoutes, rentalStores, rentalSubCats, rentalProducts, catalogCats, catalogItems, providerGroups] = await Promise.all([
       fsGetAll('categories').catch(()=>[]),
       fsGetAll('professions_categories').catch(()=>[]),
       fsGetAll('cities').catch(()=>[]), fsGetAll('services').catch(()=>[]),
@@ -315,7 +315,8 @@ async function loadAllData() {
       fsGetAll('rentalSubCats').catch(()=>[]),
       fsGetAll('rentalProducts').catch(()=>[]),
       fsGetAll('catalog_cats').catch(()=>[]),
-      fsGetAll('product_catalog').catch(()=>[])
+      fsGetAll('product_catalog').catch(()=>[]),
+      fsGetAll('provider_groups').catch(()=>[])
     ]);
     const cats = [
       ...catsBookings.map(c => ({ ...c, section: 'bookings' })),
@@ -325,7 +326,8 @@ async function loadAllData() {
     Object.assign(AppData, { cats, cities, services, orders, users, ads, ratings,
       rechargeReqs: rr, withdrawReqs: wr, transactions: tr, dictionary, banners, pages,
       stores, storeCats, storeProducts, svcSections, deliveryZones, deliveryRoutes,
-      rentalStores, rentalSubCats, rentalProducts, catalogCats, catalogItems });
+      rentalStores, rentalSubCats, rentalProducts, catalogCats, catalogItems,
+      providerGroups: providerGroups.sort((a,b)=>(a.order||99)-(b.order||99)) });
     State._dataLoaded = true;
   } catch(e) {
     console.error('loadAllData core failed:', e);

@@ -116,6 +116,7 @@ window.renderAdmin = function () {
       items: [
         { k: 'users',       icon: '👤', label: 'كل المستخدمين', desc: 'عرض وإدارة حسابات المنصة',       badge: (AppData.users||[]).length || null },
         { k: 'users',       icon: '⏳', label: 'حسابات معلقة',  desc: 'حسابات تنتظر الموافقة',           badge: pendingUsers || null, urgent: pendingUsers > 0 },
+        { k: 'provider_groups',   icon: '🏢', label: 'فروع المزودين',  desc: 'تصنيف مزودي الخدمات في فروع منظّمة' },
         { k: 'permissions',       icon: '🔑', label: 'الصلاحيات',     desc: 'أدوار وصلاحيات الموظفين' },
         { k: 'staff_performance', icon: '📊', label: 'أداء الموظفين', desc: 'مقارنة أداء الفريق وتوزيع الأقسام' },
       ]
@@ -236,6 +237,7 @@ window.renderAdmin = function () {
           ${activeTab === 'signup_settings'     ? (typeof renderSignupSettings === 'function' ? renderSignupSettings() : 'جاري التحميل...') : ''}
           ${activeTab === 'delivery_pricing'    ? (typeof renderAdminDeliveryPricing === 'function' ? renderAdminDeliveryPricing() : 'جاري التحميل...') : ''}
           ${activeTab === 'delivery_addresses'  ? (typeof renderAdminDeliveryAddresses === 'function' ? renderAdminDeliveryAddresses() : 'جاري التحميل...') : ''}
+          ${activeTab === 'provider_groups'     ? (typeof renderAdminProviderGroups === 'function' ? renderAdminProviderGroups() : 'جاري التحميل...') : ''}
         </main>
       </div>
     </div>
@@ -2704,12 +2706,17 @@ function _collectSvcForm(existingImages = []) {
 }
 
 function _renderVendorPicker(assignedIds = [], isMulti = true) {
+  const groups = AppData.providerGroups || [];
+  if (groups.length > 0 && typeof pg_renderVendorPickerGrouped === 'function') {
+    window.__pg_selectedGroup = window.__pg_selectedGroup || null;
+    return pg_renderVendorPickerGrouped(assignedIds, isMulti);
+  }
   const vendors = (AppData.users || []).filter(u => ['vendor', 'provider'].includes(u.role));
   const type = isMulti ? 'checkbox' : 'radio';
   return `
     <div class="vendor-picker-container" style="background:rgba(255,255,255,0.03); border:1px solid var(--glass-border); border-radius:16px; padding:16px; margin-top:8px">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px">
-        <label class="form-label" style="margin:0; font-weight:700; color:var(--primary)">💎 المزودين المعتمدين (إلزامي)</label>
+        <label class="form-label" style="margin:0; font-weight:700; color:var(--primary)">💎 المزودون المعتمدون (إلزامي)</label>
         <div id="multi-vendor-actions" style="display:${isMulti?'flex':'none'}; gap:8px">
           <button type="button" class="btn btn-sm" style="font-size:11px; padding:4px 8px; background:rgba(139,92,246,0.1); color:var(--primary)" onclick="ph43_selectAllVendors(true)">تحديد الكل</button>
           <button type="button" class="btn btn-sm" style="font-size:11px; padding:4px 8px; background:rgba(244,63,94,0.1); color:var(--rose)" onclick="ph43_selectAllVendors(false)">إلغاء الكل</button>
@@ -2718,11 +2725,11 @@ function _renderVendorPicker(assignedIds = [], isMulti = true) {
       <input type="text" class="form-control form-control-sm" placeholder="🔍 ابحث عن مزود..." oninput="ph43_filterVendors(this.value)" style="margin-bottom:12px; height:36px; border-radius:10px; background:rgba(0,0,0,0.2)">
       <div style="max-height:200px; overflow-y:auto; padding-right:4px" id="svc-vendors-pool" class="custom-scrollbar">
         ${vendors.map(v => `
-          <label class="vendor-item" data-name="${v.name.toLowerCase()}" style="display:flex; align-items:center; gap:12px; margin-bottom:8px; cursor:pointer; padding:10px; border-radius:12px; background:rgba(255,255,255,0.02); transition:all 0.2s; border:1px solid transparent">
-            <input type="${type}" name="svc-vendor" class="svc-vendor-cb" value="${v.id}" ${assignedIds.includes(v.id) ? 'checked' : ''} style="width:20px; height:20px; accent-color:var(--primary)"> 
+          <label class="vendor-item" data-name="${(v.name||'').toLowerCase()}" style="display:flex; align-items:center; gap:12px; margin-bottom:8px; cursor:pointer; padding:10px; border-radius:12px; background:rgba(255,255,255,0.02); transition:all 0.2s; border:1px solid transparent">
+            <input type="${type}" name="svc-vendor" class="svc-vendor-cb" value="${v.id}" ${assignedIds.includes(v.id) ? 'checked' : ''} style="width:20px; height:20px; accent-color:var(--primary)">
             <div style="flex:1">
-              <div style="font-weight:600; font-size:14px">${v.name}</div>
-              <div style="font-size:11px; color:var(--text-muted)">${v.email || v.phone || ''}</div>
+              <div style="font-weight:600; font-size:14px">${escHtml(v.name||'—')}</div>
+              <div style="font-size:11px; color:var(--text-muted)">${escHtml(v.email || v.phone || '')}</div>
             </div>
             ${assignedIds.includes(v.id) ? '<span style="font-size:16px">✅</span>' : ''}
           </label>
