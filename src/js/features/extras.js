@@ -839,8 +839,7 @@ function signupSendOTP() {
   SignupState.pendingOTP = code;
   SignupState.pendingPhone = phone;
   document.getElementById('su-otp-row').style.display = 'block';
-  toast(`${t('otp_sent')} (للاختبار: ${code})`,'info');
-  console.log('🔑 OTP for', phone, '=', code);
+  toast(t('otp_sent'), 'info');
 }
 function signupVerifyOTP() {
   const code = document.getElementById('su-otp').value.trim();

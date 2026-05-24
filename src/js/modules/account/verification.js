@@ -32,8 +32,7 @@ window.startVerification = function(type) {
     hideLoader();
     const typeLabel = type === 'phone' ? 'رسالة نصية (SMS)' : 'البريد الإلكتروني';
     
-    // Test helper toast
-    toast(`تم إرسال الرمز عبر ${typeLabel}. (للاختبار الرمز هو: ${VerificationState.pendingOTP})`, 'info');
+    toast(`تم إرسال الرمز عبر ${typeLabel}.`, 'info');
     
     openModal(`
       <div class="modal-header">

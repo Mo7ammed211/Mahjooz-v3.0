@@ -427,7 +427,7 @@ window.ph9_sendPhoneOTP = function () {
   window.__ph9_changeOTP = String(Math.floor(1000 + Math.random() * 9000));
   window.__ph9_changePending = phone;
   document.getElementById('ph9-phone-otp-row').style.display = 'block';
-  toast(`تم إرسال الرمز (للاختبار: ${window.__ph9_changeOTP})`, 'info');
+  toast('تم إرسال رمز التحقق إلى رقم هاتفك.', 'info');
 };
 
 window.ph9_confirmPhoneOTP = async function () {
