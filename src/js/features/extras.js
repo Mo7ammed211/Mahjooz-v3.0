@@ -884,7 +884,7 @@ async function doSignup() {
     if (pass && pass2El && pass !== pass2El.value) { toast('كلمتا المرور غير متطابقتين', 'error'); return; }
   }
   
-  if (!SignupState.phoneVerified || data.phone !== SignupState.pendingPhone) {
+  if (!SignupState.phoneVerified) {
     toast('يجب التحقق من رقم الجوال أولاً', 'error'); return;
   }
 
