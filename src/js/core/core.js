@@ -1220,8 +1220,7 @@ async function sendOTP(uid, email) {
     toast(`📧 تم إرسال رمز التحقق إلى ${email}`, 'success');
   } catch (ejsErr) {
     console.warn('EmailJS OTP error:', ejsErr);
-    // fallback: اعرض الرمز في رسالة Toast للاختبار
-    toast(`📧 رمز التحقق: ${otp} (تحقق من إعداد EmailJS)`, 'info');
+    toast('❌ تعذّر إرسال رمز التحقق، يرجى المحاولة مجدداً.', 'error');
   }
   return true;
 }
