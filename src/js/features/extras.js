@@ -946,7 +946,36 @@ async function doSignup() {
       data.email = data.email || SignupState.email;
       data.name = data.name || SignupState.name;
     } else {
-      const cred = await auth.createUserWithEmailAndPassword(data.email, data.pass);
+      let cred;
+      try {
+        cred = await auth.createUserWithEmailAndPassword(data.email, data.pass);
+      } catch (createErr) {
+        if (createErr.code === 'auth/email-already-in-use') {
+          // Could be a zombie account (Firebase Auth exists but no Firestore profile).
+          // Try signing in with the same password to recover it.
+          try {
+            cred = await auth.signInWithEmailAndPassword(data.email, data.pass);
+            const existingProfile = await fsGet('users', cred.user.uid);
+            if (existingProfile) {
+              // Real existing account — redirect to login
+              hideLoader();
+              window.__suppressAuthRedirect = false;
+              toast('هذا البريد مسجّل بالفعل. سيتم توجيهك لصفحة الدخول...', 'info');
+              setTimeout(() => navigate('login'), 1800);
+              return;
+            }
+            // Zombie account: Auth exists but no Firestore profile → complete signup
+          } catch (signInErr) {
+            // Sign in failed → truly registered with a different password
+            hideLoader();
+            window.__suppressAuthRedirect = false;
+            toast('هذا البريد الإلكتروني مستخدم بالفعل. إذا كنت تعرف كلمة المرور، سجّل الدخول من الصفحة الرئيسية.', 'error');
+            return;
+          }
+        } else {
+          throw createErr;
+        }
+      }
       uid = cred.user.uid;
     }
 
