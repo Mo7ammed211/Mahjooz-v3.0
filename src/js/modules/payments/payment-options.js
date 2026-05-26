@@ -119,6 +119,8 @@ function renderAdminPlatformSettings() {
     </div>
   `;
 }
+window.renderPh17Settings = renderAdminPlatformSettings;
+
 window.savePlatformSettings = async function() {
   const fee   = parseFloat(document.getElementById('adm-delivery-fee')?.value || '15');
   const waRaw = (document.getElementById('adm-wa-number')?.value || '').trim();
