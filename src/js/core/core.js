@@ -206,12 +206,66 @@ function stars(n) {
 // ─── Theme ────────────────────────────────────────
 let isDarkMode = localStorage.getItem('mahjooz_theme') !== 'light';
 if (!isDarkMode) document.body.classList.add('light-theme');
-function toggleTheme() {
-  isDarkMode = !isDarkMode;
-  localStorage.setItem('mahjooz_theme', isDarkMode ? 'dark' : 'light');
-  document.body.classList.toggle('light-theme', !isDarkMode);
-  const ic = document.getElementById('theme-icon');
-  if (ic) ic.textContent = isDarkMode ? '☀️' : '🌙';
+
+// Update theme button label
+function _updateThemeBtn() {
+  const lbl = document.getElementById('theme-btn-label');
+  if (lbl) lbl.textContent = isDarkMode ? 'وضع الإضاءة' : 'الوضع الداكن';
+}
+_updateThemeBtn();
+
+function toggleTheme(event) {
+  // ── 1. Determine ripple origin ──
+  const ripple = document.getElementById('theme-ripple');
+  const btn    = document.getElementById('theme-toggle-btn');
+  if (ripple) {
+    // New theme is the opposite of current
+    const goingLight = isDarkMode; // about to switch TO light
+    ripple.style.setProperty('--ripple-color', goingLight ? '#fbfbfe' : '#0f0c20');
+
+    // Position ripple at button center, or event position
+    let rx = '90%', ry = '90%';
+    if (event && btn) {
+      const r = btn.getBoundingClientRect();
+      rx = Math.round(r.left + r.width  / 2) + 'px';
+      ry = Math.round(r.top  + r.height / 2) + 'px';
+    }
+    ripple.style.setProperty('--rx', rx);
+    ripple.style.setProperty('--ry', ry);
+
+    // ── 2. Start expand ──
+    ripple.classList.add('expanding');
+
+    // ── 3. Switch theme exactly at midpoint ──
+    setTimeout(() => {
+      isDarkMode = !isDarkMode;
+      localStorage.setItem('mahjooz_theme', isDarkMode ? 'dark' : 'light');
+      document.body.classList.toggle('light-theme', !isDarkMode);
+      _updateThemeBtn();
+
+      // Spin the icon
+      if (btn) {
+        btn.classList.add('switching');
+        btn.addEventListener('animationend', () => btn.classList.remove('switching'), { once: true });
+      }
+
+      // ── 4. Collapse ripple ──
+      setTimeout(() => {
+        ripple.classList.remove('expanding');
+        // Reset clip-path instantly after transition to avoid flicker
+        ripple.addEventListener('transitionend', () => {
+          ripple.style.setProperty('--ripple-color', '');
+        }, { once: true });
+      }, 50);
+    }, 310);
+
+  } else {
+    // Fallback (no ripple element)
+    isDarkMode = !isDarkMode;
+    localStorage.setItem('mahjooz_theme', isDarkMode ? 'dark' : 'light');
+    document.body.classList.toggle('light-theme', !isDarkMode);
+    _updateThemeBtn();
+  }
 }
 
 // ─── Demo Accounts ────────────────────────────────
