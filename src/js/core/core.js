@@ -685,77 +685,78 @@ function renderFooter() {
     </footer>`;
 }
 function logoutConfirm() {
-  // Remove existing logout dialog if any
   const existing = document.getElementById('logout-confirm-overlay');
   if (existing) existing.remove();
 
+  const isMobile = window.innerWidth <= 640;
   const overlay = document.createElement('div');
   overlay.id = 'logout-confirm-overlay';
   overlay.style.cssText = `
     position:fixed;inset:0;z-index:99999;
-    background:rgba(0,0,0,0.65);
-    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
-    display:flex;align-items:center;justify-content:center;
-    padding:20px;
-    opacity:0;transition:opacity 0.25s ease;
+    background:rgba(0,0,0,0.6);
+    backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+    display:flex;
+    align-items:${isMobile ? 'flex-end' : 'center'};
+    justify-content:center;
+    padding:${isMobile ? '0' : '20px'};
+    opacity:0;transition:opacity 0.22s ease;
   `;
   overlay.innerHTML = `
     <div id="logout-confirm-card" style="
       background:var(--bg-card);
-      border:1px solid var(--border);
-      border-radius:20px;
-      padding:24px 22px 20px;
-      max-width:320px;width:calc(100% - 32px);
-      box-shadow:0 20px 50px rgba(0,0,0,0.45),0 0 0 1px rgba(139,92,246,0.12);
+      border:1px solid rgba(139,92,246,0.15);
+      border-radius:${isMobile ? '22px 22px 0 0' : '20px'};
+      padding:${isMobile ? '20px 20px 32px' : '22px 20px 18px'};
+      max-width:${isMobile ? '100%' : '300px'};
+      width:${isMobile ? '100%' : 'calc(100% - 32px)'};
+      box-shadow:0 -4px 40px rgba(0,0,0,0.4),0 0 0 1px rgba(139,92,246,0.1);
       text-align:center;
-      transform:translateY(20px) scale(0.96);
-      transition:transform 0.28s cubic-bezier(0.34,1.56,0.64,1),opacity 0.22s ease;
+      transform:${isMobile ? 'translateY(24px)' : 'translateY(16px) scale(0.96)'};
+      transition:transform 0.3s cubic-bezier(0.34,1.4,0.64,1),opacity 0.22s ease;
       opacity:0;
       position:relative;
     ">
       <button onclick="document.getElementById('logout-confirm-overlay').remove()" style="
-        position:absolute;top:10px;inset-inline-end:10px;
+        position:absolute;top:12px;inset-inline-end:12px;
         background:var(--bg-hover);border:none;
-        width:28px;height:28px;border-radius:50%;
-        color:var(--text-muted);font-size:13px;cursor:pointer;
+        width:26px;height:26px;border-radius:50%;
+        color:var(--text-muted);font-size:12px;cursor:pointer;
         display:flex;align-items:center;justify-content:center;
-        transition:all 0.2s;
+        transition:all 0.2s;line-height:1;
       " onmouseover="this.style.background='rgba(239,68,68,0.15)';this.style.color='#ef4444'"
          onmouseout="this.style.background='var(--bg-hover)';this.style.color='var(--text-muted)'">✕</button>
 
       <div style="
-        width:56px;height:56px;border-radius:50%;margin:0 auto 14px;
-        background:linear-gradient(135deg,rgba(239,68,68,0.15),rgba(239,68,68,0.04));
-        border:1.5px solid rgba(239,68,68,0.25);
+        width:52px;height:52px;border-radius:50%;margin:0 auto 12px;
+        background:linear-gradient(135deg,rgba(239,68,68,0.14),rgba(239,68,68,0.04));
+        border:1.5px solid rgba(239,68,68,0.22);
         display:flex;align-items:center;justify-content:center;
-        font-size:26px;
-        box-shadow:0 6px 18px rgba(239,68,68,0.18);
+        font-size:24px;
+        box-shadow:0 4px 14px rgba(239,68,68,0.15);
       ">🚪</div>
 
-      <h2 style="margin:0 0 8px;font-size:17px;font-weight:800;color:var(--text-main)">تسجيل الخروج</h2>
-      <p style="margin:0 0 20px;color:var(--text-muted);font-size:13px;line-height:1.5">
+      <h2 style="margin:0 0 6px;font-size:16px;font-weight:800;color:var(--text-main)">تسجيل الخروج</h2>
+      <p style="margin:0 0 18px;color:var(--text-muted);font-size:12.5px;line-height:1.55">
         هل أنت متأكد من رغبتك في الخروج؟
       </p>
 
-      <div style="display:flex;gap:10px;justify-content:center;flex-direction:row-reverse">
+      <div style="display:flex;gap:9px;flex-direction:row-reverse">
         <button onclick="doLogout()" style="
-          flex:1;
-          padding:10px 16px;border-radius:10px;border:none;cursor:pointer;
+          flex:1;padding:10px 14px;border-radius:11px;border:none;cursor:pointer;
           background:linear-gradient(135deg,#ef4444,#dc2626);
           color:#fff;font-weight:700;font-size:13px;
-          box-shadow:0 4px 14px rgba(239,68,68,0.3);
-          transition:all 0.2s;font-family:inherit;
-        " onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 8px 20px rgba(239,68,68,0.45)'"
-           onmouseout="this.style.transform='';this.style.boxShadow='0 4px 14px rgba(239,68,68,0.3)'">
-          🚪 خروج
+          box-shadow:0 3px 12px rgba(239,68,68,0.28);
+          transition:all 0.2s;font-family:inherit;letter-spacing:0.2px;
+        " onmouseover="this.style.filter='brightness(1.1)';this.style.transform='translateY(-1px)'"
+           onmouseout="this.style.filter='';this.style.transform=''">
+          خروج
         </button>
         <button onclick="document.getElementById('logout-confirm-overlay').remove()" style="
-          flex:1;
-          padding:10px 16px;border-radius:10px;cursor:pointer;
+          flex:1;padding:10px 14px;border-radius:11px;cursor:pointer;
           background:var(--bg-hover);border:1px solid var(--border);
           color:var(--text-main);font-weight:700;font-size:13px;
           transition:all 0.2s;font-family:inherit;
-        " onmouseover="this.style.borderColor='var(--primary)'"
+        " onmouseover="this.style.borderColor='rgba(139,92,246,0.5)'"
            onmouseout="this.style.borderColor='var(--border)'">
           إلغاء
         </button>
@@ -763,11 +764,9 @@ function logoutConfirm() {
     </div>
   `;
   document.body.appendChild(overlay);
-  // Close on backdrop click
   overlay.addEventListener('click', function(e) {
     if (e.target === overlay) overlay.remove();
   });
-  // Animate in
   requestAnimationFrame(() => {
     overlay.style.opacity = '1';
     const card = document.getElementById('logout-confirm-card');
