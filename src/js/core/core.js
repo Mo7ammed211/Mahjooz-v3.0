@@ -928,34 +928,57 @@ async function render() {
   const nw = document.getElementById('navbar-wrap');
   const fw = document.getElementById('footer-wrap');
   const app = document.getElementById('app');
-  
+
+  // ── helper: swap content with transition ──
+  const setContent = (html) => {
+    app.classList.remove('page-enter', 'page-exit');
+    // Only animate if there's existing content
+    if (app.innerHTML.trim()) {
+      app.classList.add('page-exit');
+      return new Promise(resolve => {
+        setTimeout(() => {
+          app.innerHTML = html;
+          app.classList.remove('page-exit');
+          app.classList.add('page-enter');
+          app.addEventListener('animationend', () => app.classList.remove('page-enter'), { once: true });
+          resolve();
+        }, 140);
+      });
+    } else {
+      app.innerHTML = html;
+      app.classList.add('page-enter');
+      app.addEventListener('animationend', () => app.classList.remove('page-enter'), { once: true });
+      return Promise.resolve();
+    }
+  };
+
   if (State.currentPage === 'login') {
     nw.innerHTML = ''; fw.innerHTML = '';
-    app.innerHTML = renderLoginPage(); 
+    await setContent(renderLoginPage());
     if (typeof hideLoader === 'function') hideLoader();
     return;
   }
   if (State.currentPage === 'verify2fa') {
     nw.innerHTML = ''; fw.innerHTML = '';
-    app.innerHTML = renderOTPVerificationPage(); 
+    await setContent(renderOTPVerificationPage());
     if (typeof hideLoader === 'function') hideLoader();
     return;
   }
   if (State.currentPage === 'signup') {
     nw.innerHTML = ''; fw.innerHTML = '';
-    app.innerHTML = renderSignupPage(); 
+    await setContent(renderSignupPage());
     if (typeof hideLoader === 'function') hideLoader();
     return;
   }
   if (State.currentPage === 'forgot-password') {
     nw.innerHTML = ''; fw.innerHTML = '';
-    app.innerHTML = typeof renderForgotPasswordPage === 'function' ? renderForgotPasswordPage() : '';
+    await setContent(typeof renderForgotPasswordPage === 'function' ? renderForgotPasswordPage() : '');
     if (typeof hideLoader === 'function') hideLoader();
     return;
   }
   
   nw.innerHTML = renderNavbar(); fw.innerHTML = renderFooter();
-  refreshWalletBalanceUI(); // Fetch wallet balance independently of loadAllData
+  refreshWalletBalanceUI();
   
   if (!State._dataLoaded || window._forceDataReload) {
     window._forceDataReload = false;
@@ -981,7 +1004,7 @@ async function render() {
     myorders: renderMyOrders, wallet: renderMyWallet, rate: renderRatingPage, settings: renderSettingsPage,
     admin: renderAdmin, staff: renderStaff,
     vendor: renderVendor, driver: renderDriver,
-    page: renderStaticPage, // Dynamic static pages
+    page: renderStaticPage,
     offers: () => typeof ph_offersRenderPage === 'function' ? ph_offersRenderPage() : '<div style="padding:60px;text-align:center">جاري تحميل العروض...</div>',
     store: () => typeof ph43_renderStorePage === 'function' ? ph43_renderStorePage() : '<div style="padding:60px;text-align:center">جاري تحميل المتجر...</div>',
     rentalstore: () => typeof window.ph_rentalRenderStorePage === 'function' ? window.ph_rentalRenderStorePage() : '<div style="padding:60px;text-align:center">جاري تحميل المتجر...</div>',
@@ -991,13 +1014,15 @@ async function render() {
   };
   
   const fn = pages[State.currentPage];
+  let html;
   try {
-    app.innerHTML = fn ? fn() : `<div style="padding:120px;text-align:center;color:var(--text-muted)">الصفحة غير موجودة</div>`;
+    html = fn ? fn() : `<div style="padding:120px;text-align:center;color:var(--text-muted)">الصفحة غير موجودة</div>`;
   } catch(e) {
     console.error('Render error on page ' + State.currentPage + ':', e);
-    app.innerHTML = `<div style="padding:120px;text-align:center;color:var(--danger)">حدث خطأ أثناء عرض الصفحة. يرجى المحاولة مرة أخرى.</div>`;
+    html = `<div style="padding:120px;text-align:center;color:var(--danger)">حدث خطأ أثناء عرض الصفحة. يرجى المحاولة مرة أخرى.</div>`;
   }
-  
+
+  await setContent(html);
   if (typeof hideLoader === 'function') hideLoader();
 
   if (activeElId) {

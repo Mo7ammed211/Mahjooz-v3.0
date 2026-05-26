@@ -3069,6 +3069,27 @@ body.light-theme {
 .btn-primary:hover { box-shadow: var(--glow-primary) !important; }
 .admin-nav-item:hover { box-shadow: var(--glow-subtle); }
 
+/* ═══════════════════════════════════════════
+   Page Transition Animations
+   ═══════════════════════════════════════════ */
+#app {
+  will-change: opacity, transform;
+}
+#app.page-exit {
+  animation: page-out 0.14s ease forwards;
+}
+#app.page-enter {
+  animation: page-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+@keyframes page-out {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to   { opacity: 0; transform: translateY(6px) scale(0.992); }
+}
+@keyframes page-in {
+  from { opacity: 0; transform: translateY(14px) scale(0.993); }
+  to   { opacity: 1; transform: translateY(0)   scale(1); }
+}
+
 
 
 /* ??????????????????????????????????????????????????????????????
