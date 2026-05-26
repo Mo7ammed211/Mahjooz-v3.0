@@ -107,6 +107,11 @@
   <!-- Toast -->
   <div id="toast-container"></div>
 
+  <!-- Back to Top Button -->
+  <button id="back-to-top" aria-label="العودة للأعلى" onclick="window.scrollTo({top:0,behavior:'smooth'})">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+  </button>
+
   <!-- Smart Assistant Widget -->
   <div id="chat-widget" style="display: none;">
     <div id="chat-button" onclick="toggleChat()" title="المساعد الذكي لمحجوز">
@@ -299,6 +304,26 @@
     });
 
     // Hide Splash Screen on load is now handled by core.js (hideLoader)
+
+    // ── Back to Top Button ──
+    (function() {
+      const btn = document.getElementById('back-to-top');
+      if (!btn) return;
+      let ticking = false;
+      window.addEventListener('scroll', function() {
+        if (!ticking) {
+          requestAnimationFrame(function() {
+            if (window.scrollY > 320) {
+              btn.classList.add('visible');
+            } else {
+              btn.classList.remove('visible');
+            }
+            ticking = false;
+          });
+          ticking = true;
+        }
+      }, { passive: true });
+    })();
   </script>
 </body>
 </html>
