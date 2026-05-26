@@ -36,30 +36,51 @@ function renderHome() {
     <div class="section-hub">
       <div class="section-title">🏠 الأقسام الرئيسية</div>
       <div class="hub-grid">
-        <div class="hub-card" onclick="navigate('listing',{section:'bookings'})">
-          <span class="hub-icon">📅</span><div class="hub-title">الحجوزات</div>
-          <div class="hub-desc">فنادق، سيارات، رحلات، أطباء، أعراس وأكثر</div>
-          <span class="badge badge-purple">${AppData.cats.filter(c=>c.section==='bookings' && !c.parentId).length} تصنيف</span>
-        </div>
-        <div class="hub-card" onclick="navigate('listing',{section:'services'})">
-          <span class="hub-icon">🔧</span><div class="hub-title">الخدمات المهنية</div>
-          <div class="hub-desc">كهربائي، سباك، نجار، مصور، محامي وأكثر</div>
-          <span class="badge badge-teal">${AppData.cats.filter(c=>(c.section==='services' || c.section==='professions') && !c.parentId).length} تصنيف</span>
-        </div>
-        <div class="hub-card" onclick="navigate('listing',{section:'stores'})">
-          <span class="hub-icon">🏪</span><div class="hub-title">المتاجر والصيدليات</div>
-          <div class="hub-desc">صيدليات ومنتجات طبية مع توصيل</div>
-          <span class="badge badge-gold">${(AppData.stores||[]).length} متجر متاح</span>
-        </div>
-        <div class="hub-card" onclick="navigate('offers')" style="position:relative;overflow:hidden">
-          <div style="position:absolute;inset:0;background:linear-gradient(135deg,rgba(239,68,68,0.08),rgba(245,158,11,0.06));border-radius:inherit;pointer-events:none"></div>
-          <span class="hub-icon">🏷️</span><div class="hub-title" style="color:#ef4444">العروض والخصومات</div>
-          <div class="hub-desc">أفضل العروض من جميع الأقسام في مكان واحد</div>
-          <span class="badge" style="background:linear-gradient(135deg,#ef4444,#f59e0b);color:#fff">${(()=>{const now=new Date();return(AppData.offers||[]).filter(o=>o.active&&(!o.expiresAt||(o.expiresAt.toDate?o.expiresAt.toDate():new Date(o.expiresAt))>now)).length})()}&nbsp;عرض نشط</span>
-        </div>
+        ${(()=>{
+          const isAdmin = u?.role === 'admin';
+          const sv = window.SV;
+          const _card = (key, html, adminLabel) => {
+            if (!sv) return html;
+            const visible = sv.get(key) !== false;
+            const maint   = !!sv.get(key + '_maint');
+            if (!isAdmin && !visible) return '';
+            const overlay = isAdmin && !visible
+              ? `<div class="sv-hub-badge sv-hub-badge-hidden">🙈 مخفي</div>` : '';
+            const maintBadge = isAdmin && maint
+              ? `<div class="sv-hub-badge sv-hub-badge-maint">🔧 صيانة</div>` : '';
+            const dimStyle = isAdmin && !visible ? 'opacity:0.45;filter:grayscale(0.5);' : '';
+            return html.replace('class="hub-card"', `class="hub-card" style="position:relative;${dimStyle}"`) + overlay + maintBadge;
+          };
+          const _click = (key, fallback) => {
+            if (!window.SV || window.SV.isAccessible(key)) return fallback;
+            return `svShowMaintMsg('${key}')`;
+          };
+          return `
+          ${_card('bookings', `<div class="hub-card" onclick="${_click('bookings','navigate(\'listing\',{section:\'bookings\'})')}">
+            <span class="hub-icon">📅</span><div class="hub-title">الحجوزات</div>
+            <div class="hub-desc">فنادق، سيارات، رحلات، أطباء، أعراس وأكثر</div>
+            <span class="badge badge-purple">${AppData.cats.filter(c=>c.section==='bookings' && !c.parentId).length} تصنيف</span>
+          </div>`)}
+          ${_card('services', `<div class="hub-card" onclick="${_click('services','navigate(\'listing\',{section:\'services\'})')}">
+            <span class="hub-icon">🔧</span><div class="hub-title">الخدمات المهنية</div>
+            <div class="hub-desc">كهربائي، سباك، نجار، مصور، محامي وأكثر</div>
+            <span class="badge badge-teal">${AppData.cats.filter(c=>(c.section==='services'||c.section==='professions')&&!c.parentId).length} تصنيف</span>
+          </div>`)}
+          ${_card('stores', `<div class="hub-card" onclick="${_click('stores','navigate(\'listing\',{section:\'stores\'})')}">
+            <span class="hub-icon">🏪</span><div class="hub-title">المتاجر والصيدليات</div>
+            <div class="hub-desc">صيدليات ومنتجات طبية مع توصيل</div>
+            <span class="badge badge-gold">${(AppData.stores||[]).length} متجر متاح</span>
+          </div>`)}
+          ${_card('offers', `<div class="hub-card" onclick="${_click('offers','navigate(\'offers\')')}" style="position:relative;overflow:hidden">
+            <div style="position:absolute;inset:0;background:linear-gradient(135deg,rgba(239,68,68,0.08),rgba(245,158,11,0.06));border-radius:inherit;pointer-events:none"></div>
+            <span class="hub-icon">🏷️</span><div class="hub-title" style="color:#ef4444">العروض والخصومات</div>
+            <div class="hub-desc">أفضل العروض من جميع الأقسام في مكان واحد</div>
+            <span class="badge" style="background:linear-gradient(135deg,#ef4444,#f59e0b);color:#fff">${(()=>{const now=new Date();return(AppData.offers||[]).filter(o=>o.active&&(!o.expiresAt||(o.expiresAt.toDate?o.expiresAt.toDate():new Date(o.expiresAt))>now)).length})()}&nbsp;عرض نشط</span>
+          </div>`)}`;
+        })()}
       </div>
     </div>
-    ${featured.length ? `
+    ${(!window.SV || window.SV.get('featured') !== false || u?.role === 'admin') && featured.length ? `
     <div class="section-hub" style="padding-top:0">
       <div class="section-title">⭐ أبرز الخدمات</div>
       <div class="service-grid">${featured.map(renderServiceCard).join('')}</div>

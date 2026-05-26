@@ -133,6 +133,10 @@ window.renderAdmin = function () {
         { k: 'cms_pages',        icon: '📄', label: 'الصفحات الثابتة',  desc: 'شروط الخدمة وسياسة الخصوصية' },
         { k: 'ph17settings',     icon: '⚙️', label: 'الإعدادات العامة', desc: 'إعدادات النظام الشاملة' },
         { k: 'direct_routing',   icon: '🚦', label: 'التوجيه المباشر',  desc: 'ضبط توزيع الطلبات تلقائياً' },
+        { k: 'sys_visibility',   icon: '🛡️', label: 'التحكم في الأقسام', desc: 'إظهار وإخفاء أقسام المنصة وصيانتها',
+          badge: (() => { try { const d = JSON.parse(localStorage.getItem('sv_config_v2')||'{}'); const hidden = ['bookings','services','stores','digital','offers'].filter(k=>d[k]===false).length; const maint = ['bookings','services','stores','digital','offers'].filter(k=>!!d[k+'_maint']).length; return (hidden+maint)||null; } catch(e){ return null; } })(),
+          urgent: (() => { try { const d = JSON.parse(localStorage.getItem('sv_config_v2')||'{}'); return !!d.full_maint; } catch(e){ return false; } })()
+        },
       ]
     },
   ];
@@ -238,6 +242,7 @@ window.renderAdmin = function () {
           ${activeTab === 'delivery_pricing'    ? (typeof renderAdminDeliveryPricing === 'function' ? renderAdminDeliveryPricing() : 'جاري التحميل...') : ''}
           ${activeTab === 'delivery_addresses'  ? (typeof renderAdminDeliveryAddresses === 'function' ? renderAdminDeliveryAddresses() : 'جاري التحميل...') : ''}
           ${activeTab === 'provider_groups'     ? (typeof renderAdminProviderGroups === 'function' ? renderAdminProviderGroups() : 'جاري التحميل...') : ''}
+          ${activeTab === 'sys_visibility'      ? (typeof renderAdminSectionVisibility === 'function' ? renderAdminSectionVisibility() : '<div style="padding:40px;text-align:center;color:var(--text-muted)">⏳ جاري تحميل نظام التحكم...</div>') : ''}
         </main>
       </div>
     </div>
