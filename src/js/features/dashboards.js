@@ -114,11 +114,13 @@ window.renderAdmin = function () {
     {
       id: 'hub_users', icon: '👥', title: 'إدارة المستخدمين',
       items: [
-        { k: 'users',       icon: '👤', label: 'كل المستخدمين', desc: 'عرض وإدارة حسابات المنصة',       badge: (AppData.users||[]).length || null },
-        { k: 'users',       icon: '⏳', label: 'حسابات معلقة',  desc: 'حسابات تنتظر الموافقة',           badge: pendingUsers || null, urgent: pendingUsers > 0 },
-        { k: 'provider_groups',   icon: '🏢', label: 'فروع المزودين',  desc: 'تصنيف مزودي الخدمات في فروع منظّمة' },
-        { k: 'permissions',       icon: '🔑', label: 'الصلاحيات',     desc: 'أدوار وصلاحيات الموظفين' },
-        { k: 'staff_performance', icon: '📊', label: 'أداء الموظفين', desc: 'مقارنة أداء الفريق وتوزيع الأقسام' },
+        { k: 'users',             icon: '👤', label: 'كل المستخدمين',         desc: 'عرض وإدارة حسابات المنصة',              badge: (AppData.users||[]).length || null },
+        { k: 'users',             icon: '⏳', label: 'حسابات معلقة',          desc: 'حسابات تنتظر الموافقة',                  badge: pendingUsers || null, urgent: pendingUsers > 0 },
+        { k: 'provider_groups',   icon: '🏢', label: 'فروع المزودين',         desc: 'تصنيف مزودي الخدمات في فروع منظّمة' },
+        { k: 'providers_database',icon: '🗂️', label: 'قاعدة بيانات المزودين', desc: 'إدارة مزودي الخدمات وعناوينهم وصورهم',  badge: (() => { try { return (AppData.pdbEntries||[]).length || null; } catch(e){ return null; } })() },
+        { k: 'drivers_database',  icon: '🚗', label: 'قاعدة بيانات المندوبين',desc: 'إدارة مندوبي التوصيل وبياناتهم',         badge: (() => { try { return (AppData.ddbEntries||[]).length || null; } catch(e){ return null; } })() },
+        { k: 'permissions',       icon: '🔑', label: 'الصلاحيات',             desc: 'أدوار وصلاحيات الموظفين' },
+        { k: 'staff_performance', icon: '📊', label: 'أداء الموظفين',         desc: 'مقارنة أداء الفريق وتوزيع الأقسام' },
       ]
     },
     {
@@ -241,7 +243,9 @@ window.renderAdmin = function () {
           ${activeTab === 'signup_settings'     ? (typeof renderSignupSettings === 'function' ? renderSignupSettings() : 'جاري التحميل...') : ''}
           ${activeTab === 'delivery_pricing'    ? (typeof renderAdminDeliveryPricing === 'function' ? renderAdminDeliveryPricing() : 'جاري التحميل...') : ''}
           ${activeTab === 'delivery_addresses'  ? (typeof renderAdminDeliveryAddresses === 'function' ? renderAdminDeliveryAddresses() : 'جاري التحميل...') : ''}
-          ${activeTab === 'provider_groups'     ? (typeof renderAdminProviderGroups === 'function' ? renderAdminProviderGroups() : 'جاري التحميل...') : ''}
+          ${activeTab === 'provider_groups'      ? (typeof renderAdminProviderGroups === 'function' ? renderAdminProviderGroups() : 'جاري التحميل...') : ''}
+          ${activeTab === 'providers_database'  ? (typeof renderAdminProvidersDatabase === 'function' ? renderAdminProvidersDatabase() : '<div style="padding:40px;text-align:center;color:var(--text-muted)">⏳ جاري تحميل قاعدة بيانات المزودين...</div>') : ''}
+          ${activeTab === 'drivers_database'    ? (typeof renderAdminDriversDatabase === 'function' ? renderAdminDriversDatabase() : '<div style="padding:40px;text-align:center;color:var(--text-muted)">⏳ جاري تحميل قاعدة بيانات المندوبين...</div>') : ''}
           ${activeTab === 'sys_visibility'      ? (typeof renderAdminSectionVisibility === 'function' ? renderAdminSectionVisibility() : '<div style="padding:40px;text-align:center;color:var(--text-muted)">⏳ جاري تحميل نظام التحكم...</div>') : ''}
         </main>
       </div>

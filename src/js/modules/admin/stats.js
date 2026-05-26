@@ -491,7 +491,9 @@ function __legacy_renderAdmin() {
     else if (adminTab==='reports')     content = typeof renderAdminReports === 'function' ? renderAdminReports() : fallback('renderAdminReports');
     else if (adminTab==='delivery_pricing')   content = typeof renderAdminDeliveryPricing   === 'function' ? renderAdminDeliveryPricing()   : fallback('renderAdminDeliveryPricing');
     else if (adminTab==='delivery_addresses') content = typeof renderAdminDeliveryAddresses === 'function' ? renderAdminDeliveryAddresses() : fallback('renderAdminDeliveryAddresses');
-    else if (adminTab==='direct_routing')     content = typeof renderAdminDirectRouting     === 'function' ? renderAdminDirectRouting()     : fallback('renderAdminDirectRouting');
+    else if (adminTab==='direct_routing')       content = typeof renderAdminDirectRouting       === 'function' ? renderAdminDirectRouting()       : fallback('renderAdminDirectRouting');
+    else if (adminTab==='providers_database')   content = typeof renderAdminProvidersDatabase   === 'function' ? renderAdminProvidersDatabase()   : fallback('renderAdminProvidersDatabase');
+    else if (adminTab==='drivers_database')     content = typeof renderAdminDriversDatabase     === 'function' ? renderAdminDriversDatabase()     : fallback('renderAdminDriversDatabase');
     else if (adminTab.startsWith('rental_stores_')) content = typeof _renderRentalStoresTab === 'function' ? _renderRentalStoresTab(adminTab.replace('rental_stores_','')) : fallback('_renderRentalStoresTab');
     else                               content = typeof renderAdminDash === 'function' ? renderAdminDash() : 'Dashboard Error';
 

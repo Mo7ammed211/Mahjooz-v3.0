@@ -353,7 +353,7 @@ async function loadAllData() {
       console.error('[Migration] Category migration failed:', err);
     }
 
-    const [catsBookings,catsProfs,cities,services,orders,users,ads,ratings,rr,wr,tr, dictionarySnap, banners, pages, stores, storeCats, storeProducts, svcSections, deliveryZones, deliveryRoutes, rentalStores, rentalSubCats, rentalProducts, catalogCats, catalogItems, providerGroups] = await Promise.all([
+    const [catsBookings,catsProfs,cities,services,orders,users,ads,ratings,rr,wr,tr, dictionarySnap, banners, pages, stores, storeCats, storeProducts, svcSections, deliveryZones, deliveryRoutes, rentalStores, rentalSubCats, rentalProducts, catalogCats, catalogItems, providerGroups, pdbCats, pdbSubcats, pdbEntries, ddbCats, ddbSubcats, ddbEntries] = await Promise.all([
       fsGetAll('categories').catch(()=>[]),
       fsGetAll('professions_categories').catch(()=>[]),
       fsGetAll('cities').catch(()=>[]), fsGetAll('services').catch(()=>[]),
@@ -370,7 +370,13 @@ async function loadAllData() {
       fsGetAll('rentalProducts').catch(()=>[]),
       fsGetAll('catalog_cats').catch(()=>[]),
       fsGetAll('product_catalog').catch(()=>[]),
-      fsGetAll('provider_groups').catch(()=>[])
+      fsGetAll('provider_groups').catch(()=>[]),
+      fsGetAll('pdb_cats').catch(()=>[]),
+      fsGetAll('pdb_subcats').catch(()=>[]),
+      fsGetAll('pdb_entries').catch(()=>[]),
+      fsGetAll('ddb_cats').catch(()=>[]),
+      fsGetAll('ddb_subcats').catch(()=>[]),
+      fsGetAll('ddb_entries').catch(()=>[]),
     ]);
     const cats = [
       ...catsBookings.map(c => ({ ...c, section: 'bookings' })),
@@ -381,7 +387,14 @@ async function loadAllData() {
       rechargeReqs: rr, withdrawReqs: wr, transactions: tr, dictionary, banners, pages,
       stores, storeCats, storeProducts, svcSections, deliveryZones, deliveryRoutes,
       rentalStores, rentalSubCats, rentalProducts, catalogCats, catalogItems,
-      providerGroups: providerGroups.sort((a,b)=>(a.order||99)-(b.order||99)) });
+      providerGroups: providerGroups.sort((a,b)=>(a.order||99)-(b.order||99)),
+      pdbCats:    pdbCats.sort((a,b)=>(a.order||99)-(b.order||99)),
+      pdbSubcats: pdbSubcats.sort((a,b)=>(a.order||99)-(b.order||99)),
+      pdbEntries,
+      ddbCats:    ddbCats.sort((a,b)=>(a.order||99)-(b.order||99)),
+      ddbSubcats: ddbSubcats.sort((a,b)=>(a.order||99)-(b.order||99)),
+      ddbEntries,
+    });
     State._dataLoaded = true;
   } catch(e) {
     console.error('loadAllData core failed:', e);
