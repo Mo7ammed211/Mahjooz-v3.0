@@ -69,11 +69,43 @@ window.loadAllData = async function() {
 
 // ─── ADMIN: PLATFORM SETTINGS ──────────────────────────
 function renderAdminPlatformSettings() {
-  const fee = AppData.platformSettings?.deliveryFee || 15;
+  const fee   = AppData.platformSettings?.deliveryFee    || 15;
+  const waNum = AppData.platformSettings?.whatsappNumber || '';
   return `
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
       <h2>⚙️ الإعدادات العامة للمنصة</h2>
     </div>
+
+    <!-- ═══ واتساب الاستفسار ═══ -->
+    <div class="settings-card" style="max-width:600px;margin-bottom:20px;border:1.5px solid rgba(37,211,102,0.25);background:rgba(37,211,102,0.04)">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+        <div style="width:40px;height:40px;border-radius:12px;background:#25d36618;display:flex;align-items:center;justify-content:center;font-size:22px">💬</div>
+        <div>
+          <h3 style="margin:0 0 2px;font-size:16px">رقم واتساب الاستفسار</h3>
+          <p style="margin:0;color:var(--text-secondary);font-size:13px">يظهر زر "راسلنا على واتساب" بجانب كل خدمة ومنتج في المنصة</p>
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:8px">
+        <label class="form-label">رقم الواتساب (مع رمز الدولة، بدون +)</label>
+        <div style="display:flex;gap:10px;align-items:center">
+          <input class="form-control" id="adm-wa-number" type="tel"
+            placeholder="مثال: 9665XXXXXXXX أو 9671XXXXXXXX"
+            value="${escAttr(waNum)}"
+            style="direction:ltr;text-align:left;font-family:monospace;letter-spacing:0.5px;flex:1">
+          <button class="btn btn-sm" style="background:#25d366;color:#fff;border-radius:10px;white-space:nowrap;padding:10px 14px;flex-shrink:0"
+            onclick="savePlatformSettings()">💾 حفظ</button>
+        </div>
+        ${waNum
+          ? `<div style="margin-top:8px;display:flex;align-items:center;gap:8px;font-size:13px;color:#25d366">
+               <span>✅ الزر مفعّل</span>
+               <a href="https://wa.me/${waNum.replace(/\D/g,'')}" target="_blank" rel="noopener"
+                  style="color:#25d366;font-size:12px;text-decoration:underline">اختبر الرابط</a>
+             </div>`
+          : `<div style="margin-top:8px;font-size:13px;color:var(--text-muted)">⚠️ أدخل الرقم لتفعيل زر الاستفسار على جميع الخدمات والمنتجات</div>`}
+      </div>
+    </div>
+
+    <!-- ═══ رسوم التوصيل ═══ -->
     <div class="settings-card" style="max-width: 600px;">
       <h3 style="margin-bottom:16px">رسوم التوصيل</h3>
       <p style="color:var(--text-secondary);font-size:14px;margin-bottom:16px">
@@ -88,12 +120,17 @@ function renderAdminPlatformSettings() {
   `;
 }
 window.savePlatformSettings = async function() {
-  const fee = parseFloat(document.getElementById('adm-delivery-fee').value);
-  if (isNaN(fee) || fee < 0) { toast('يرجى إدخال مبلغ صحيح', 'error'); return; }
-  
-  await fsUpdate('platform_settings', 'main', { deliveryFee: fee });
-  AppData.platformSettings.deliveryFee = fee;
-  toast('تم حفظ الإعدادات بنجاح ✅', 'success');
+  const fee   = parseFloat(document.getElementById('adm-delivery-fee')?.value || '15');
+  const waRaw = (document.getElementById('adm-wa-number')?.value || '').trim();
+  const waNum = waRaw.replace(/\D/g, '');
+
+  if (isNaN(fee) || fee < 0) { toast('يرجى إدخال مبلغ رسوم صحيح', 'error'); return; }
+  if (waRaw && waNum.length < 7) { toast('رقم الواتساب قصير جداً، تأكد من إدخاله مع رمز الدولة', 'error'); return; }
+
+  const updates = { deliveryFee: fee, whatsappNumber: waNum };
+  await fsUpdate('platform_settings', 'main', updates);
+  AppData.platformSettings = { ...(AppData.platformSettings || {}), ...updates };
+  toast('✅ تم حفظ الإعدادات بنجاح', 'success');
   await render();
 }
 

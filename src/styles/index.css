@@ -1849,6 +1849,22 @@ textarea.form-control { resize: vertical; min-height: 100px; }
 .service-price { font-size: 16px; font-weight: 700; background: var(--gradient-main);
   background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 
+/* ─── زر استفسار واتساب ─── */
+.svc-card-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.btn-wa-inquiry {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 13px; border-radius: 10px; font-size: 13px; font-weight: 700;
+  background: #25d36618; color: #25d366; border: 1.5px solid #25d36640;
+  text-decoration: none; cursor: pointer; transition: background 0.18s, transform 0.15s, box-shadow 0.18s;
+  white-space: nowrap;
+}
+.btn-wa-inquiry svg { width: 15px; height: 15px; flex-shrink: 0; }
+.btn-wa-inquiry:hover { background: #25d366; color: #fff; border-color: #25d366;
+  box-shadow: 0 4px 14px rgba(37,211,102,0.35); transform: translateY(-1px); }
+.btn-wa-inquiry--full { display: flex; width: 100%; border-radius: 10px; justify-content: center;
+  padding: 9px 13px; font-size: 13px; }
+[data-theme="dark"] .btn-wa-inquiry { background: #25d36622; border-color: #25d36650; }
+
 .svc-badge {
   position: absolute; top: 10px; padding: 4px 10px; border-radius: 999px;
   font-size: 11px; font-weight: 700; backdrop-filter: blur(6px);
