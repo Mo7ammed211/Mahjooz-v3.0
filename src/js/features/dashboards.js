@@ -2038,11 +2038,18 @@ function renderDriver() {
   const driverTab = State.driverTab || 'orders';
   const initial = (u.name || u.email || 'D')[0].toUpperCase();
   const displayName = u.name || u.email || 'المندوب';
-  const tabs = [['orders','📋','طلباتي'],['earnings','💰','أرباحي'],['profile','👤','الملف']];
+  const pdbCount = (AppData.pdbEntries || []).filter(e => e.active !== false).length;
+  const tabs = [
+    ['orders',    '📋', 'طلباتي'],
+    ['providers', '🏢', `مزودو الخدمات${pdbCount ? ` <span style="background:#8b5cf6;color:#fff;border-radius:99px;padding:0 6px;font-size:10px;margin-right:2px">${pdbCount}</span>` : ''}`],
+    ['earnings',  '💰', 'أرباحي'],
+    ['profile',   '👤', 'الملف'],
+  ];
   let content = '';
-  if (driverTab==='orders')    content = renderDriverOrders();
-  else if (driverTab==='earnings') content = renderDriverEarnings();
-  else if (driverTab==='profile') content = renderDriverProfile();
+  if (driverTab==='orders')         content = renderDriverOrders();
+  else if (driverTab==='providers') content = renderDriverProviders();
+  else if (driverTab==='earnings')  content = renderDriverEarnings();
+  else if (driverTab==='profile')   content = renderDriverProfile();
   return `
   <div id="app-content">
     <div class="admin-sidebar-overlay" id="adminSidebarOverlay" onclick="closeAdminSidebar()"></div>
@@ -2079,39 +2086,262 @@ async function setDriverTab(tab) {
 function renderDriverOrders() {
   const u = State.currentUser;
   const orders = AppData.orders.filter(o=>o.driverId===u.uid).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
-  
+
   if (orders.length === 0) {
     return `
       <h2>📋 طلبات التوصيل</h2>
-      <div class="empty-state" style="padding: 48px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); text-align: center; margin-top: 16px;">
-        <div class="empty-icon" style="font-size: 48px; margin-bottom: 16px;">🚚</div>
-        <div class="empty-title" style="font-size: 18px; font-weight: 700; color: var(--text-main); margin-bottom: 8px;">لا توجد طلبات توصيل مسندة إليك</div>
-        <p style="color: var(--text-muted); font-size: 14px; margin: 0; line-height: 1.6;">سيتم إشعارك وتحديث الصفحة فور تعيين طلب توصيل جديد لك من قِبل إدارة النظام</p>
+      <div class="empty-state" style="padding:48px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);text-align:center;margin-top:16px">
+        <div style="font-size:48px;margin-bottom:16px">🚚</div>
+        <div style="font-size:18px;font-weight:700;color:var(--text-main);margin-bottom:8px">لا توجد طلبات توصيل مسندة إليك</div>
+        <p style="color:var(--text-muted);font-size:14px;margin:0;line-height:1.6">سيتم إشعارك وتحديث الصفحة فور تعيين طلب توصيل جديد لك من قِبل إدارة النظام</p>
       </div>`;
   }
-  
+
   return `
     <h2>📋 طلبات التوصيل</h2>
-    <div class="table-wrap">
-      <table class="admin-table">
-        <thead><tr><th>رقم الطلب</th><th>العميل</th><th>العنوان</th><th>الحالة</th><th>إجراءات</th></tr></thead>
-        <tbody>
-          ${orders.map(o=>`
-            <tr>
-              <td style="font-weight:700">${o.orderId}</td>
-              <td>${o.customerName}</td>
-              <td style="color:var(--text-secondary);font-size:13px">${o.customerAddr}</td>
-              <td><span class="badge badge-teal">${o.status}</span></td>
-              <td>
-                <button class="btn btn-sm btn-secondary" onclick="showDeliveryMap('${o.id}')">🗺️ الموقع</button>
-                ${o.status==='accepted'?`<button class="btn btn-sm btn-primary" onclick="startDriverDelivery('${o.id}')">🚗 بدء التوصيل وتتبع الـ GPS</button>`:''}
-                ${o.status==='with_driver'?`<button class="btn btn-sm btn-success" onclick="stopDriverDelivery('${o.id}')">📦 تم التوصيل</button>`:''}
-              </td>
-            </tr>`).join('')}
-        </tbody>
-      </table>
+    <div style="display:flex;flex-direction:column;gap:12px;margin-top:16px">
+      ${orders.map(o => {
+        const linkedProviders = _driver_getOrderProviders(o);
+        const hasProviders = linkedProviders.length > 0;
+        const statusLabel = {
+          pending:'⏳ انتظار', accepted:'✅ مقبول', with_driver:'🚗 معك',
+          delivered:'📦 تم التوصيل', completed:'✅ مكتمل', cancelled:'❌ ملغي'
+        }[o.status] || o.status;
+        return `
+        <div style="background:var(--bg-card);border:1.5px solid var(--border);border-radius:16px;padding:18px;transition:border-color 0.2s">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:12px">
+            <div>
+              <div style="font-weight:900;font-size:15px;color:var(--text-main)">طلب #${escHtml(o.orderId||o.id?.slice(-6)||'—')}</div>
+              <div style="font-size:13px;color:var(--text-secondary);margin-top:3px">👤 ${escHtml(o.customerName||'—')}</div>
+              ${o.customerAddr ? `<div style="font-size:12px;color:var(--text-muted);margin-top:2px">📍 ${escHtml(o.customerAddr)}</div>` : ''}
+            </div>
+            <span style="font-size:13px;font-weight:700;padding:5px 12px;border-radius:20px;background:rgba(13,148,136,0.1);color:#0d9488;border:1px solid rgba(13,148,136,0.25);white-space:nowrap">${statusLabel}</span>
+          </div>
+          ${hasProviders ? `
+          <div style="background:rgba(139,92,246,0.05);border:1px solid rgba(139,92,246,0.15);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:var(--text-secondary)">
+            🏢 مرتبط بـ <strong style="color:var(--primary)">${linkedProviders.length}</strong> موفر خدمة
+            ${linkedProviders.slice(0,2).map(p=>`· ${escHtml(p.name)}`).join('')}${linkedProviders.length>2?` · +${linkedProviders.length-2}…`:''}
+          </div>` : ''}
+          <div style="display:flex;flex-wrap:wrap;gap:8px">
+            <button class="btn btn-sm btn-secondary" onclick="showDeliveryMap('${o.id}')">🗺️ موقع التوصيل</button>
+            ${hasProviders ? `<button class="btn btn-sm" style="background:rgba(139,92,246,0.12);color:var(--primary);border:1px solid rgba(139,92,246,0.3);border-radius:8px;padding:5px 12px;font-size:13px;font-weight:700;cursor:pointer" onclick="driver_showOrderProviders('${o.id}')">🏢 مزودو هذا الطلب</button>` : ''}
+            ${o.status==='accepted' ? `<button class="btn btn-sm btn-primary" onclick="startDriverDelivery('${o.id}')">🚗 بدء التوصيل</button>` : ''}
+            ${o.status==='with_driver' ? `<button class="btn btn-sm btn-success" onclick="stopDriverDelivery('${o.id}')">📦 تم التوصيل</button>` : ''}
+          </div>
+        </div>`;
+      }).join('')}
     </div>`;
 }
+
+function _driver_getOrderProviders(order) {
+  if (!order) return [];
+  const entries   = AppData.pdbEntries || [];
+  const catalogItems = AppData.catalogItems || [];
+
+  const pdbIds = new Set();
+  const result  = [];
+
+  const refIds = [order.catalogItemId, order.itemId, order.productId].filter(Boolean);
+  refIds.forEach(id => {
+    const item = catalogItems.find(i => i.id === id);
+    if (item) (item.linkedProviders||[]).forEach(l => { if(l.pdbId) pdbIds.add(l.pdbId); });
+  });
+  if (order.linkedProviders) {
+    order.linkedProviders.forEach(l => { if(l.pdbId) pdbIds.add(l.pdbId); });
+  }
+
+  pdbIds.forEach(id => {
+    const entry = entries.find(e => e.id === id);
+    if (entry) result.push(entry);
+  });
+  return result;
+}
+
+window.driver_showOrderProviders = function(orderId) {
+  const order = (AppData.orders||[]).find(o=>o.id===orderId);
+  if (!order) return;
+  const providers = _driver_getOrderProviders(order);
+  const cats    = AppData.pdbCats    || [];
+  const subcats = AppData.pdbSubcats || [];
+
+  if (providers.length === 0) {
+    openModal(`
+    <div class="modal-header">
+      <h2 class="modal-title">🏢 مزودو الطلب</h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div style="padding:32px;text-align:center;color:var(--text-muted)">
+      <div style="font-size:36px;margin-bottom:10px">🏢</div>
+      <div>لا يوجد مزودو خدمات مرتبطون بهذا الطلب</div>
+    </div>`);
+    return;
+  }
+
+  const html = providers.map(p => _driver_providerCardHTML(p, cats, subcats)).join('');
+  openModal(`
+  <div class="modal-header">
+    <h2 class="modal-title">🏢 مزودو خدمات الطلب #${escHtml(order.orderId||orderId.slice(-6))}</h2>
+    <button class="modal-close" onclick="closeModal()">✕</button>
+  </div>
+  <div style="padding:0 20px 20px;max-height:72vh;overflow-y:auto">
+    ${html}
+  </div>`, 'large');
+};
+
+// ── عرض مزودي الخدمات لجميع الطلبات (تبويب مستقل) ──────────────────
+function renderDriverProviders() {
+  const entries = (AppData.pdbEntries || []).filter(e => e.active !== false);
+  const cats    = AppData.pdbCats    || [];
+  const subcats = AppData.pdbSubcats || [];
+  const sq      = (State._driverPdbSearch || '').toLowerCase().trim();
+
+  const filtered = sq ? entries.filter(e =>
+    (e.name||'').toLowerCase().includes(sq) ||
+    (e.phone||'').toLowerCase().includes(sq) ||
+    (cats.find(c=>c.id===e.catId)?.name||'').toLowerCase().includes(sq) ||
+    (subcats.find(s=>s.id===e.subcatId)?.name||'').toLowerCase().includes(sq)
+  ) : entries;
+
+  const grouped = {};
+  filtered.forEach(e => {
+    const cat = cats.find(c => c.id === e.catId);
+    const key = cat?.name || 'غير مصنّف';
+    if (!grouped[key]) grouped[key] = { icon: cat?.icon || '🏢', entries: [] };
+    grouped[key].entries.push(e);
+  });
+
+  return `
+  ${_driverPdbStyles()}
+  <div style="padding:20px;max-width:960px;margin:0 auto;font-family:'Cairo',sans-serif">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:20px">
+      <div>
+        <h2 style="margin:0;font-size:20px;font-weight:900;color:var(--text-main)">🏢 مزودو الخدمات</h2>
+        <p style="color:var(--text-muted);font-size:13px;margin:4px 0 0">${entries.length} مزود خدمة — عناوينهم ومواقعهم وصورهم</p>
+      </div>
+    </div>
+
+    <!-- بحث -->
+    <div style="position:relative;margin-bottom:20px">
+      <span style="position:absolute;right:13px;top:50%;transform:translateY(-50%);color:var(--text-muted);pointer-events:none;font-size:16px">🔍</span>
+      <input
+        style="width:100%;padding:11px 42px 11px 14px;border:1.5px solid var(--border);border-radius:12px;background:var(--glass-bg);color:var(--text-main);font-family:'Cairo',sans-serif;font-size:14px;box-sizing:border-box;transition:border-color 0.2s"
+        placeholder="ابحث بالاسم أو التصنيف أو الهاتف..."
+        value="${escHtml(State._driverPdbSearch || '')}"
+        oninput="State._driverPdbSearch=this.value; render()"
+        onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'">
+    </div>
+
+    ${entries.length === 0 ? `
+    <div style="text-align:center;padding:60px 20px;background:rgba(139,92,246,0.03);border:2px dashed rgba(139,92,246,0.15);border-radius:20px">
+      <div style="font-size:48px;margin-bottom:14px">🏢</div>
+      <h3 style="color:var(--text-secondary);font-family:'Cairo',sans-serif;margin-bottom:8px">لا يوجد مزودو خدمات بعد</h3>
+      <p style="color:var(--text-muted);font-size:13px">يُضيفهم المدير من قسم "قاعدة بيانات المزودين"</p>
+    </div>` : filtered.length === 0 ? `
+    <div style="text-align:center;padding:40px;color:var(--text-muted)">
+      <div style="font-size:36px;margin-bottom:10px">🔍</div>
+      <div>لا توجد نتائج مطابقة لـ "<strong>${escHtml(sq)}</strong>"</div>
+    </div>` : `
+    <div style="display:flex;flex-direction:column;gap:28px">
+      ${Object.entries(grouped).map(([catName, group]) => `
+      <div>
+        <div style="font-size:14px;font-weight:800;color:var(--text-secondary);margin-bottom:12px;display:flex;align-items:center;gap:8px">
+          <span>${group.icon}</span>
+          <span>${escHtml(catName)}</span>
+          <span style="background:var(--bg-card);border:1px solid var(--border);border-radius:20px;padding:2px 8px;font-size:11px;font-weight:600;color:var(--text-muted)">${group.entries.length}</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          ${group.entries.map(e => _driver_providerCardHTML(e, cats, subcats)).join('')}
+        </div>
+      </div>`).join('')}
+    </div>`}
+  </div>`;
+}
+
+function _driver_providerCardHTML(entry, cats, subcats) {
+  const cat    = cats.find(c => c.id === entry.catId);
+  const subcat = subcats.find(s => s.id === entry.subcatId);
+  const addresses = entry.addresses || [];
+  const allImages = addresses.flatMap(a => a.images || []);
+
+  return `
+  <div style="background:var(--bg-card);border:1.5px solid var(--border);border-radius:18px;overflow:hidden">
+
+    <!-- رأس البطاقة -->
+    <div style="padding:16px 18px 12px;display:flex;align-items:center;gap:14px;border-bottom:1px solid var(--border)">
+      <div style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--primary),#7c3aed);color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;flex-shrink:0">
+        ${(entry.name||'م').charAt(0).toUpperCase()}
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:16px;font-weight:900;color:var(--text-main)">${escHtml(entry.name||'—')}</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:3px">
+          🏢 ${escHtml(cat?.name||'—')} › ${escHtml(subcat?.name||'—')}
+        </div>
+      </div>
+      ${entry.phone ? `
+      <a href="tel:${escAttr(entry.phone)}"
+         style="display:inline-flex;align-items:center;gap:5px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);color:#10b981;border-radius:10px;padding:7px 12px;font-size:13px;font-weight:700;text-decoration:none;flex-shrink:0;font-family:'Cairo',sans-serif">
+        📞 اتصال
+      </a>` : ''}
+    </div>
+
+    <!-- صور المحل (إن وجدت) -->
+    ${allImages.length > 0 ? `
+    <div style="display:flex;gap:6px;padding:10px 14px;overflow-x:auto;background:rgba(0,0,0,0.02)">
+      ${allImages.slice(0,6).map(img => `
+      <img src="${escAttr(img)}" alt="صورة المحل" loading="lazy"
+           style="width:80px;height:70px;object-fit:cover;border-radius:10px;flex-shrink:0;border:1px solid var(--border)"
+           onerror="this.style.display='none'">`).join('')}
+      ${allImages.length > 6 ? `<div style="width:80px;height:70px;border-radius:10px;background:rgba(139,92,246,0.1);display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--primary);font-weight:700;flex-shrink:0">+${allImages.length-6} أخرى</div>` : ''}
+    </div>` : ''}
+
+    <!-- العناوين -->
+    ${addresses.length > 0 ? `
+    <div style="padding:12px 16px;display:flex;flex-direction:column;gap:10px">
+      ${addresses.map((addr, idx) => `
+      <div style="background:rgba(139,92,246,0.04);border:1px solid rgba(139,92,246,0.12);border-radius:12px;padding:12px 14px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:800;color:var(--text-main);margin-bottom:4px">
+              📍 ${escHtml(addr.label || `عنوان ${idx+1}`)}
+            </div>
+            ${addr.text ? `<div style="font-size:12px;color:var(--text-secondary);line-height:1.5">${escHtml(addr.text)}</div>` : ''}
+          </div>
+          <div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap">
+            ${addr.lat && addr.lng ? `
+            <a href="https://www.google.com/maps?q=${addr.lat},${addr.lng}" target="_blank" rel="noopener"
+               style="display:inline-flex;align-items:center;gap:4px;background:#1a73e8;color:#fff;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;text-decoration:none;font-family:'Cairo',sans-serif">
+              🗺️ خرائط
+            </a>
+            <a href="https://waze.com/ul?ll=${addr.lat},${addr.lng}&navigate=yes" target="_blank" rel="noopener"
+               style="display:inline-flex;align-items:center;gap:4px;background:#33ccff;color:#fff;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;text-decoration:none;font-family:'Cairo',sans-serif">
+              🚗 Waze
+            </a>` : ''}
+          </div>
+        </div>
+        ${addr.lat && addr.lng ? `
+        <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
+          <span style="font-size:10px;font-family:monospace;background:rgba(139,92,246,0.08);color:#8b5cf6;border:1px solid rgba(139,92,246,0.2);border-radius:6px;padding:2px 7px">Lat: ${addr.lat}</span>
+          <span style="font-size:10px;font-family:monospace;background:rgba(139,92,246,0.08);color:#8b5cf6;border:1px solid rgba(139,92,246,0.2);border-radius:6px;padding:2px 7px">Lng: ${addr.lng}</span>
+        </div>` : ''}
+      </div>`).join('')}
+    </div>` : `
+    <div style="padding:14px 18px;font-size:12px;color:var(--text-muted);font-style:italic">لم يُسجّل عنوان لهذا المزود بعد</div>`}
+
+    <!-- ملاحظات -->
+    ${entry.notes ? `
+    <div style="padding:10px 18px 14px;font-size:12px;color:var(--text-muted);border-top:1px solid var(--border);line-height:1.6">
+      💬 ${escHtml(entry.notes)}
+    </div>` : ''}
+  </div>`;
+}
+
+function _driverPdbStyles() {
+  if (document.getElementById('driver-pdb-styles')) return '';
+  return `<style id="driver-pdb-styles">
+    @media (max-width:600px) { }
+  </style>`;
+}
+
 function showDeliveryMap(orderId) {
   openModal(`<div style="text-align:center"><div style="width:100%;height:300px;background:linear-gradient(135deg,#0d9488 0%,#0f766e 100%);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px">🗺️ خريطة التوصيل (يتم الربط لاحقاً مع Google Maps)</div></div>`);
 }
