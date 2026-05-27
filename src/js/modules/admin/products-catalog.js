@@ -1832,105 +1832,248 @@ window.ph46_deleteItem = async function(id) {
 };
 
 // ═══════════════════════════════════════════════════════
-//  لوحة ربط موفري الخدمة (Provider Mapping)
+//  لوحة ربط موفري الخدمة (Provider Mapping) — Phase 47
+//  المصدر: قاعدة بيانات المزودين (pdb_entries)
 // ═══════════════════════════════════════════════════════
 
-window.ph46_showProvidersMappingModal = function(itemId) {
+window.ph46_showProvidersMappingModal = function(itemId, _searchQ) {
   const item = (AppData.catalogItems || []).find(i => i.id === itemId);
   if (!item) return;
 
-  const linked = item.linkedProviders || [];
-  const providers = (AppData.users || []).filter(u => u.role === 'provider' || u.role === 'tech');
+  const linked   = item.linkedProviders || [];
+  const sq       = (_searchQ || '').toLowerCase().trim();
 
-  const providerRows = providers.map(p => {
-    const isLinked = linked.some(l => l.providerUid === p.uid);
-    const linkDetail = linked.find(l => l.providerUid === p.uid);
+  // ── مزودو قاعدة البيانات الجديدة ─────────────────────
+  const dbProviders = typeof pdb_getAllProvidersList === 'function'
+    ? pdb_getAllProvidersList()
+    : [];
+
+  // ── مزودو المنصة (احتياطي — حسابات vendor/tech) ───────
+  const userProviders = (AppData.users || [])
+    .filter(u => u.role === 'provider' || u.role === 'tech' || u.role === 'vendor')
+    .filter(u => !dbProviders.some(d => d.linkedUserId === u.id));
+
+  // ── فلترة البحث ────────────────────────────────────────
+  const filteredDb   = sq ? dbProviders.filter(p =>
+    (p.name||'').toLowerCase().includes(sq) ||
+    (p.catName||'').toLowerCase().includes(sq) ||
+    (p.subcatName||'').toLowerCase().includes(sq) ||
+    (p.phone||'').includes(sq)
+  ) : dbProviders;
+
+  const filteredUsers = sq ? userProviders.filter(u =>
+    (u.name||'').toLowerCase().includes(sq) || (u.phone||'').includes(sq)
+  ) : userProviders;
+
+  // ── بناء صفوف مزودي القاعدة ────────────────────────────
+  const dbRows = filteredDb.map(p => {
+    const linkKey    = p.id;
+    const isLinked   = linked.some(l => l.pdbId === linkKey);
+    const linkDetail = linked.find(l => l.pdbId === linkKey);
+    const addrCount  = (p.addresses || []).length;
     return `
-    <div class="ph46-provider-mapping-row" style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid var(--glass-border);">
-      <div class="provider-info-cell" style="display:flex; align-items:center; gap:12px;">
-        <div class="provider-avatar" style="width:36px; height:36px; border-radius:50%; background:var(--primary); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700;">
-          ${(p.name||'P').charAt(0).toUpperCase()}
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:13px 0;border-bottom:1px solid var(--glass-border);gap:12px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0">
+        <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--primary),#7c3aed);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:16px;flex-shrink:0">
+          ${(p.name||'م').charAt(0)}
         </div>
-        <div>
-          <div class="provider-name" style="font-weight:700;">${escHtml(p.name)}</div>
-          <div class="provider-subtext" style="font-size:11px; color:var(--text-muted)">الدور: ${p.role === 'tech' ? 'فني مهني' : 'صاحب متجر/خدمة'} | الهاتف: ${p.phone || '—'}</div>
+        <div style="min-width:0">
+          <div style="font-weight:800;font-size:14px;color:var(--text-main)">${escHtml(p.name)}</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">
+            🏢 ${escHtml(p.catName)} › ${escHtml(p.subcatName)}
+            ${p.phone ? ` · 📞 ${escHtml(p.phone)}` : ''}
+            · 📍 ${addrCount} ${addrCount === 1 ? 'عنوان' : 'عناوين'}
+          </div>
+          ${isLinked && linkDetail?.customPrice ? `<div style="font-size:11px;color:#10b981;margin-top:2px">💰 سعر مخصص: ${linkDetail.customPrice} ر.س</div>` : ''}
         </div>
       </div>
-      <div class="provider-pricing-cell">
+      <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
         ${isLinked ? `
-          <div style="display:flex; gap:6px; align-items:center">
-            <span style="font-size:11.5px; color:var(--text-muted)">سعر مخصص (ر.س):</span>
-            <input type="number" class="ph46-input-inline" placeholder="أساسي" value="${linkDetail.customPrice || ''}"
-              onchange="ph46_updateProviderPrice('${item.id}', '${p.uid}', this.value)" style="width:80px; padding:4px 8px; font-size:12px;">
-            <button class="ph46-btn ph46-btn-xs ph46-btn-danger" onclick="ph46_toggleProviderLink('${item.id}', '${p.uid}', false)">إلغاء الربط</button>
-          </div>
+          <input type="number" placeholder="سعر مخصص" value="${linkDetail?.customPrice || ''}"
+            onchange="ph46_updateProviderPrice('${item.id}','${linkKey}',this.value,'pdb')"
+            style="width:100px;padding:5px 8px;font-size:12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-card);color:var(--text-main);font-family:'Cairo',sans-serif">
+          <button class="ph46-btn ph46-btn-xs ph46-btn-danger" onclick="ph46_toggleProviderLink('${item.id}','${linkKey}',false,'pdb','${escAttr(_searchQ||'')}')">
+            إلغاء الربط
+          </button>
         ` : `
-          <button class="ph46-btn ph46-btn-xs ph46-btn-primary" onclick="ph46_toggleProviderLink('${item.id}', '${p.uid}', true)">ربط الآن</button>
+          <button class="ph46-btn ph46-btn-xs ph46-btn-primary" onclick="ph46_toggleProviderLink('${item.id}','${linkKey}',true,'pdb','${escAttr(_searchQ||'')}')">
+            ربط الآن
+          </button>
         `}
       </div>
     </div>`;
   }).join('');
 
+  // ── بناء صفوف مزودي المنصة (القسم الاحتياطي) ──────────
+  const userRows = filteredUsers.map(p => {
+    const linkKey    = p.uid || p.id;
+    const isLinked   = linked.some(l => l.providerUid === linkKey);
+    const linkDetail = linked.find(l => l.providerUid === linkKey);
+    return `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--glass-border);gap:12px;flex-wrap:wrap;opacity:0.85">
+      <div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0">
+        <div style="width:36px;height:36px;border-radius:50%;background:rgba(100,116,139,0.3);color:var(--text-secondary);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0">
+          ${(p.name||'P').charAt(0).toUpperCase()}
+        </div>
+        <div>
+          <div style="font-weight:700;font-size:13px;color:var(--text-main)">${escHtml(p.name||'—')}</div>
+          <div style="font-size:11px;color:var(--text-muted)">
+            👤 ${p.role === 'tech' ? 'فني مهني' : 'مزود'} · حساب المنصة
+            ${p.phone ? ` · 📞 ${escHtml(p.phone)}` : ''}
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
+        ${isLinked ? `
+          <input type="number" placeholder="سعر مخصص" value="${linkDetail?.customPrice || ''}"
+            onchange="ph46_updateProviderPrice('${item.id}','${linkKey}',this.value,'user')"
+            style="width:100px;padding:5px 8px;font-size:12px;border:1px solid var(--border);border-radius:8px;background:var(--bg-card);color:var(--text-main);font-family:'Cairo',sans-serif">
+          <button class="ph46-btn ph46-btn-xs ph46-btn-danger" onclick="ph46_toggleProviderLink('${item.id}','${linkKey}',false,'user','${escAttr(_searchQ||'')}')">
+            إلغاء الربط
+          </button>
+        ` : `
+          <button class="ph46-btn ph46-btn-xs ph46-btn-primary" onclick="ph46_toggleProviderLink('${item.id}','${linkKey}',true,'user','${escAttr(_searchQ||'')}')">
+            ربط الآن
+          </button>
+        `}
+      </div>
+    </div>`;
+  }).join('');
+
+  const linkedCount = linked.length;
+
   openModal(`
     <div class="modal-header">
-      <h2 class="modal-title">👥 ربط موفري الخدمات والأسعار المخصصة</h2>
+      <h2 class="modal-title">🔗 ربط موفري الخدمات بالمنتج</h2>
       <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
-    <div style="margin-bottom:14px; font-size:13px; color:var(--text-muted)">
-      المنتج/الخدمة: <strong>${escHtml(item.name)}</strong>
-      <br>قم بربط هذا المنتج الموحد بمزود خدمة واحد أو أكثر، ليتمكنوا من عرضه وتوفير أسعار مخصصة.
-    </div>
-    <div style="max-height:55vh; overflow-y:auto; padding-right:4px">
-      ${providerRows || '<div style="padding:20px; text-align:center; color:var(--text-muted)">لا يوجد موفري خدمات مسجلين في المنصة حالياً</div>'}
+
+    <div style="padding:0 20px 14px">
+      <!-- معلومات المنتج -->
+      <div style="background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.2);border-radius:12px;padding:12px 16px;margin-bottom:16px">
+        <div style="font-weight:800;font-size:14px;color:var(--text-main)">📦 ${escHtml(item.name)}</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:3px">
+          ${linkedCount > 0
+            ? `مرتبط بـ <strong style="color:var(--primary)">${linkedCount}</strong> موفر حالياً`
+            : 'لم يُربط بأي موفر بعد'}
+        </div>
+      </div>
+
+      <!-- بحث -->
+      <div style="position:relative;margin-bottom:14px">
+        <span style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--text-muted);pointer-events:none">🔍</span>
+        <input
+          style="width:100%;padding:9px 36px 9px 14px;border:1.5px solid var(--border);border-radius:10px;background:var(--glass-bg);color:var(--text-main);font-family:'Cairo',sans-serif;font-size:14px;box-sizing:border-box"
+          placeholder="ابحث بالاسم أو التصنيف أو الهاتف..."
+          value="${escHtml(_searchQ || '')}"
+          oninput="ph46_showProvidersMappingModal('${itemId}', this.value)"
+          autofocus>
+      </div>
+
+      <!-- قاعدة بيانات المزودين -->
+      ${dbProviders.length > 0 ? `
+      <div style="margin-bottom:6px">
+        <div style="font-size:12px;font-weight:800;color:var(--primary);margin-bottom:10px;display:flex;align-items:center;gap:6px">
+          <span style="background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.25);border-radius:20px;padding:2px 10px">
+            🗂️ قاعدة بيانات المزودين — ${filteredDb.length} مزود
+          </span>
+        </div>
+        <div style="max-height:42vh;overflow-y:auto;padding-left:2px">
+          ${filteredDb.length > 0 ? dbRows : `<div style="padding:16px;text-align:center;color:var(--text-muted);font-size:13px">لا توجد نتائج مطابقة</div>`}
+        </div>
+      </div>` : ''}
+
+      <!-- مزودو المنصة (احتياطي) -->
+      ${userProviders.length > 0 ? `
+      <details style="margin-top:12px" ${dbProviders.length === 0 ? 'open' : ''}>
+        <summary style="font-size:12px;font-weight:800;color:var(--text-muted);cursor:pointer;padding:6px 0;user-select:none;list-style:none;display:flex;align-items:center;gap:6px">
+          <span style="background:var(--bg-card);border:1px solid var(--border);border-radius:20px;padding:2px 10px">
+            👤 حسابات المنصة — ${filteredUsers.length} حساب ${dbProviders.length > 0 ? '(احتياطي)' : ''}
+          </span>
+          <span style="color:var(--text-muted);font-size:10px">انقر للعرض</span>
+        </summary>
+        <div style="max-height:30vh;overflow-y:auto;padding-left:2px;margin-top:6px">
+          ${filteredUsers.length > 0 ? userRows : `<div style="padding:16px;text-align:center;color:var(--text-muted);font-size:13px">لا توجد نتائج</div>`}
+        </div>
+      </details>` : ''}
+
+      ${dbProviders.length === 0 && userProviders.length === 0 ? `
+      <div style="padding:32px;text-align:center;color:var(--text-muted)">
+        <div style="font-size:40px;margin-bottom:10px">🏢</div>
+        <div style="font-weight:700;margin-bottom:6px">لا يوجد موفرو خدمات بعد</div>
+        <div style="font-size:12px">أضف مزودين من قسم <strong>قاعدة بيانات المزودين</strong> في لوحة المدير</div>
+        <button class="ph46-btn ph46-btn-xs ph46-btn-primary" style="margin-top:14px" onclick="closeModal();setAdminTab('providers_database')">
+          🗂️ فتح قاعدة بيانات المزودين
+        </button>
+      </div>` : ''}
     </div>
   `, 'large');
 };
 
-window.ph46_toggleProviderLink = async function(itemId, providerUid, shouldLink) {
+window.ph46_toggleProviderLink = async function(itemId, linkKey, shouldLink, source, searchQ) {
   showLoader();
   try {
     const item = (AppData.catalogItems || []).find(i => i.id === itemId);
     if (!item) return;
 
     let linked = [...(item.linkedProviders || [])];
+
     if (shouldLink) {
-      const p = (AppData.users || []).find(u => u.uid === providerUid);
-      linked.push({
-        providerUid,
-        providerName: p?.name || 'مجهول',
-        customPrice: null,
-        linkedAt: new Date()
-      });
+      if (source === 'pdb') {
+        const p = typeof pdb_getProvider === 'function' ? pdb_getProvider(linkKey) : null;
+        const cats    = AppData.pdbCats    || [];
+        const subcats = AppData.pdbSubcats || [];
+        const cat    = cats.find(c => c.id === p?.catId);
+        const subcat = subcats.find(s => s.id === p?.subcatId);
+        linked.push({
+          pdbId:        linkKey,
+          providerName: p?.name       || 'مجهول',
+          catName:      cat?.name     || '',
+          subcatName:   subcat?.name  || '',
+          phone:        p?.phone      || '',
+          linkedUserId: p?.linkedUserId || null,
+          customPrice:  null,
+          linkedAt:     new Date(),
+        });
+      } else {
+        const p = (AppData.users || []).find(u => (u.uid || u.id) === linkKey);
+        linked.push({
+          providerUid:  linkKey,
+          providerName: p?.name || 'مجهول',
+          customPrice:  null,
+          linkedAt:     new Date(),
+        });
+      }
     } else {
-      linked = linked.filter(l => l.providerUid !== providerUid);
+      linked = linked.filter(l =>
+        source === 'pdb' ? l.pdbId !== linkKey : l.providerUid !== linkKey
+      );
     }
 
     await fsUpdate('product_catalog', itemId, { linkedProviders: linked });
     await ph46_reloadData();
     hideLoader();
     toast(shouldLink ? 'تم ربط موفر الخدمة بالمنتج ✅' : 'تم إلغاء الربط ❌', 'success');
-    ph46_showProvidersMappingModal(itemId);
+    ph46_showProvidersMappingModal(itemId, searchQ || '');
   } catch(e) {
     hideLoader();
     toast('خطأ: ' + e.message, 'error');
   }
 };
 
-window.ph46_updateProviderPrice = async function(itemId, providerUid, val) {
+window.ph46_updateProviderPrice = async function(itemId, linkKey, val, source) {
   try {
     const item = (AppData.catalogItems || []).find(i => i.id === itemId);
     if (!item) return;
 
     const linked = (item.linkedProviders || []).map(l => {
-      if (l.providerUid === providerUid) {
-        return { ...l, customPrice: val ? parseFloat(val) : null };
-      }
-      return l;
+      const match = source === 'pdb' ? l.pdbId === linkKey : l.providerUid === linkKey;
+      return match ? { ...l, customPrice: val ? parseFloat(val) : null } : l;
     });
 
     await fsUpdate('product_catalog', itemId, { linkedProviders: linked });
     await ph46_reloadData();
-    toast('تم تحديث السعر المخصص بنجاح', 'success');
+    toast('✅ تم تحديث السعر المخصص', 'success');
   } catch(e) {
     toast('خطأ: ' + e.message, 'error');
   }
