@@ -2038,9 +2038,10 @@ function renderDriver() {
   const driverTab = State.driverTab || 'orders';
   const initial = (u.name || u.email || 'D')[0].toUpperCase();
   const displayName = u.name || u.email || 'المندوب';
-  const pdbCount = (AppData.pdbEntries || []).filter(e => e.active !== false).length;
+  const pdbCount   = (AppData.pdbEntries || []).filter(e => e.active !== false).length;
+  const newOrders  = (window.DRIVER_ALERTS?.newCount || 0);
   const tabs = [
-    ['orders',    '📋', 'طلباتي'],
+    ['orders',    '📋', `طلباتي${newOrders ? ` <span style="background:#ef4444;color:#fff;border-radius:99px;padding:0 6px;font-size:10px;margin-right:2px">${newOrders}</span>` : ''}`],
     ['providers', '🏢', `مزودو الخدمات${pdbCount ? ` <span style="background:#8b5cf6;color:#fff;border-radius:99px;padding:0 6px;font-size:10px;margin-right:2px">${pdbCount}</span>` : ''}`],
     ['earnings',  '💰', 'أرباحي'],
     ['profile',   '👤', 'الملف'],
