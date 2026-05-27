@@ -251,6 +251,7 @@ function _ddb_renderEntriesList() {
             : `<span class="ddb-chip" style="background:rgba(239,68,68,0.1);border-color:rgba(239,68,68,0.3);color:#ef4444">⛔ معطّل</span>`}
         </div>
         <div class="ddb-entry-actions">
+          ${e.linkedUserId ? `<button class="ddb-icon-btn" onclick="adminSendDriverMessage('${e.linkedUserId}','${escAttr(e.name||'')}')" title="مراسلة المندوب" style="color:#7c3aed">📨</button>` : ''}
           <button class="ddb-icon-btn" onclick="ddb_openEditEntryModal('${e.id}')" title="تعديل">✏️</button>
           <button class="ddb-icon-btn danger" onclick="ddb_confirmDeleteEntry('${e.id}','${escAttr(e.name||'')}')" title="حذف">🗑️</button>
         </div>
@@ -299,7 +300,19 @@ function _ddb_renderEntryDetail() {
         ${entry.notes ? `<div style="font-size:13px;color:var(--text-muted);margin-top:6px;line-height:1.6">${escHtml(entry.notes)}</div>` : ''}
         ${linkedUser ? `<div style="font-size:12px;color:var(--primary);margin-top:8px">🔗 مرتبط بحساب: ${escHtml(linkedUser.name||linkedUser.email||'—')}</div>` : ''}
       </div>
-      <button class="ddb-btn ddb-btn-secondary" onclick="ddb_openEditEntryModal('${entry.id}')">✏️ تعديل</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${entry.linkedUserId ? `
+        <button class="ddb-btn" style="background:linear-gradient(135deg,rgba(124,58,237,0.12),rgba(13,148,136,0.12));border:1.5px solid rgba(124,58,237,0.3);color:#7c3aed;font-weight:800"
+                onclick="adminSendDriverMessage('${entry.linkedUserId}','${escAttr(entry.name||'')}')">
+          📨 مراسلة المندوب
+        </button>
+        <button class="ddb-btn ddb-btn-secondary" style="font-size:12px"
+                onclick="adminViewDriverMessages('${entry.linkedUserId}','${escAttr(entry.name||'')}')">
+          📜 سجل الرسائل
+        </button>` : `
+        <div style="font-size:12px;color:var(--text-muted);padding:6px 0">⚠️ لا يمكن المراسلة — المندوب غير مرتبط بحساب مستخدم</div>`}
+        <button class="ddb-btn ddb-btn-secondary" onclick="ddb_openEditEntryModal('${entry.id}')">✏️ تعديل</button>
+      </div>
     </div>
 
     <!-- الأرشيف الإضافي -->

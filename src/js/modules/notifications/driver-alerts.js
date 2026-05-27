@@ -291,12 +291,15 @@
   /* ── Attach / Detach ─────────────────────────────── */
   function detach() {
     try { DA.unsub && DA.unsub(); } catch (e) {}
-    DA.unsub       = null;
-    DA.boundUid    = null;
-    DA.seenIds     = new Set();
-    DA._lastStatus = {};
-    DA.feed        = [];
-    DA.newCount    = 0;
+    try { DA.unsubMessages && DA.unsubMessages(); } catch (e) {}
+    DA.unsub          = null;
+    DA.unsubMessages  = null;
+    DA.boundUid       = null;
+    DA.seenIds        = new Set();
+    DA.seenMsgIds     = new Set();
+    DA._lastStatus    = {};
+    DA.feed           = [];
+    DA.newCount       = 0;
     const bell = document.getElementById('da-bell');
     if (bell) bell.remove();
     const panel = document.getElementById('da-feed-panel');
@@ -314,6 +317,35 @@
     ensureStyles();
 
     setTimeout(injectBellIfNeeded, 800);
+
+    try {
+      DA.unsubMessages = db.collection('driver_messages')
+        .where('toUid', '==', user.uid)
+        .orderBy('createdAt', 'desc')
+        .limit(30)
+        .onSnapshot(snap => {
+          snap.docChanges().forEach(ch => {
+            if (ch.type !== 'added') return;
+            const d  = ch.doc.data() || {};
+            const ms = d.createdAt?.toMillis ? d.createdAt.toMillis() : 0;
+            if (ms && ms < DA.attachedAt - 1000) return;
+            if (DA.seenMsgIds?.has(ch.doc.id)) return;
+            DA.seenMsgIds = DA.seenMsgIds || new Set();
+            DA.seenMsgIds.add(ch.doc.id);
+
+            const title = `📨 رسالة من الإدارة`;
+            const sub   = d.message || '';
+            playChime();
+            browserNotify(title, sub);
+            showBanner(title, sub.length > 60 ? sub.slice(0,60)+'…' : sub, null);
+            DA.feed.unshift({ icon: '📨', title, sub: sub.length>50?sub.slice(0,50)+'…':sub, time: fmtTime(d.createdAt) });
+            DA.newCount++;
+            updateBell();
+
+            db.collection('driver_messages').doc(ch.doc.id).update({ read: true }).catch(()=>{});
+          });
+        }, err => console.warn('[DA] messages listener error:', err));
+    } catch (e) { console.warn('[DA] failed to attach messages listener:', e); }
 
     try {
       DA.unsub = db.collection('orders')
