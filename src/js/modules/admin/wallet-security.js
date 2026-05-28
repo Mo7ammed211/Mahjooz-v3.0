@@ -899,7 +899,11 @@
     <div class="wsec-wrap">
       <div class="wsec-header">
         <div class="wsec-title">📋 سجل تدقيق المحافظ</div>
-        <div style="display:flex;gap:8px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button onclick="wsecExportAuditPDF(_auditFilter||'all')"
+                  style="background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;border:none;border-radius:10px;padding:8px 16px;font-size:12px;font-weight:800;cursor:pointer;font-family:'Cairo',sans-serif;display:flex;align-items:center;gap:5px">
+            📄 تصدير PDF
+          </button>
           <button onclick="_auditLogs=null;setAdminTab('wallet_audit')"
                   style="background:var(--card-bg);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:'Cairo',sans-serif">
             🔄 تحديث
@@ -1000,6 +1004,233 @@
       🛡️ هذا السجل دائم ومحمي — لا يمكن حذفه أو تعديله
     </p>`;
   }
+
+  /* ══════════════════════════════════════════════════════════
+     تصدير سجل التدقيق إلى PDF
+  ══════════════════════════════════════════════════════════ */
+  window.wsecExportAuditPDF = async function (filterKey) {
+    if (!_isSessionValid()) {
+      wsecShowGate(() => wsecExportAuditPDF(filterKey));
+      return;
+    }
+
+    /* التحقق من وجود مكتبات PDF */
+    const hasLibs = () => !!(window.html2canvas && window.jspdf?.jsPDF);
+    if (!hasLibs()) {
+      toast('⏳ جاري تحميل مكتبة PDF...', 'info');
+      await new Promise(r => setTimeout(r, 3000));
+      if (!hasLibs()) { toast('فشل تحميل مكتبة PDF', 'error'); return; }
+    }
+
+    toast('⏳ جاري إنشاء التقرير...', 'info');
+
+    /* جلب السجلات إن لم تكن محمّلة */
+    let logs = _auditLogs;
+    if (!logs) {
+      try {
+        const snap = await db.collection(AUDIT_COLLECTION)
+          .orderBy('timestamp', 'desc').limit(500).get();
+        logs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        _auditLogs = logs;
+      } catch (e) {
+        toast('فشل تحميل السجلات: ' + e.message, 'error');
+        return;
+      }
+    }
+
+    /* فلترة */
+    let rows = logs;
+    if (filterKey && filterKey !== 'all') {
+      rows = logs.filter(l => l.action === filterKey || l.action === `${filterKey}_failed`);
+    }
+
+    const me        = State.currentUser;
+    const adminName = me?.displayName || me?.name || me?.email || '—';
+    const now       = new Date();
+    const nowStr    = now.toLocaleString('ar-SA', { year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit' });
+    const filename  = `wallet-audit-${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}.pdf`;
+
+    /* ملخصات */
+    const totCredit = rows.filter(r => r.action === 'credit').reduce((s, r) => s + (r.amount || 0), 0);
+    const totDebit  = rows.filter(r => r.action === 'debit') .reduce((s, r) => s + (r.amount || 0), 0);
+    const totOps    = rows.filter(r => ['credit','debit','set'].includes(r.action)).length;
+    const totAccess = rows.filter(r => r.action === 'gate_access').length;
+
+    const actionText = {
+      credit:       'إضافة رصيد',
+      debit:        'خصم رصيد',
+      set:          'تعيين رصيد',
+      gate_access:  'دخول اللوحة',
+      gate_locked:  'تجميد وصول',
+      credit_failed:'إضافة فاشلة',
+      debit_failed: 'خصم فاشل',
+      set_failed:   'تعيين فاشل',
+    };
+
+    /* بناء صفوف الجدول */
+    const tableRows = rows.map((log, i) => {
+      const bg  = i % 2 === 0 ? '#ffffff' : '#f9fafb';
+      const clr = log.action === 'credit' ? '#059669'
+                : log.action === 'debit'  ? '#dc2626'
+                : log.action.includes('failed') ? '#b91c1c'
+                : '#374151';
+      return `
+      <tr style="background:${bg}">
+        <td style="padding:7px 10px;font-size:11px;color:#6b7280;white-space:nowrap;border-bottom:1px solid #f3f4f6">${_fmtTs(log.timestamp)}</td>
+        <td style="padding:7px 10px;font-size:12px;font-weight:700;border-bottom:1px solid #f3f4f6">${_esc(log.adminName || '—')}</td>
+        <td style="padding:7px 10px;font-size:11px;color:#6b7280;border-bottom:1px solid #f3f4f6">${_roleName(log.adminRole)}</td>
+        <td style="padding:7px 10px;font-size:11px;font-weight:700;color:${clr};border-bottom:1px solid #f3f4f6">${actionText[log.action] || log.action}</td>
+        <td style="padding:7px 10px;font-size:12px;border-bottom:1px solid #f3f4f6">${_esc(log.targetName || '—')}</td>
+        <td style="padding:7px 10px;font-size:12px;font-weight:800;color:${clr};text-align:center;border-bottom:1px solid #f3f4f6">
+          ${log.amount ? log.amount.toLocaleString('ar-SA') + ' ر.س' : '—'}
+        </td>
+        <td style="padding:7px 10px;font-size:11px;color:#6b7280;border-bottom:1px solid #f3f4f6">
+          ${log.balanceBefore != null ? log.balanceBefore.toLocaleString('ar-SA') : '—'}
+          ${log.balanceAfter  != null ? ' ← ' + log.balanceAfter.toLocaleString('ar-SA') : ''}
+        </td>
+        <td style="padding:7px 10px;font-size:11px;color:#374151;border-bottom:1px solid #f3f4f6;max-width:160px">${_esc(log.note || '—')}</td>
+      </tr>`;
+    }).join('');
+
+    const filterLabel = filterKey && filterKey !== 'all'
+      ? ` — فلترة: ${actionText[filterKey] || filterKey}`
+      : '';
+
+    const htmlContent = `
+    <div style="direction:rtl;text-align:right;font-family:'Tajawal','Cairo',Tahoma,Arial,sans-serif;color:#1f2937">
+
+      <!-- رأس التقرير -->
+      <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:16px;border-bottom:3px solid #7c3aed;margin-bottom:20px">
+        <div>
+          <div style="font-size:26px;font-weight:900;color:#7c3aed;letter-spacing:1px">محجوز</div>
+          <div style="font-size:12px;color:#6b7280;margin-top:2px">منصة الحجوزات والخدمات الشاملة</div>
+        </div>
+        <div style="text-align:left">
+          <div style="font-size:16px;font-weight:800;color:#1f2937">📋 تقرير تدقيق المحافظ${filterLabel}</div>
+          <div style="font-size:11px;color:#6b7280;margin-top:3px">تاريخ الإصدار: ${nowStr}</div>
+          <div style="font-size:11px;color:#6b7280">أصدره: ${_esc(adminName)}</div>
+        </div>
+      </div>
+
+      <!-- بيانات التقرير -->
+      <div style="background:#f8f7ff;border:1px solid #e9d5ff;border-radius:10px;padding:14px 18px;margin-bottom:20px;font-size:12px;color:#374151">
+        <div style="font-weight:800;color:#7c3aed;margin-bottom:8px;font-size:13px">📊 ملخص التقرير</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;text-align:center">
+          <div>
+            <div style="font-size:20px;font-weight:900;color:#059669">${totCredit.toLocaleString('ar-SA')}</div>
+            <div style="font-size:10px;color:#6b7280">إجمالي الإضافات (ر.س)</div>
+          </div>
+          <div>
+            <div style="font-size:20px;font-weight:900;color:#dc2626">${totDebit.toLocaleString('ar-SA')}</div>
+            <div style="font-size:10px;color:#6b7280">إجمالي الخصومات (ر.س)</div>
+          </div>
+          <div>
+            <div style="font-size:20px;font-weight:900;color:#7c3aed">${totOps}</div>
+            <div style="font-size:10px;color:#6b7280">عمليات مالية</div>
+          </div>
+          <div>
+            <div style="font-size:20px;font-weight:900;color:#374151">${rows.length}</div>
+            <div style="font-size:10px;color:#6b7280">إجمالي السجلات</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- تحذير أمني -->
+      <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:10px 14px;margin-bottom:20px;font-size:11px;color:#92400e;display:flex;align-items:center;gap:8px">
+        🔒 هذا التقرير سري ومخصص للإدارة فقط — سجل التدقيق محمي من الحذف والتعديل في قاعدة البيانات
+      </div>
+
+      <!-- جدول السجلات -->
+      ${rows.length === 0 ? `<div style="text-align:center;padding:40px;color:#9ca3af;font-size:14px">لا توجد سجلات للعرض</div>` : `
+      <table style="width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed">
+        <thead>
+          <tr style="background:#7c3aed;color:#fff">
+            <th style="padding:9px 10px;text-align:right;font-weight:800;width:16%">التاريخ والوقت</th>
+            <th style="padding:9px 10px;text-align:right;font-weight:800;width:13%">المدير</th>
+            <th style="padding:9px 10px;text-align:right;font-weight:800;width:8%">الدور</th>
+            <th style="padding:9px 10px;text-align:right;font-weight:800;width:11%">العملية</th>
+            <th style="padding:9px 10px;text-align:right;font-weight:800;width:13%">المستخدم</th>
+            <th style="padding:9px 10px;text-align:center;font-weight:800;width:10%">المبلغ</th>
+            <th style="padding:9px 10px;text-align:right;font-weight:800;width:14%">قبل → بعد</th>
+            <th style="padding:9px 10px;text-align:right;font-weight:800;width:15%">السبب</th>
+          </tr>
+        </thead>
+        <tbody>${tableRows}</tbody>
+      </table>`}
+
+      <!-- تذييل -->
+      <div style="margin-top:28px;padding-top:14px;border-top:1px solid #e5e7eb;text-align:center;font-size:10px;color:#9ca3af">
+        هذا التقرير صادر إلكترونياً ولا يحتاج توقيع — محجوز © ${now.getFullYear()}
+        &nbsp;|&nbsp; رقم الجلسة: ${_sessionId}
+        &nbsp;|&nbsp; عدد السجلات: ${rows.length}
+      </div>
+    </div>`;
+
+    /* توليد PDF باستخدام html2canvas + jsPDF */
+    try {
+      const wrap = document.createElement('div');
+      wrap.style.cssText = `
+        position:fixed;top:0;left:0;
+        width:1100px;min-height:1200px;
+        background:#ffffff;color:#1f2937;
+        direction:rtl;text-align:right;
+        font-family:'Tajawal','Cairo',Tahoma,Arial,sans-serif;
+        font-size:13px;line-height:1.8;
+        padding:36px 40px;box-sizing:border-box;
+        opacity:0;z-index:-1;
+      `;
+      wrap.innerHTML = htmlContent;
+      document.body.appendChild(wrap);
+
+      await new Promise(r => setTimeout(r, 400));
+      wrap.style.opacity = '1';
+      wrap.style.zIndex  = '9999';
+      await new Promise(r => setTimeout(r, 300));
+
+      const canvas = await window.html2canvas(wrap, {
+        scale: 1.8,
+        backgroundColor: '#ffffff',
+        useCORS: true,
+        windowWidth: wrap.scrollWidth,
+        windowHeight: wrap.scrollHeight,
+        logging: false,
+      });
+
+      const { jsPDF } = window.jspdf;
+      const pdf   = new jsPDF('l', 'mm', 'a4'); /* landscape للجدول العريض */
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+      const imgW  = pageW;
+      const imgH  = (canvas.height * imgW) / canvas.width;
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.92);
+      pdf.addImage(imgData, 'JPEG', 0, 0, imgW, imgH, undefined, 'FAST');
+
+      let heightLeft = imgH - pageH;
+      let position   = -pageH;
+      while (heightLeft > 0) {
+        pdf.addPage();
+        pdf.addImage(imgData, 'JPEG', 0, position, imgW, imgH, undefined, 'FAST');
+        heightLeft -= pageH;
+        position   -= pageH;
+      }
+
+      pdf.save(filename);
+      toast(`✅ تم تحميل التقرير — ${rows.length} سجل`, 'success');
+
+      /* تسجيل عملية التصدير في سجل التدقيق */
+      await _writeAuditLog({
+        action: 'export_pdf',
+        note:   `تصدير ${rows.length} سجل إلى PDF${filterLabel}`,
+      });
+
+      document.body.removeChild(wrap);
+    } catch (err) {
+      console.error('[WalletSecurity] خطأ في تصدير PDF:', err);
+      toast('فشل إنشاء PDF: ' + (err.message || err), 'error');
+      document.querySelector('[style*="z-index: 9999"]')?.remove?.();
+    }
+  };
 
   console.log('[WalletSecurity] نظام أمان المحافظ المتكامل جاهز 🔐');
 })();
