@@ -264,5 +264,22 @@
   `;
   document.head.appendChild(style);
 
+  /* ── إزالة أي زر عائم قديم (#da-bell) ─────────────────────── */
+  (function _killOldBell() {
+    function _remove() {
+      const el = document.getElementById('da-bell');
+      if (el) el.remove();
+    }
+    _remove();
+    if (document.readyState !== 'complete') {
+      document.addEventListener('DOMContentLoaded', _remove);
+      window.addEventListener('load', _remove);
+    }
+    const obs = new MutationObserver(() => {
+      if (document.getElementById('da-bell')) _remove();
+    });
+    obs.observe(document.body || document.documentElement, { childList: true, subtree: true });
+  })();
+
   console.log('[UnifiedBell] جرس الإشعارات الموحد جاهز 🔔');
 })();
