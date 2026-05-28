@@ -1904,6 +1904,7 @@ function renderVendor() {
               <span>${ic}</span><span>${l}</span>
             </button>`).join('')}
         </nav>
+        ${typeof renderAvailabilityToggle === 'function' ? renderAvailabilityToggle('vendor') : ''}
       </aside>
       <main class="admin-main">${content}</main>
     </div>
@@ -1917,6 +1918,7 @@ function renderVendorOrders() {
   const u = State.currentUser;
   const orders = AppData.orders.filter(o=>o.vendorId===u.uid || o.providerUid===u.uid).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
   const isProfUser = orders.some(o => o.isProfession);
+  const availBanner = typeof renderAvailabilityBanner === 'function' ? renderAvailabilityBanner('vendor') : '';
   const sLabel = {
     pending:'⏳ جديد',
     pending_inspection:'🛠️ معاينة',
@@ -1929,6 +1931,7 @@ function renderVendorOrders() {
     cancelled:'❌ ملغى'
   };
   return `
+    ${availBanner}
     <h2>📋 ${isProfUser ? 'طلبات المهن والخدمات' : 'الطلبات الواردة'}</h2>
     ${orders.length ? `
     <div class="table-wrap">
@@ -2088,6 +2091,7 @@ function renderDriver() {
               <span>${ic}</span><span>${l}</span>
             </button>`).join('')}
         </nav>
+        ${typeof renderAvailabilityToggle === 'function' ? renderAvailabilityToggle('driver') : ''}
       </aside>
       <main class="admin-main">${content}</main>
     </div>
@@ -2100,9 +2104,11 @@ async function setDriverTab(tab) {
 function renderDriverOrders() {
   const u = State.currentUser;
   const orders = AppData.orders.filter(o=>o.driverId===u.uid).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
+  const driverBanner = typeof renderAvailabilityBanner === 'function' ? renderAvailabilityBanner('driver') : '';
 
   if (orders.length === 0) {
     return `
+      ${driverBanner}
       <h2>📋 طلبات التوصيل</h2>
       <div class="empty-state" style="padding:48px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);text-align:center;margin-top:16px">
         <div style="font-size:48px;margin-bottom:16px">🚚</div>
@@ -2112,6 +2118,7 @@ function renderDriverOrders() {
   }
 
   return `
+    ${driverBanner}
     <h2>📋 طلبات التوصيل</h2>
     <div style="display:flex;flex-direction:column;gap:12px;margin-top:16px">
       ${orders.map(o => {

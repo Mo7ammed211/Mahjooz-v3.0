@@ -544,6 +544,12 @@ async function confirmBooking(svcId) {
   const assignedVendorUser = assignedVendorId ? (AppData.users||[]).find(u => u.uid === assignedVendorId || u.id === assignedVendorId) : null;
   const assignedVendorName = assignedVendorUser ? assignedVendorUser.name : (s?.provider || '—');
 
+  if (assignedVendorId && typeof isVendorOpen === 'function' && !isVendorOpen(assignedVendorId)) {
+    toast('⛔ هذا المزود/المتجر مغلق حالياً ولا يقبل طلبات جديدة', 'error');
+    closeModal();
+    return;
+  }
+
   await fsAdd('orders', {
     orderId, svcId,
     svcName: s?.name, svcIcon: s?.icon,
