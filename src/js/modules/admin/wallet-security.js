@@ -609,7 +609,7 @@
     else if (ts.seconds) d = new Date(ts.seconds * 1000);
     else                 d = new Date(ts);
     if (isNaN(d)) return '—';
-    return d.toLocaleString('ar-SA', {
+    return d.toLocaleString('ar-YE', {
       year:'numeric', month:'2-digit', day:'2-digit',
       hour:'2-digit', minute:'2-digit', second:'2-digit'
     });
@@ -819,7 +819,7 @@
       <!-- ملخص -->
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:22px">
         <div style="background:rgba(16,185,129,0.07);border:1.5px solid rgba(16,185,129,0.2);border-radius:14px;padding:16px;text-align:center">
-          <div style="font-size:24px;font-weight:900;color:#10b981">${totalBalance.toLocaleString('ar-SA')}</div>
+          <div style="font-size:24px;font-weight:900;color:#10b981">${totalBalance.toLocaleString('ar-YE')}</div>
           <div style="font-size:11px;color:var(--text-muted)">إجمالي أرصدة المحافظ (ريال)</div>
         </div>
         <div style="background:rgba(124,58,237,0.07);border:1.5px solid rgba(124,58,237,0.2);border-radius:14px;padding:16px;text-align:center">
@@ -861,7 +861,7 @@
           <div class="wsec-user-role">${_roleName(u.role)}</div>
         </div>
         <div class="wsec-user-balance ${balance === 0 ? 'zero' : ''}">
-          ${balance.toLocaleString('ar-SA')} ر.س
+          ${balance.toLocaleString('ar-YE')} ر.ي
         </div>
       </div>`;
     }).join('');
@@ -906,7 +906,7 @@
 
     <!-- الرصيد الحالي -->
     <div class="wsec-balance-display">
-      <div class="wsec-balance-num">${balance.toLocaleString('ar-SA')} <span style="font-size:14px;color:var(--text-muted)">ريال</span></div>
+      <div class="wsec-balance-num">${balance.toLocaleString('ar-YE')} <span style="font-size:14px;color:var(--text-muted)">ريال</span></div>
       <div class="wsec-balance-label">الرصيد الحالي</div>
     </div>
 
@@ -991,7 +991,7 @@
     if (!amount || amount <= 0)     { toast('يرجى إدخال مبلغ صحيح أكبر من الصفر', 'error'); return; }
     if (!note)                       { toast('يرجى إدخال سبب العملية — مطلوب للتدقيق', 'error'); return; }
     if (action === 'debit' && amount > balanceBefore) {
-      toast(`الرصيد الحالي (${balanceBefore} ر.س) أقل من المبلغ المطلوب خصمه`, 'error');
+      toast(`الرصيد الحالي (${balanceBefore} ر.ي) أقل من المبلغ المطلوب خصمه`, 'error');
       return;
     }
 
@@ -1015,7 +1015,7 @@
           balanceAfter = cur + amount;
           t.set(ref, { balance: balanceAfter, uid }, { merge: true });
         } else if (action === 'debit') {
-          if (cur < amount) throw new Error(`رصيد غير كافٍ: المتاح ${cur} ر.س`);
+          if (cur < amount) throw new Error(`رصيد غير كافٍ: المتاح ${cur} ر.ي`);
           balanceAfter = cur - amount;
           t.set(ref, { balance: balanceAfter, uid }, { merge: true });
         } else if (action === 'set') {
@@ -1055,7 +1055,7 @@
 
       closeModal();
       const actionLabel = { credit:'✅ تمت إضافة', debit:'✅ تم خصم', set:'✅ تم تعيين' }[action];
-      toast(`${actionLabel} ${amount.toLocaleString('ar-SA')} ريال من محفظة ${userName}`, 'success');
+      toast(`${actionLabel} ${amount.toLocaleString('ar-YE')} ريال من محفظة ${userName}`, 'success');
 
       /* إعادة رسم الصفحة */
       await render();
@@ -1192,11 +1192,11 @@
       <td>${actionLabel[log.action] || `<span class="wsec-badge view">${_esc(log.action)}</span>`}</td>
       <td>${log.targetName ? _esc(log.targetName) : '<span style="color:var(--text-muted)">—</span>'}</td>
       <td style="font-weight:800;color:${log.action==='credit'?'#10b981':log.action==='debit'?'#ef4444':'#a78bfa'}">
-        ${log.amount ? `${log.amount.toLocaleString('ar-SA')} ر.س` : '—'}
+        ${log.amount ? `${log.amount.toLocaleString('ar-YE')} ر.ي` : '—'}
       </td>
       <td style="font-size:11px;color:var(--text-muted)">
-        ${log.balanceBefore != null ? log.balanceBefore.toLocaleString('ar-SA') : '—'}
-        ${log.balanceAfter  != null ? ` → ${log.balanceAfter.toLocaleString('ar-SA')}` : ''}
+        ${log.balanceBefore != null ? log.balanceBefore.toLocaleString('ar-YE') : '—'}
+        ${log.balanceAfter  != null ? ` → ${log.balanceAfter.toLocaleString('ar-YE')}` : ''}
       </td>
       <td style="font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${_esc(log.note)}">
         ${_esc(log.note || '—')}
@@ -1268,7 +1268,7 @@
     const me        = State.currentUser;
     const adminName = me?.displayName || me?.name || me?.email || '—';
     const now       = new Date();
-    const nowStr    = now.toLocaleString('ar-SA', { year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit' });
+    const nowStr    = now.toLocaleString('ar-YE', { year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit' });
     const filename  = `wallet-audit-${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}.pdf`;
 
     /* ملخصات */
@@ -1303,11 +1303,11 @@
         <td style="padding:7px 10px;font-size:11px;font-weight:700;color:${clr};border-bottom:1px solid #f3f4f6">${actionText[log.action] || log.action}</td>
         <td style="padding:7px 10px;font-size:12px;border-bottom:1px solid #f3f4f6">${_esc(log.targetName || '—')}</td>
         <td style="padding:7px 10px;font-size:12px;font-weight:800;color:${clr};text-align:center;border-bottom:1px solid #f3f4f6">
-          ${log.amount ? log.amount.toLocaleString('ar-SA') + ' ر.س' : '—'}
+          ${log.amount ? log.amount.toLocaleString('ar-YE') + ' ر.ي' : '—'}
         </td>
         <td style="padding:7px 10px;font-size:11px;color:#6b7280;border-bottom:1px solid #f3f4f6">
-          ${log.balanceBefore != null ? log.balanceBefore.toLocaleString('ar-SA') : '—'}
-          ${log.balanceAfter  != null ? ' ← ' + log.balanceAfter.toLocaleString('ar-SA') : ''}
+          ${log.balanceBefore != null ? log.balanceBefore.toLocaleString('ar-YE') : '—'}
+          ${log.balanceAfter  != null ? ' ← ' + log.balanceAfter.toLocaleString('ar-YE') : ''}
         </td>
         <td style="padding:7px 10px;font-size:11px;color:#374151;border-bottom:1px solid #f3f4f6;max-width:160px">${_esc(log.note || '—')}</td>
       </tr>`;
@@ -1338,12 +1338,12 @@
         <div style="font-weight:800;color:#7c3aed;margin-bottom:8px;font-size:13px">📊 ملخص التقرير</div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;text-align:center">
           <div>
-            <div style="font-size:20px;font-weight:900;color:#059669">${totCredit.toLocaleString('ar-SA')}</div>
-            <div style="font-size:10px;color:#6b7280">إجمالي الإضافات (ر.س)</div>
+            <div style="font-size:20px;font-weight:900;color:#059669">${totCredit.toLocaleString('ar-YE')}</div>
+            <div style="font-size:10px;color:#6b7280">إجمالي الإضافات (ر.ي)</div>
           </div>
           <div>
-            <div style="font-size:20px;font-weight:900;color:#dc2626">${totDebit.toLocaleString('ar-SA')}</div>
-            <div style="font-size:10px;color:#6b7280">إجمالي الخصومات (ر.س)</div>
+            <div style="font-size:20px;font-weight:900;color:#dc2626">${totDebit.toLocaleString('ar-YE')}</div>
+            <div style="font-size:10px;color:#6b7280">إجمالي الخصومات (ر.ي)</div>
           </div>
           <div>
             <div style="font-size:20px;font-weight:900;color:#7c3aed">${totOps}</div>
@@ -1524,7 +1524,7 @@
       <div class="wsec-ta-body">
         <div class="wsec-ta-title">${m.label}</div>
         <div class="wsec-ta-amount" style="color:${m.color}">
-          ${alert.amount?.toLocaleString('ar-SA') || '—'} ر.س
+          ${alert.amount?.toLocaleString('ar-YE') || '—'} ر.ي
         </div>
         <div class="wsec-ta-meta">
           ${_esc(alert.targetName || '—')} · بواسطة: ${_esc(alert.adminName || '—')}
@@ -1567,7 +1567,7 @@
             <div class="wsec-alert-icon">${m.icon}</div>
             <div class="wsec-alert-body">
               <div class="wsec-alert-title">${m.label}</div>
-              <div class="wsec-alert-amount ${m.cls}">${(a.amount||0).toLocaleString('ar-SA')} ر.س</div>
+              <div class="wsec-alert-amount ${m.cls}">${(a.amount||0).toLocaleString('ar-YE')} ر.ي</div>
               <div class="wsec-alert-meta">${_esc(a.targetName||'—')} · ${_esc(a.adminName||'—')}</div>
               <div class="wsec-alert-meta">${_fmtTs(a.timestamp)}</div>
               ${a.note ? `<div class="wsec-alert-meta" style="color:var(--text)">${_esc(a.note)}</div>` : ''}
@@ -1578,7 +1578,7 @@
 
     panel.innerHTML = `
       <div class="wsec-ap-header">
-        <div class="wsec-ap-title">🔔 تنبيهات المحافظ <span style="font-size:11px;color:var(--text-muted);font-weight:400">(≥${LARGE_AMOUNT_THRESHOLD} ر.س)</span></div>
+        <div class="wsec-ap-title">🔔 تنبيهات المحافظ <span style="font-size:11px;color:var(--text-muted);font-weight:400">(≥${LARGE_AMOUNT_THRESHOLD} ر.ي)</span></div>
         <div class="wsec-ap-actions">
           <button class="wsec-ap-btn" onclick="wsecMarkAllAlerts()">✓ تعليم الكل مقروء</button>
           <button class="wsec-ap-btn" onclick="wsecToggleAlertsPanel()">✕</button>

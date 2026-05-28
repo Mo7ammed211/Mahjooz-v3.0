@@ -260,7 +260,7 @@ function ph29_timeAgo(date) {
   if (diff < 3600) return 'منذ ' + Math.floor(diff / 60) + ' دقيقة';
   if (diff < 86400) return 'منذ ' + Math.floor(diff / 3600) + ' ساعة';
   if (diff < 604800) return 'منذ ' + Math.floor(diff / 86400) + ' يوم';
-  return then.toLocaleDateString('ar-SA');
+  return then.toLocaleDateString('ar-YE');
 }
 
 // ============================================================

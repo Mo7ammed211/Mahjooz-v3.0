@@ -41,7 +41,7 @@
   add('status_cancelled',    'ملغي',                'Cancelled');
   add('status_other',        'أخرى',                'Other');
   add('orders_count',        'عدد الطلبات',         '# of orders');
-  add('revenue_amount',      'الإيرادات (ر)',       'Revenue (SAR)');
+  add('revenue_amount',      'الإيرادات (ر)',       'Revenue (YER)');
   add('total_label',         'الإجمالي',            'Total');
 })();
 
@@ -274,7 +274,7 @@ function ph4_drawCharts() {
     for (let i = days - 1; i >= 0; i--) {
       const d = new Date(now.getTime() - i * 86400000);
       const k = ph4_dayKey(d);
-      labels.push(d.toLocaleDateString('ar-SA', { month: 'short', day: 'numeric' }));
+      labels.push(d.toLocaleDateString('ar-YE', { month: 'short', day: 'numeric' }));
       ordersByDay.push(grouped[k]?.count || 0);
       revenueByDay.push(grouped[k]?.revenue || 0);
     }

@@ -220,7 +220,7 @@ function formatTime(timestamp) {
   if (minutes < 60) return `${minutes}m`;
   if (hours < 24) return `${hours}h`;
   if (days < 7) return `${days}d`;
-  return timestamp.toLocaleDateString('ar-SA');
+  return timestamp.toLocaleDateString('ar-YE');
 }
 
 // ─── Test Notifications ──────────────────────────────────────────

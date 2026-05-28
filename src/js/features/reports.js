@@ -114,7 +114,7 @@ class ReportsManager {
           completionRate: orders.length > 0 ? ((completedOrders / orders.length) * 100).toFixed(0) : 0,
           totalRevenue,
           avgRating,
-          joinDate: vendor.createdAt?.toDate?.().toLocaleDateString('ar-SA') || '-'
+          joinDate: vendor.createdAt?.toDate?.().toLocaleDateString('ar-YE') || '-'
         });
       }
 
@@ -180,7 +180,7 @@ class ReportsManager {
             customerName: customer.displayName || 'مجهول',
             orderCount: orders.length,
             totalSpent,
-            lastOrderDate: new Date(lastOrderDate).toLocaleDateString('ar-SA')
+            lastOrderDate: new Date(lastOrderDate).toLocaleDateString('ar-YE')
           });
         }
       }
@@ -305,7 +305,7 @@ class ReportsManager {
           serviceId: r.serviceId,
           stars: r.stars,
           comment: r.comment?.substring(0, 50) + '...' || '-',
-          date: r.createdAt?.toDate?.().toLocaleDateString('ar-SA') || '-'
+          date: r.createdAt?.toDate?.().toLocaleDateString('ar-YE') || '-'
         }));
 
       return report;
@@ -537,11 +537,11 @@ async function renderOverviewReport() {
         <div class="metric-label">إجمالي الطلبات</div>
       </div>
       <div class="metric-card">
-        <div class="metric-value">${(salesReport.totalRevenue || 0).toLocaleString()} ر.س</div>
+        <div class="metric-value">${(salesReport.totalRevenue || 0).toLocaleString()} ر.ي</div>
         <div class="metric-label">إجمالي الإيرادات</div>
       </div>
       <div class="metric-card">
-        <div class="metric-value">${(salesReport.profit || 0).toLocaleString()} ر.س</div>
+        <div class="metric-value">${(salesReport.profit || 0).toLocaleString()} ر.ي</div>
         <div class="metric-label">الربح</div>
       </div>
       <div class="metric-card">
@@ -567,7 +567,7 @@ async function renderOverviewReport() {
         </div>
         <div class="stat-item">
           <span class="stat-label">متوسط قيمة الطلب:</span>
-          <span class="stat-value">${customerAnalytics.avgOrderValue || 0} ر.س</span>
+          <span class="stat-value">${customerAnalytics.avgOrderValue || 0} ر.ي</span>
         </div>
       </div>
     </div>
@@ -599,7 +599,7 @@ async function renderOverviewReport() {
       <div class="stats-grid">
         <div class="stat-item">
           <span class="stat-label">إجمالي الأرصدة:</span>
-          <span class="stat-value">${(walletReport.totalBalances || 0).toLocaleString()} ر.س</span>
+          <span class="stat-value">${(walletReport.totalBalances || 0).toLocaleString()} ر.ي</span>
         </div>
         <div class="stat-item">
           <span class="stat-label">المحافظ النشطة:</span>
@@ -607,11 +607,11 @@ async function renderOverviewReport() {
         </div>
         <div class="stat-item">
           <span class="stat-label">إجمالي الائتمانات:</span>
-          <span class="stat-value">${(walletReport.totalCredits || 0).toLocaleString()} ر.س</span>
+          <span class="stat-value">${(walletReport.totalCredits || 0).toLocaleString()} ر.ي</span>
         </div>
         <div class="stat-item">
           <span class="stat-label">إجمالي الخصومات:</span>
-          <span class="stat-value">${(walletReport.totalDebits || 0).toLocaleString()} ر.س</span>
+          <span class="stat-value">${(walletReport.totalDebits || 0).toLocaleString()} ر.ي</span>
         </div>
       </div>
     </div>
@@ -643,15 +643,15 @@ async function renderSalesReport() {
         </tr>
         <tr>
           <td>إجمالي الإيرادات:</td>
-          <td><strong>${(salesReport.totalRevenue || 0).toLocaleString()} ر.س</strong></td>
+          <td><strong>${(salesReport.totalRevenue || 0).toLocaleString()} ر.ي</strong></td>
         </tr>
         <tr>
           <td>إجمالي التكاليف:</td>
-          <td><strong>${(salesReport.totalCost || 0).toLocaleString()} ر.س</strong></td>
+          <td><strong>${(salesReport.totalCost || 0).toLocaleString()} ر.ي</strong></td>
         </tr>
         <tr>
           <td>الربح الصافي:</td>
-          <td><strong>${(salesReport.profit || 0).toLocaleString()} ر.س</strong></td>
+          <td><strong>${(salesReport.profit || 0).toLocaleString()} ر.ي</strong></td>
         </tr>
         <tr>
           <td>هامش الربح:</td>
@@ -676,7 +676,7 @@ async function renderSalesReport() {
           <tr>
             <td>${cat.categoryName}</td>
             <td>${cat.orderCount}</td>
-            <td>${(cat.totalRevenue || 0).toLocaleString()} ر.س</td>
+            <td>${(cat.totalRevenue || 0).toLocaleString()} ر.ي</td>
             <td>⭐ ${cat.avgRating || 0}</td>
           </tr>
           `).join('')}
@@ -720,7 +720,7 @@ async function renderVendorsReport() {
           <td>${vendor.completedOrders}</td>
           <td>${vendor.cancelledOrders}</td>
           <td>${vendor.completionRate}%</td>
-          <td>${(vendor.totalRevenue || 0).toLocaleString()} ر.س</td>
+          <td>${(vendor.totalRevenue || 0).toLocaleString()} ر.ي</td>
           <td>⭐ ${vendor.avgRating || 0}</td>
           <td>${vendor.joinDate}</td>
         </tr>
@@ -762,11 +762,11 @@ async function renderCustomersReport() {
         </tr>
         <tr>
           <td>إجمالي المصاريف:</td>
-          <td><strong>${(customerAnalytics.totalSpent || 0).toLocaleString()} ر.س</strong></td>
+          <td><strong>${(customerAnalytics.totalSpent || 0).toLocaleString()} ر.ي</strong></td>
         </tr>
         <tr>
           <td>متوسط قيمة الطلب:</td>
-          <td><strong>${customerAnalytics.avgOrderValue || 0} ر.س</strong></td>
+          <td><strong>${customerAnalytics.avgOrderValue || 0} ر.ي</strong></td>
         </tr>
       </table>
     </div>
@@ -796,7 +796,7 @@ async function renderCustomersReport() {
           <tr>
             <td>${customer.customerName}</td>
             <td>${customer.orderCount}</td>
-            <td>${(customer.totalSpent || 0).toLocaleString()} ر.س</td>
+            <td>${(customer.totalSpent || 0).toLocaleString()} ر.ي</td>
             <td>${customer.lastOrderDate}</td>
           </tr>
           `).join('')}

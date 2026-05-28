@@ -36,8 +36,8 @@
   add('notifications', 'الإشعارات', 'Notifications');
   add('no_notifications', 'لا توجد إشعارات', 'No notifications');
   add('mark_all_read', 'تعليم الكل كمقروء', 'Mark all read');
-  add('amount_to_credit', 'مبلغ الإضافة (ريال)', 'Amount to credit (SAR)');
-  add('amount_to_debit', 'مبلغ الخصم (ريال)', 'Amount to debit (SAR)');
+  add('amount_to_credit', 'مبلغ الإضافة (ريال)', 'Amount to credit (YER)');
+  add('amount_to_debit', 'مبلغ الخصم (ريال)', 'Amount to debit (YER)');
   add('reason', 'السبب', 'Reason');
   if (typeof applyLang === 'function') applyLang();
 })();

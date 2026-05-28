@@ -281,7 +281,7 @@ window.ph43_routeToNextVendor = async function(orderId, rejectedItems) {
     const nextVendorId = o.vendorPool[nextIdx];
     const nextVendor = AppData.users.find(u => u.id === nextVendorId);
     
-    // Add 10 SAR for each additional location
+    // Add 10 YER for each additional location
     const newExtraFee = (o.additionalDeliveryFee || 0) + 10;
     const newLocationCount = (o.locationCount || 1) + 1;
 

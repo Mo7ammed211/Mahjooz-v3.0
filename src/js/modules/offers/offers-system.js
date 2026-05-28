@@ -60,9 +60,9 @@ window.ph_offersRenderPage = function () {
         <div style="font-size:15px;font-weight:800;color:var(--text-main);margin-bottom:5px;line-height:1.4">${escHtml(offer.title)}</div>
         ${offer.desc ? `<div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${escHtml(offer.desc)}</div>` : ''}
         <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:14px;flex-wrap:wrap">
-          <div style="font-size:22px;font-weight:900;color:#10b981">${(offer.discountedPrice || 0).toLocaleString('ar-SA')} <span style="font-size:12px;font-weight:600">ريال</span></div>
-          ${offer.originalPrice ? `<div style="font-size:13px;color:var(--text-muted);text-decoration:line-through">${offer.originalPrice.toLocaleString('ar-SA')} ريال</div>` : ''}
-          ${offer.originalPrice && offer.discountedPrice ? `<div style="font-size:12px;font-weight:700;color:#ef4444;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:6px;padding:2px 7px">وفّر ${(offer.originalPrice - offer.discountedPrice).toLocaleString('ar-SA')} ريال</div>` : ''}
+          <div style="font-size:22px;font-weight:900;color:#10b981">${(offer.discountedPrice || 0).toLocaleString('ar-YE')} <span style="font-size:12px;font-weight:600">ريال</span></div>
+          ${offer.originalPrice ? `<div style="font-size:13px;color:var(--text-muted);text-decoration:line-through">${offer.originalPrice.toLocaleString('ar-YE')} ريال</div>` : ''}
+          ${offer.originalPrice && offer.discountedPrice ? `<div style="font-size:12px;font-weight:700;color:#ef4444;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:6px;padding:2px 7px">وفّر ${(offer.originalPrice - offer.discountedPrice).toLocaleString('ar-YE')} ريال</div>` : ''}
         </div>
         <button class="btn btn-primary" style="width:100%;border-radius:12px;font-weight:700;font-size:14px" onclick="ph_offerAction('${offer.id}','${offer.sourceType || ''}','${offer.sourceId || ''}','${offer.sourceSection || ''}')">
           🛒 اطلب الآن بالسعر المخفض
@@ -85,7 +85,7 @@ window.ph_offersRenderPage = function () {
       <div style="font-size:52px;margin-bottom:10px">🏷️</div>
       <h1 style="font-size:34px;font-weight:900;margin-bottom:8px;background:linear-gradient(135deg,#ef4444,#f59e0b,#8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent">العروض والخصومات</h1>
       <p style="color:var(--text-secondary);font-size:15px;max-width:480px;margin:0 auto">أفضل العروض من الحجوزات والخدمات المهنية والمتاجر في مكان واحد</p>
-      ${totalSavings > 0 ? `<div style="display:inline-flex;align-items:center;gap:8px;margin-top:14px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);border-radius:99px;padding:7px 18px;color:#10b981;font-weight:700;font-size:13px">💰 وفّر حتى ${totalSavings.toLocaleString('ar-SA')} ريال على العروض المتاحة</div>` : ''}
+      ${totalSavings > 0 ? `<div style="display:inline-flex;align-items:center;gap:8px;margin-top:14px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);border-radius:99px;padding:7px 18px;color:#10b981;font-weight:700;font-size:13px">💰 وفّر حتى ${totalSavings.toLocaleString('ar-YE')} ريال على العروض المتاحة</div>` : ''}
     </div>
 
     <div style="padding:18px;display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
@@ -156,14 +156,14 @@ window.renderAdminOffers = function () {
       <td>
         <div style="font-weight:900;color:#ef4444;font-size:16px">-${discount}%</div>
         <div style="font-size:11px;color:var(--text-muted)">
-          ${(offer.discountedPrice || 0).toLocaleString('ar-SA')} بدلاً من ${(offer.originalPrice || 0).toLocaleString('ar-SA')}
+          ${(offer.discountedPrice || 0).toLocaleString('ar-YE')} بدلاً من ${(offer.originalPrice || 0).toLocaleString('ar-YE')}
         </div>
       </td>
       <td>
         ${expired
           ? '<span class="badge badge-rose">منتهية ⚠️</span>'
           : expiresAt
-            ? `<span class="badge badge-gold">${daysLeft === 0 ? 'آخر يوم' : daysLeft + ' يوم'}</span><div style="font-size:10px;color:var(--text-muted);margin-top:2px">${expiresAt.toLocaleDateString('ar-SA')}</div>`
+            ? `<span class="badge badge-gold">${daysLeft === 0 ? 'آخر يوم' : daysLeft + ' يوم'}</span><div style="font-size:10px;color:var(--text-muted);margin-top:2px">${expiresAt.toLocaleDateString('ar-YE')}</div>`
             : '<span class="badge badge-teal">دائمة ♾️</span>'}
       </td>
       <td>

@@ -523,7 +523,7 @@ function getStatusLabel(status) {
 function formatDate(timestamp) {
   if (!timestamp) return '-';
   const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-  return date.toLocaleDateString('ar-SA');
+  return date.toLocaleDateString('ar-YE');
 }
 
 function updateTabButtons(activeTab) {

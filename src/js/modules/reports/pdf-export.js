@@ -87,8 +87,8 @@ function ph6_fmtMoney(n) {
 function ph6_fmtDate(d) {
   if (!d) return '—';
   const dd = ph6_toDate(d) || new Date();
-  return dd.toLocaleDateString('ar-SA', { year:'numeric', month:'2-digit', day:'2-digit' }) +
-         ' ' + dd.toLocaleTimeString('ar-SA', { hour:'2-digit', minute:'2-digit' });
+  return dd.toLocaleDateString('ar-YE', { year:'numeric', month:'2-digit', day:'2-digit' }) +
+         ' ' + dd.toLocaleTimeString('ar-YE', { hour:'2-digit', minute:'2-digit' });
 }
 function ph6_dayKey(d) {
   const dd = d instanceof Date ? d : (ph6_toDate(d) || new Date());

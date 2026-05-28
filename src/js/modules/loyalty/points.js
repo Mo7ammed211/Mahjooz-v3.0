@@ -208,7 +208,7 @@ window.ph31_renderHistory = function(user) {
         <div class="ph31-history-item" style="display:flex;justify-content:space-between;align-items:center;padding:12px;border-bottom:1px solid var(--border)">
           <div>
             <div style="font-weight:600">${h.reason}</div>
-            <div style="font-size:12px;color:var(--text-muted)">${new Date(h.date).toLocaleDateString('ar-SA')}</div>
+            <div style="font-size:12px;color:var(--text-muted)">${new Date(h.date).toLocaleDateString('ar-YE')}</div>
           </div>
           <div style="font-size:18px;font-weight:700;color:${h.type === 'earn' ? '#10b981' : '#ef4444'}">
             ${h.type === 'earn' ? '+' : '-'}${Math.abs(h.amount)}

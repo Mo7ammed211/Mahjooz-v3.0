@@ -626,7 +626,7 @@ function _renderSysServices(section, catId, titles, secIcons) {
 
   const cards = filtered.map(s => {
     const isActive = s.status === 'active' || !s.status;
-    const priceLabel = s.price ? `${Number(s.price).toLocaleString('ar-SA')} ريال` : (section==='professions' ? 'بعد المعاينة' : '—');
+    const priceLabel = s.price ? `${Number(s.price).toLocaleString('ar-YE')} ريال` : (section==='professions' ? 'بعد المعاينة' : '—');
     return `
     <div class="usys-svc-card">
       <div class="usys-svc-card-top">
@@ -1220,7 +1220,7 @@ window.ph_offerFieldsCalc = function () {
     const preview = document.getElementById('offer-price-preview');
     if (preview) {
       preview.style.display = 'block';
-      preview.textContent = `💰 السعر الأصلي: ${price.toLocaleString('ar-SA')} ريال  →  السعر بعد الخصم: ${discounted.toLocaleString('ar-SA')} ريال  (وفّر ${(price - discounted).toLocaleString('ar-SA')} ريال)`;
+      preview.textContent = `💰 السعر الأصلي: ${price.toLocaleString('ar-YE')} ريال  →  السعر بعد الخصم: ${discounted.toLocaleString('ar-YE')} ريال  (وفّر ${(price - discounted).toLocaleString('ar-YE')} ريال)`;
     }
   }
 };

@@ -247,7 +247,7 @@ window.renderStaffOrders = function () {
     const cat = (AppData.cats || []).find(c => c.id === o.catId);
     const sc  = statusColor[o.status] || '#8b5cf6';
     const sl  = statusLabel[o.status] || o.status;
-    const dt  = o.createdAt ? (o.createdAt.toDate ? o.createdAt.toDate() : new Date(o.createdAt)).toLocaleDateString('ar-SA') : '—';
+    const dt  = o.createdAt ? (o.createdAt.toDate ? o.createdAt.toDate() : new Date(o.createdAt)).toLocaleDateString('ar-YE') : '—';
     return `
     <tr>
       <td>
@@ -259,7 +259,7 @@ window.renderStaffOrders = function () {
         <div style="font-size:11px;color:var(--text-muted)">${escHtml(cat?.name || '—')}</div>
       </td>
       <td><span style="background:${sc}22;color:${sc};border:1px solid ${sc}44;border-radius:99px;padding:3px 10px;font-size:12px;font-weight:700">${sl}</span></td>
-      <td style="font-weight:700;color:var(--primary)">${(o.totalPrice || o.price || 0).toLocaleString('ar-SA')} ر.س</td>
+      <td style="font-weight:700;color:var(--primary)">${(o.totalPrice || o.price || 0).toLocaleString('ar-YE')} ر.ي</td>
       <td>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
           ${['pending','pending_admin'].includes(o.status) ? `

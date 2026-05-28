@@ -192,12 +192,12 @@ window.closeModal = closeModal;
 function fmtDate(ts) {
   if (!ts) return '—';
   const d = ts.toDate ? ts.toDate() : new Date(ts);
-  return d.toLocaleDateString('ar-SA');
+  return d.toLocaleDateString('ar-YE');
 }
 function fmtDateTime(ts) {
   if (!ts) return '—';
   const d = ts.toDate ? ts.toDate() : new Date(ts);
-  return d.toLocaleString('ar-SA');
+  return d.toLocaleString('ar-YE');
 }
 function stars(n) {
   return '⭐'.repeat(n) + '☆'.repeat(5 - n);
@@ -326,7 +326,7 @@ async function refreshWalletBalanceUI() {
     try {
       State.walletBalance = await getBalance(State.currentUser.uid);
       document.querySelectorAll('.nav-wallet-balance-disp').forEach(el => {
-        el.innerHTML = `${(State.walletBalance||0).toLocaleString('ar-SA')} <span style="font-size:12px; font-weight:600; color: rgba(255,255,255,0.9);">ريال</span>`;
+        el.innerHTML = `${(State.walletBalance||0).toLocaleString('ar-YE')} <span style="font-size:12px; font-weight:600; color: rgba(255,255,255,0.9);">ريال</span>`;
       });
     } catch(e) {}
   }
@@ -407,7 +407,7 @@ function _navItemsForRole(u) {
     const items = [{ page: 'home', icon: '🏠', label: 'الرئيسية' }];
     if (u.role === 'customer') {
       items.push({ page: 'myorders', icon: '📋', label: 'طلباتي' });
-      const balStr = State.walletBalance !== undefined ? `${(State.walletBalance||0).toLocaleString('ar-SA')} <span style="font-size:12px; font-weight:600; color: rgba(255,255,255,0.9);">ريال</span>` : '...';
+      const balStr = State.walletBalance !== undefined ? `${(State.walletBalance||0).toLocaleString('ar-YE')} <span style="font-size:12px; font-weight:600; color: rgba(255,255,255,0.9);">ريال</span>` : '...';
       const balPill = `<span class="nav-wallet-balance-disp" style="display:inline-flex; align-items:baseline; gap:4px; margin-inline-start:8px; font-weight:800; color:#ffffff; background:linear-gradient(135deg, #10b981, #059669); padding:4px 12px; border-radius:24px; font-size:15px; box-shadow:0 4px 12px rgba(16,185,129,0.3); border:1px solid rgba(255,255,255,0.2); transition:var(--transition); letter-spacing:0.5px;">${balStr}</span>`;
       items.push({ page: 'wallet',   icon: '💰', label: `محفظتي ${balPill}` });
     }
@@ -1505,7 +1505,7 @@ async function _checkNewDeviceLogin(uid, email, name) {
     const location  = [city, country].filter(Boolean).join('، ') || 'غير محدد';
     const ip        = ipInfo?.ip || 'غير معروف';
     const { device, browser, os } = _getDeviceName();
-    const timeStr   = new Date().toLocaleString('ar-SA', { dateStyle:'full', timeStyle:'short' });
+    const timeStr   = new Date().toLocaleString('ar-YE', { dateStyle:'full', timeStyle:'short' });
 
     // حفظ بصمة الجهاز الحالي
     localStorage.setItem(storeKey, deviceId);

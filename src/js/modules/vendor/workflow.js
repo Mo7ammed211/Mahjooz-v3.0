@@ -43,7 +43,7 @@ window.ph21_updateFinalPrice = function() {
   if (!priceEl || !commEl || !taxEl || !dispEl) return;
   const fp = calcFinalPrice(priceEl.value, commEl.value, taxEl.value);
   if (fp > 0) {
-    dispEl.textContent = fp.toLocaleString('ar-SA') + ' ريال';
+    dispEl.textContent = fp.toLocaleString('ar-YE') + ' ريال';
     if (prevEl) prevEl.style.display = 'block';
   } else {
     dispEl.textContent = '—';
@@ -101,7 +101,7 @@ window.bookService = function(svcId) {
       <div style="font-size:28px;margin-bottom:8px">${svc.icon||'🔷'}</div>
       <div style="font-size:18px;font-weight:800">${svc.name}</div>
       <div style="color:var(--text-muted);font-size:13px;margin-top:4px">${isProfession ? '👤 صاحب المهنة:' : '👤 مزود الخدمة:'} ${svc.providerName||svc.provider||'—'}</div>
-      <div style="font-size:26px;font-weight:800;margin-top:12px;color:#10b981">${isProfession ? 'السعر بعد المعاينة' : (dispPrice ? dispPrice.toLocaleString('ar-SA')+' ريال' : 'السعر عند التواصل')}</div>
+      <div style="font-size:26px;font-weight:800;margin-top:12px;color:#10b981">${isProfession ? 'السعر بعد المعاينة' : (dispPrice ? dispPrice.toLocaleString('ar-YE')+' ريال' : 'السعر عند التواصل')}</div>
     </div>
     ${issuesHtml}
     <div class="form-group"><label class="form-label">📅 التاريخ المطلوب</label><input class="form-control" id="bk-date" type="date" min="${new Date().toISOString().split('T')[0]}"></div>
@@ -169,7 +169,7 @@ window.renderProviderDashboard = function() {
         <td>${o.svcName||'—'}</td>
         <td>${o.userName||'—'}</td>
         <td>${o.date||'—'}</td>
-        <td style="font-weight:700;color:#10b981">${o.finalPrice ? o.finalPrice.toLocaleString('ar-SA')+' ريال' : '—'}</td>
+        <td style="font-weight:700;color:#10b981">${o.finalPrice ? o.finalPrice.toLocaleString('ar-YE')+' ريال' : '—'}</td>
         <td><span class="badge ${statusBadge[o.status]||'badge-purple'}">${statusLabel[o.status]||o.status}</span></td>
         <td>${o.status==='pending_provider'
           ? (o.type === 'store_order' || (o.items && o.items.length > 0)
@@ -185,8 +185,8 @@ window.renderProviderDashboard = function() {
       <thead><tr><th>الخدمة</th><th>السعر الأساسي</th><th>السعر النهائي</th><th>الحالة</th></tr></thead>
       <tbody>${mySvcs.map(s => `<tr>
         <td>${s.name}</td>
-        <td>${s.price ? s.price.toLocaleString('ar-SA')+' ريال' : '—'}</td>
-        <td style="font-weight:700;color:#10b981">${s.finalPrice ? s.finalPrice.toLocaleString('ar-SA')+' ريال' : '—'}</td>
+        <td>${s.price ? s.price.toLocaleString('ar-YE')+' ريال' : '—'}</td>
+        <td style="font-weight:700;color:#10b981">${s.finalPrice ? s.finalPrice.toLocaleString('ar-YE')+' ريال' : '—'}</td>
         <td><span class="badge badge-teal">✅ نشط</span></td>
       </tr>`).join('')}</tbody>
     </table></div>` : '<div class="empty-state"><div class="empty-icon">🛎️</div><div class="empty-title">لا توجد خدمات نشطة مرتبطة بك حالياً</div></div>'}
@@ -203,7 +203,7 @@ window.renderProviderDashboard = function() {
           <td><span style="font-weight:700">${escHtml(p.name)}</span></td>
           <td><span class="badge badge-purple">${sectionNames[p.sectionId] || p.sectionId}</span></td>
           <td>${cat ? escHtml(cat.name) : '—'}</td>
-          <td style="font-weight:700;color:#10b981">${p.price ? p.price.toLocaleString('ar-SA')+' ريال' : '—'}</td>
+          <td style="font-weight:700;color:#10b981">${p.price ? p.price.toLocaleString('ar-YE')+' ريال' : '—'}</td>
           <td><span class="badge ${statusBadge[p.status] || 'badge-gold'}">${statusLabel[p.status] || p.status}</span></td>
           <td style="color:var(--text-secondary);" title="${escHtml(p.rejectionReason || '')}">${escHtml(p.rejectionReason || '—')}</td>
         </tr>`;
@@ -678,7 +678,7 @@ window.renderAdminOrders = function() {
                   </td>
                   <td>
                     <div style="font-weight:800;color:#10b981;font-size:13px;white-space:nowrap">
-                      ${o.finalPrice ? o.finalPrice.toLocaleString('ar-SA') + ' ريال' : (o.total ? o.total.toLocaleString('ar-SA') + ' ريال' : '—')}
+                      ${o.finalPrice ? o.finalPrice.toLocaleString('ar-YE') + ' ريال' : (o.total ? o.total.toLocaleString('ar-YE') + ' ريال' : '—')}
                     </div>
                     <div style="font-size:10px;color:var(--text-secondary);margin-top:2px;white-space:nowrap">
                       ${o.paymentMethod === 'wallet' ? 'المحفظة' : o.paymentMethod === 'cod' ? 'عند الاستلام' : o.paymentMethod || '—'}
@@ -742,7 +742,7 @@ window.renderAdminPendingSvcs = function() {
       <tbody>${svcs.map(s => `<tr>
         <td>${s.name}</td>
         <td>${s.providerName||'—'}</td>
-        <td>${s.price ? s.price.toLocaleString('ar-SA')+' ريال' : '—'}</td>
+        <td>${s.price ? s.price.toLocaleString('ar-YE')+' ريال' : '—'}</td>
         <td>
           <button class="btn btn-sm btn-success" onclick="ph21_approveProviderSvc('${s.id}')">✅ قبول</button>
           <button class="btn btn-sm btn-danger" onclick="ph21_rejectProviderSvc('${s.id}')" style="margin-top:4px">❌ رفض</button>

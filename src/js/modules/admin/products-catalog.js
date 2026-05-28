@@ -1884,7 +1884,7 @@ window.ph46_showProvidersMappingModal = function(itemId, _searchQ) {
             ${p.phone ? ` · 📞 ${escHtml(p.phone)}` : ''}
             · 📍 ${addrCount} ${addrCount === 1 ? 'عنوان' : 'عناوين'}
           </div>
-          ${isLinked && linkDetail?.customPrice ? `<div style="font-size:11px;color:#10b981;margin-top:2px">💰 سعر مخصص: ${linkDetail.customPrice} ر.س</div>` : ''}
+          ${isLinked && linkDetail?.customPrice ? `<div style="font-size:11px;color:#10b981;margin-top:2px">💰 سعر مخصص: ${linkDetail.customPrice} ر.ي</div>` : ''}
         </div>
       </div>
       <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">

@@ -1,6 +1,6 @@
 /* phase17.js — Major upgrades:
    1) Remove "خدمة العملاء" (cs) role; merge all permissions/data into "موظف" (staff).
-   2) Multi-currency price popup (YER base, SAR/USD with rates) shown at purchase time
+   2) Multi-currency price popup (YER base, YER/USD with rates) shown at purchase time
       with admin-editable rates. NOT shown in navbar.
    3) Permission delegation — admin can grant any admin permission to any user
       (including customers); permissions list expanded.
@@ -26,7 +26,7 @@
     loyaltyEnabled: true,
     currencies: [
       { code: 'YER', name: 'ريال يمني',   nameEn: 'Yemeni Rial',  rate: 1,    base: true,  symbol: '﷼ يمني' },
-      { code: 'SAR', name: 'ريال سعودي',  nameEn: 'Saudi Riyal',  rate: 406,  base: false, symbol: '﷼ سعودي' },
+      { code: 'YER', name: 'ريال سعودي',  nameEn: 'Saudi Riyal',  rate: 406,  base: false, symbol: '﷼ سعودي' },
       { code: 'USD', name: 'دولار أمريكي', nameEn: 'US Dollar',    rate: 1589, base: false, symbol: '$' }
     ]
   };

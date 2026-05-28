@@ -179,7 +179,7 @@ function renderListing() {
             <span style="font-size:10px;font-weight:600;background:${color}18;color:${color};border-radius:4px;padding:2px 7px">${labels[type]}</span>
           </div>
           ${item.desc ? `<div style="font-size:13px;color:var(--text-muted);margin-bottom:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(item.desc)}</div>` : ''}
-          <div style="font-size:13px;font-weight:700;color:${color}">${item.price ? item.price.toLocaleString('ar-SA') + ' ريال' : 'السعر عند التواصل'}</div>
+          <div style="font-size:13px;font-weight:700;color:${color}">${item.price ? item.price.toLocaleString('ar-YE') + ' ريال' : 'السعر عند التواصل'}</div>
         </div>
       </div>`;
     };
@@ -401,7 +401,7 @@ async function bookService(svcId) {
       <div style="flex:1">
         <div style="font-size:17px;font-weight:700">${s.name}</div>
         <!-- Provider hidden -->
-        ${showPrice ? `<div style="font-size:20px;font-weight:800;margin-top:6px;color:var(--primary)">${s.price.toLocaleString('ar-SA')} ريال</div>` : ''}
+        ${showPrice ? `<div style="font-size:20px;font-weight:800;margin-top:6px;color:var(--primary)">${s.price.toLocaleString('ar-YE')} ريال</div>` : ''}
 
       </div>
     </div>
@@ -686,7 +686,7 @@ function renderMyWallet() {
   const myReqs = AppData.rechargeReqs.filter(r=>r.userId===u.uid);
   const pendingReq = myReqs.find(r=>r.status==='pending');
 
-  // Multi-currency conversions (YER base → SAR / USD).
+  // Multi-currency conversions (YER base → YER / USD).
   let currencyChips = '';
   try {
     if (typeof ph17_settings === 'function' && typeof ph17_convert === 'function') {
@@ -702,12 +702,12 @@ function renderMyWallet() {
 
   return `<div id="app-content">
     <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
-      <h1>💰 محفظتي — ${bal.toLocaleString('ar-SA')} ريال</h1>
+      <h1>💰 محفظتي — ${bal.toLocaleString('ar-YE')} ريال</h1>
       <button class="btn btn-secondary btn-sm" onclick="ph6_generateStatement && ph6_generateStatement(State.currentUser.uid||State.currentUser.id, 90)">📄 تحميل كشف PDF</button>
     </div>
     <div class="wallet-card">
       <div class="wallet-label">رصيدك الحالي</div>
-      <div class="wallet-balance">${bal.toLocaleString('ar-SA')} <span style="font-size:18px">ريال</span></div>
+      <div class="wallet-balance">${bal.toLocaleString('ar-YE')} <span style="font-size:18px">ريال</span></div>
       ${currencyChips ? `<div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;justify-content:center">${currencyChips}</div>` : ''}
       ${pendingReq ? `<div style="margin-top:12px"><span class="badge badge-gold">⏳ يوجد طلب شحن قيد المراجعة (${pendingReq.amount} ريال)</span></div>` : ''}
       <button class="btn btn-primary" style="margin-top:20px" onclick="showRechargeModal()" ${pendingReq?'disabled':''}>

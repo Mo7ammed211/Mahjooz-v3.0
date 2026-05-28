@@ -170,7 +170,7 @@ function ph43_renderCartBody() {
           : `<div style="width:52px;height:52px;border-radius:12px;background:var(--bg-secondary);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0">📦</div>`}
         <div style="flex:1;min-width:0">
           <div style="font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(item.name)}</div>
-          <div style="color:var(--primary);font-weight:700;font-size:13px;margin-top:3px">${(item.price * item.qty).toLocaleString('ar-SA')} ريال</div>
+          <div style="color:var(--primary);font-weight:700;font-size:13px;margin-top:3px">${(item.price * item.qty).toLocaleString('ar-YE')} ريال</div>
         </div>
         <div style="display:flex;align-items:center;gap:6px">
           <button onclick="ph43_changeQty('${item.productId}',-1)" style="width:30px;height:30px;border-radius:50%;border:1.5px solid var(--glass-border);background:var(--bg-card);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--text-main)">−</button>
@@ -184,7 +184,7 @@ function ph43_renderCartBody() {
   <div style="background:linear-gradient(135deg,rgba(139,92,246,0.06),rgba(139,92,246,0.02));border-radius:16px;border:1px solid var(--glass-border);padding:16px">
     <div style="display:flex;justify-content:space-between;margin-bottom:8px">
       <span style="color:var(--text-secondary)">المجموع الفرعي</span>
-      <span style="font-weight:700">${ph43_cartTotal().toLocaleString('ar-SA')} ريال</span>
+      <span style="font-weight:700">${ph43_cartTotal().toLocaleString('ar-YE')} ريال</span>
     </div>
     <div style="display:flex;justify-content:space-between;margin-bottom:10px">
       <span style="color:var(--text-secondary)">رسوم التوصيل</span>
@@ -193,7 +193,7 @@ function ph43_renderCartBody() {
     <div style="height:1px;background:var(--glass-border)"></div>
     <div style="display:flex;justify-content:space-between;margin-top:10px">
       <span style="font-weight:800;font-size:17px">المجموع الفرعي</span>
-      <span style="font-weight:800;font-size:22px;background:var(--gradient-main);-webkit-background-clip:text;-webkit-text-fill-color:transparent">${ph43_cartTotal().toLocaleString('ar-SA')} ريال</span>
+      <span style="font-weight:800;font-size:22px;background:var(--gradient-main);-webkit-background-clip:text;-webkit-text-fill-color:transparent">${ph43_cartTotal().toLocaleString('ar-YE')} ريال</span>
     </div>
   </div>`;
 
@@ -230,7 +230,7 @@ window.ph43_proceedCheckout = async function () {
       <div style="font-size:36px">🛍️</div>
       <div>
         <div style="font-size:13px;color:var(--text-muted)">${cart.reduce((s,i)=>s+i.qty,0)} منتج من ${[...new Set(cart.map(i=>i.storeName))].length} متجر</div>
-        <div style="font-weight:800;font-size:24px;color:var(--primary)">${ph43_cartTotal().toLocaleString('ar-SA')} ريال</div>
+        <div style="font-weight:800;font-size:24px;color:var(--primary)">${ph43_cartTotal().toLocaleString('ar-YE')} ريال</div>
         <div style="font-size:12px;color:var(--text-muted);margin-top:2px">+ رسوم التوصيل تُحسب بعد إدخال العنوان</div>
       </div>
     </div>
@@ -586,7 +586,7 @@ window.ph43_renderStorePage = function () {
         
         ${cartCount > 0 ? `
         <button class="ph43-cart-hero-btn" onclick="ph43_showCart()" style="position:absolute; left:20px; top:20px;">
-          🛒 <strong>${cartCount}</strong> | ${(ph43_cartTotal()+15).toLocaleString('ar-SA')} ريال
+          🛒 <strong>${cartCount}</strong> | ${(ph43_cartTotal()+15).toLocaleString('ar-YE')} ريال
         </button>` : ''}
       </div>
     </div>
@@ -595,7 +595,7 @@ window.ph43_renderStorePage = function () {
     ${cartCount > 0 ? `
     <div class="ph43-sticky-cart" onclick="ph43_showCart()">
       <span>🛒 <strong>${cartCount}</strong> منتج في السلة</span>
-      <span style="font-weight:800">${(ph43_cartTotal() + 15).toLocaleString('ar-SA')} ريال ←</span>
+      <span style="font-weight:800">${(ph43_cartTotal() + 15).toLocaleString('ar-YE')} ريال ←</span>
     </div>` : ''}
 
     <!-- Store Body -->
@@ -652,9 +652,9 @@ function ph43_renderProductCard(p, storeId, u) {
   let priceHtml = '';
   if (hasTiers) {
     const minPrice = Math.min(...p.tiers.map(t => t.price || 0));
-    priceHtml = `<span style="font-size:11px;font-weight:600;color:var(--text-muted)">يبدأ من </span>${minPrice.toLocaleString('ar-SA')} <span style="font-size:11px;font-weight:600;color:var(--text-muted)">ريال</span>`;
+    priceHtml = `<span style="font-size:11px;font-weight:600;color:var(--text-muted)">يبدأ من </span>${minPrice.toLocaleString('ar-YE')} <span style="font-size:11px;font-weight:600;color:var(--text-muted)">ريال</span>`;
   } else {
-    priceHtml = `${(p.price || 0).toLocaleString('ar-SA')} <span style="font-size:11px;font-weight:600;color:var(--text-muted)">ريال</span>`;
+    priceHtml = `${(p.price || 0).toLocaleString('ar-YE')} <span style="font-size:11px;font-weight:600;color:var(--text-muted)">ريال</span>`;
   }
 
   let btnHtml = '';
@@ -726,7 +726,7 @@ window.ph43_showProductDetails = function(pid, storeId) {
     <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(59,130,246,0.05); padding:16px; border-radius:12px; margin-bottom:20px;">
       <div>
         <div style="font-size:13px; color:var(--text-muted)">السعر</div>
-        <div style="font-size:24px; font-weight:800; color:var(--primary)">${(p.price || 0).toLocaleString('ar-SA')} <span style="font-size:14px">ريال</span></div>
+        <div style="font-size:24px; font-weight:800; color:var(--primary)">${(p.price || 0).toLocaleString('ar-YE')} <span style="font-size:14px">ريال</span></div>
       </div>
       ${p.unit ? `<div><div style="font-size:13px; color:var(--text-muted)">الوحدة</div><div style="font-size:16px; font-weight:600">${escHtml(p.unit)}</div></div>` : ''}
     </div>`;
@@ -876,7 +876,7 @@ function ph43_renderAdminStoreDetail(storeId) {
                   ${p.unit ? `<div style="font-size:11px;color:var(--text-muted)">${escHtml(p.unit)}</div>` : ''}
                 </td>
                 <td>${cat ? `<span class="badge badge-purple">${cat.icon || '📦'} ${escHtml(cat.name)}</span>` : '<span style="color:var(--text-muted)">—</span>'}</td>
-                <td style="font-weight:700;color:var(--primary)">${(p.price || 0).toLocaleString('ar-SA')} ريال</td>
+                <td style="font-weight:700;color:var(--primary)">${(p.price || 0).toLocaleString('ar-YE')} ريال</td>
                 <td><span class="badge ${p.active !== false ? 'badge-teal' : 'badge-rose'}">${p.active !== false ? '✅ نشط' : '⏸️'}</span></td>
                 <td>
                   <button class="btn btn-sm" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);color:#fff" onclick="ph43_showProductTiersModal('${p.id}','${storeId}')" title="فئات المنتج">🏷️</button>
@@ -1422,7 +1422,7 @@ window.ph43_showProductTiersModal = function (productId, storeId) {
           <span style="font-size:22px">${tier.icon || '🏷️'}</span>
           <div>
             <div class="ph40-tier-name">${escHtml(tier.name)}</div>
-            <div class="ph40-tier-price">${(tier.price || 0).toLocaleString('ar-SA')} ريال</div>
+            <div class="ph40-tier-price">${(tier.price || 0).toLocaleString('ar-YE')} ريال</div>
           </div>
         </div>
         <div style="display:flex;gap:6px;flex-shrink:0">
@@ -1552,7 +1552,7 @@ window.ph43_renderProductTierSelector = function (product) {
                 ${tier.desc ? `<div class="ph40-tc-desc-inline">${escHtml(tier.desc)}</div>` : ''}
               </div>
               <div class="ph40-tc-price-wrap">
-                <div class="ph40-tc-price">${(tier.price || 0).toLocaleString('ar-SA')}</div>
+                <div class="ph40-tc-price">${(tier.price || 0).toLocaleString('ar-YE')}</div>
                 <div class="ph40-tc-currency">ريال</div>
               </div>
               <span class="ph40-tc-check" id="ph43-check-${idx}">${idx === 0 ? '✅' : ''}</span>

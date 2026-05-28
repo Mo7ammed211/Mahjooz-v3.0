@@ -5,7 +5,7 @@
 //    • High cancellation rate last 24h (>30%)
 //    • No orders in last 6 hours during business hours
 //    • Pending recharge requests pile-up (> 5)
-//    • High-value order today (≥ 5,000 SAR)
+//    • High-value order today (≥ 5,000 YER)
 //    • Inactive vendors (no orders in last 7 days)
 //
 //  Each alert:
@@ -23,7 +23,7 @@
   add('all_clear',            'كل شيء على ما يرام ✅',          'All clear ✅');
   add('all_clear_sub',        'لا توجد تنبيهات تحتاج لانتباهك حالياً.', 'No alerts requiring your attention right now.');
   add('alert_revenue_drop_t', 'انخفاض في الإيرادات اليوم',     'Revenue drop today');
-  add('alert_revenue_drop_b', 'إيرادات اليوم {today} ر مقابل {yesterday} ر بالأمس (انخفاض {pct}%).', 'Today\'s revenue {today} SAR vs {yesterday} SAR yesterday (down {pct}%).');
+  add('alert_revenue_drop_b', 'إيرادات اليوم {today} ر مقابل {yesterday} ر بالأمس (انخفاض {pct}%).', 'Today\'s revenue {today} YER vs {yesterday} YER yesterday (down {pct}%).');
   add('alert_cancel_high_t',  'نسبة إلغاء مرتفعة',             'High cancellation rate');
   add('alert_cancel_high_b',  'تم إلغاء {n} من {total} طلب آخر 24 ساعة ({pct}%).', '{n} of {total} orders cancelled in last 24h ({pct}%).');
   add('alert_no_orders_t',    'لا توجد طلبات منذ 6 ساعات',     'No orders for 6+ hours');
@@ -31,7 +31,7 @@
   add('alert_recharges_t',    'طلبات شحن معلقة كثيرة',         'Many pending recharges');
   add('alert_recharges_b',    'يوجد {n} طلب شحن بانتظار الموافقة.', '{n} recharge requests waiting for approval.');
   add('alert_big_order_t',    'طلب بقيمة عالية اليوم',         'High-value order today');
-  add('alert_big_order_b',    'أكبر طلب اليوم بقيمة {amount} ر — {svc}.', 'Largest order today: {amount} SAR — {svc}.');
+  add('alert_big_order_b',    'أكبر طلب اليوم بقيمة {amount} ر — {svc}.', 'Largest order today: {amount} YER — {svc}.');
   add('alert_inactive_t',     'مزودون غير نشطين',              'Inactive vendors');
   add('alert_inactive_b',     '{n} من أصحاب الخدمات بدون طلبات منذ أكثر من 7 أيام.', '{n} vendors with no orders in 7+ days.');
   add('view_orders_btn',      'عرض الطلبات',                   'View orders');

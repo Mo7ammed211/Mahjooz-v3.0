@@ -250,7 +250,7 @@ window.ph30_renderCuponsAdmin = function() {
               <div class="ph30-info">
                 ${c.minOrderValue ? `<div>الحد الأدنى: ${c.minOrderValue} ريال</div>` : ''}
                 <div>الاستخدام: ${c.uses || 0} ${c.maxUses ? '/ ' + c.maxUses : ''}</div>
-                ${c.expiresAt ? `<div>ينتهي: ${new Date(c.expiresAt).toLocaleDateString('ar-SA')}</div>` : ''}
+                ${c.expiresAt ? `<div>ينتهي: ${new Date(c.expiresAt).toLocaleDateString('ar-YE')}</div>` : ''}
               </div>
             </div>
             <div class="ph30-card-actions">

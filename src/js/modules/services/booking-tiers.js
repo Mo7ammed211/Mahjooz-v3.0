@@ -118,7 +118,7 @@ window.ph40_showTiersModal = function (serviceId) {
           <span style="font-size:22px">${tier.icon || '🏷️'}</span>
           <div>
             <div class="ph40-tier-name">${escHtml(tier.name)}</div>
-            <div class="ph40-tier-price">${(tier.price || 0).toLocaleString('ar-SA')} ريال</div>
+            <div class="ph40-tier-price">${(tier.price || 0).toLocaleString('ar-YE')} ريال</div>
             ${tier.vendorId ? `<div style="font-size:11px;color:var(--primary);margin-top:4px">🧑‍🔧 مزود مخصص: ${(vendors.find(v=>v.uid===tier.vendorId||v.id===tier.vendorId)?.name) || 'غير معروف'}</div>` : ''}
           </div>
         </div>
@@ -324,7 +324,7 @@ window.ph40_renderTierSelector = function (svc) {
                 ${tier.desc ? `<div class="ph40-tc-desc-inline">${escHtml(tier.desc)}</div>` : ''}
               </div>
               <div class="ph40-tc-price-wrap">
-                <div class="ph40-tc-price">${(tier.price || 0).toLocaleString('ar-SA')}</div>
+                <div class="ph40-tc-price">${(tier.price || 0).toLocaleString('ar-YE')}</div>
                 <div class="ph40-tc-currency">ريال</div>
               </div>
               <span class="ph40-tc-check" id="ph40-check-${idx}">${idx === 0 ? '✅' : ''}</span>

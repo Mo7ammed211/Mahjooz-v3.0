@@ -10,7 +10,7 @@ function _last7Days() {
   const labels = [], dates = [];
   for (let i = 6; i >= 0; i--) {
     const d = new Date(); d.setDate(d.getDate() - i);
-    labels.push(d.toLocaleDateString('ar-SA', { month: 'short', day: 'numeric' }));
+    labels.push(d.toLocaleDateString('ar-YE', { month: 'short', day: 'numeric' }));
     dates.push(d.toISOString().split('T')[0]);
   }
   return { labels, dates };
@@ -209,19 +209,19 @@ window.renderAdvancedAnalytics = function () {
     <div class="ph42-kpi-grid">
       <div class="ph42-kpi-card" style="--kpi-color:#8b5cf6">
         <div class="ph42-kpi-icon">📋</div>
-        <div class="ph42-kpi-val">${orders.length.toLocaleString('ar-SA')}</div>
+        <div class="ph42-kpi-val">${orders.length.toLocaleString('ar-YE')}</div>
         <div class="ph42-kpi-lbl">إجمالي الطلبات</div>
         <div class="ph42-kpi-sub">${completedPct}% مكتملة</div>
       </div>
       <div class="ph42-kpi-card" style="--kpi-color:#10b981">
         <div class="ph42-kpi-icon">💰</div>
-        <div class="ph42-kpi-val">${totalRevenue.toLocaleString('ar-SA')}</div>
+        <div class="ph42-kpi-val">${totalRevenue.toLocaleString('ar-YE')}</div>
         <div class="ph42-kpi-lbl">إجمالي الإيرادات</div>
         <div class="ph42-kpi-sub">ريال يمني</div>
       </div>
       <div class="ph42-kpi-card" style="--kpi-color:#f59e0b">
         <div class="ph42-kpi-icon">👥</div>
-        <div class="ph42-kpi-val">${customers.toLocaleString('ar-SA')}</div>
+        <div class="ph42-kpi-val">${customers.toLocaleString('ar-YE')}</div>
         <div class="ph42-kpi-lbl">إجمالي العملاء</div>
         <div class="ph42-kpi-sub">${vendors} صاحب خدمة</div>
       </div>

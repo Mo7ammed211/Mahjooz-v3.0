@@ -172,7 +172,7 @@ window.ph_renderAdminRentalStoreDetail = function (storeId) {
                 </td>
                 <td>${cat ? `<span class="badge badge-purple">${cat.icon || '📦'} ${escHtml(cat.name)}</span>` : '<span style="color:var(--text-muted)">—</span>'}</td>
                 <td><span class="badge badge-teal">${vCount} مزود${vCount>1?'ين':''}</span></td>
-                <td style="font-weight:700;color:var(--primary)">${(p.price || 0).toLocaleString('ar-SA')} ريال</td>
+                <td style="font-weight:700;color:var(--primary)">${(p.price || 0).toLocaleString('ar-YE')} ريال</td>
                 <td><span class="badge ${p.active !== false ? 'badge-teal' : 'badge-rose'}">${p.active !== false ? '✅ نشط' : '⏸️'}</span></td>
                 <td>
                   <button class="btn btn-sm btn-secondary" onclick="ph_showEditRentalProductModal('${p.id}', '${storeId}')">✏️</button>
@@ -802,7 +802,7 @@ window.ph_rentalRenderStorePage = function() {
               </div>
             </div>
             <div class="ph43-product-footer" style="padding: 0 12px 12px 12px;">
-              <div class="ph43-product-price">${(p.price||0).toLocaleString('ar-SA')} <span style="font-size:11px;font-weight:600;color:var(--text-muted)">ريال</span></div>
+              <div class="ph43-product-price">${(p.price||0).toLocaleString('ar-YE')} <span style="font-size:11px;font-weight:600;color:var(--text-muted)">ريال</span></div>
               <button class="ph43-add-cart-btn" style="background:var(--primary)" onclick="ph_rentalShowBookingModal('${p.id}', '${storeId}')">📅 احجز الآن</button>
             </div>
           </div>`).join('')}
@@ -842,15 +842,15 @@ window.ph_rentalShowBookingModal = function(productId, storeId) {
       <div style="flex:1">
         <div style="font-size:17px;font-weight:700">${escHtml(p.name)}</div>
         <div style="font-size:13px;color:var(--text-muted);margin-top:2px">متجر: ${escHtml(store.name)}</div>
-        <div style="font-size:20px;font-weight:800;margin-top:6px;color:var(--primary)">${(p.price||0).toLocaleString('ar-SA')} ريال</div>
+        <div style="font-size:20px;font-weight:800;margin-top:6px;color:var(--primary)">${(p.price||0).toLocaleString('ar-YE')} ريال</div>
       </div>
     </div>
     ${store.taxPercent ? `
     <div style="background:var(--bg-secondary); border:1px solid var(--border); border-radius:12px; padding:12px 16px; margin-bottom:20px; font-size:13px;">
-      <div style="display:flex; justify-content:space-between; margin-bottom:4px;"><span style="color:var(--text-secondary)">💵 سعر الإيجار الأساسي:</span><span style="font-weight:700">${(p.price || 0).toLocaleString('ar-SA')} ريال</span></div>
+      <div style="display:flex; justify-content:space-between; margin-bottom:4px;"><span style="color:var(--text-secondary)">💵 سعر الإيجار الأساسي:</span><span style="font-weight:700">${(p.price || 0).toLocaleString('ar-YE')} ريال</span></div>
       <div style="display:flex; justify-content:space-between; margin-bottom:4px;"><span style="color:var(--text-secondary)">📈 نسبة الضريبة:</span><span style="font-weight:700; color:var(--rose)">${store.taxPercent}%</span></div>
-      <div style="display:flex; justify-content:space-between; margin-bottom:4px;"><span style="color:var(--text-secondary)">💸 قيمة الضريبة:</span><span style="font-weight:700; color:var(--rose)">${Math.round((p.price || 0) * store.taxPercent / 100).toLocaleString('ar-SA')} ريال</span></div>
-      <div style="display:flex; justify-content:space-between; border-top:1px solid var(--border); padding-top:6px; margin-top:6px; font-weight:800;"><span style="color:var(--text-main)">💰 الإجمالي شامل الضريبة:</span><span style="color:var(--primary); font-size:15px;">${(p.price + Math.round((p.price || 0) * store.taxPercent / 100)).toLocaleString('ar-SA')} ريال</span></div>
+      <div style="display:flex; justify-content:space-between; margin-bottom:4px;"><span style="color:var(--text-secondary)">💸 قيمة الضريبة:</span><span style="font-weight:700; color:var(--rose)">${Math.round((p.price || 0) * store.taxPercent / 100).toLocaleString('ar-YE')} ريال</span></div>
+      <div style="display:flex; justify-content:space-between; border-top:1px solid var(--border); padding-top:6px; margin-top:6px; font-weight:800;"><span style="color:var(--text-main)">💰 الإجمالي شامل الضريبة:</span><span style="color:var(--primary); font-size:15px;">${(p.price + Math.round((p.price || 0) * store.taxPercent / 100)).toLocaleString('ar-YE')} ريال</span></div>
     </div>
     ` : ''}
 
