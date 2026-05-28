@@ -2,8 +2,8 @@
    Driver Assignment — تعيين المندوب على الطلب
    ------------------------------------------------------------
    adminAssignDriver(orderId)  — يفتح مودال اختيار المندوب
-   يُحدّث orders بـ { driverId, driverName }
-   ويُرسل إشعاراً فورياً للمندوب عبر driver_messages
+   المندوبون مرتبون حسب قربهم من موقع مزود الخدمة (لا العميل)
+   حتى يستلم المندوب الأقرب الطلب من المزود ويوصله للعميل أسرع
    ============================================================ */
 (function () {
   'use strict';
@@ -13,6 +13,41 @@
     return String(s).replace(/[&<>"']/g, c =>
       ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])
     );
+  }
+
+  /* ── مسافة هافرساين (كم) ───────────────────────────── */
+  function _dist(lat1, lon1, lat2, lon2) {
+    if (!lat1 || !lon1 || !lat2 || !lon2) return null;
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  }
+
+  /* ── إيجاد موقع مزود الخدمة من الطلب ──────────────── */
+  function _getProviderCoords(order) {
+    const provId = order.providerUid || order.vendorId || order.providerId;
+    if (!provId) return null;
+    const prov = (AppData.users || []).find(u => u.id === provId || u.uid === provId);
+    if (!prov) return null;
+    const lat = prov.lat || prov.latitude || prov.location?.lat;
+    const lng = prov.lng || prov.longitude || prov.lon || prov.location?.lng;
+    if (!lat || !lng) return null;
+    return { lat: Number(lat), lng: Number(lng), name: prov.name || '' };
+  }
+
+  /* ── إيجاد موقع المندوب من ملفه في users ──────────── */
+  function _getDriverCoords(driverUid) {
+    if (!driverUid) return null;
+    const u = (AppData.users || []).find(u => u.id === driverUid || u.uid === driverUid);
+    if (!u) return null;
+    const lat = u.lat || u.latitude || u.location?.lat;
+    const lng = u.lng || u.longitude || u.lon || u.location?.lng;
+    if (!lat || !lng) return null;
+    return { lat: Number(lat), lng: Number(lng) };
   }
 
   /* ── حالة البث الأخيرة للمندوب (آخر طلب نشط له) ── */
@@ -31,13 +66,31 @@
     if (!order) { toast('لم يُعثر على الطلب', 'error'); return; }
 
     const drivers = (AppData.ddbEntries || []).filter(d => d.linkedUserId);
-    const sq      = '';
 
-    openModal(_buildModal(order, drivers, sq), 'lg');
+    /* احسب المسافة لكل مندوب من موقع المزود */
+    const provCoords = _getProviderCoords(order);
+    drivers.forEach(d => {
+      if (provCoords) {
+        const dc = _getDriverCoords(d.linkedUserId);
+        d._distToProvider = dc ? _dist(dc.lat, dc.lng, provCoords.lat, provCoords.lng) : null;
+      } else {
+        d._distToProvider = null;
+      }
+    });
+
+    /* رتّب: المندوبون الذين لديهم مسافة أولاً (الأقرب للمزود)، ثم الباقون */
+    drivers.sort((a, b) => {
+      if (a._distToProvider === null && b._distToProvider === null) return 0;
+      if (a._distToProvider === null) return 1;
+      if (b._distToProvider === null) return -1;
+      return a._distToProvider - b._distToProvider;
+    });
+
+    openModal(_buildModal(order, drivers, '', provCoords), 'lg');
   };
 
   /* ── بناء HTML المودال ─────────────────────────── */
-  function _buildModal(order, drivers, sq) {
+  function _buildModal(order, drivers, sq, provCoords) {
     const filtered = sq
       ? drivers.filter(d =>
           (d.name||'').toLowerCase().includes(sq) ||
@@ -49,18 +102,35 @@
     const currentUid  = order.driverId || '';
     const currentName = order.driverName || '';
 
+    /* أول مندوب متاح (غير مشغول وله موقع) */
+    const nearestAvail = filtered.find(d => {
+      const busy = driverActiveOrder(d.linkedUserId);
+      return !busy && d._distToProvider !== null;
+    }) || filtered.find(d => !driverActiveOrder(d.linkedUserId));
+
     return `
     <div class="modal-header" style="border-bottom:1px solid var(--border);padding-bottom:14px;margin-bottom:0">
       <div>
         <h2 class="modal-title" style="margin-bottom:4px">🚗 تعيين مندوب</h2>
-        <p style="font-size:12px;color:var(--text-muted);margin:0">الطلب #${esc(order.orderId||order.id.slice(-6))} · ${esc(order.customerName||'')}</p>
+        <p style="font-size:12px;color:var(--text-muted);margin:0">
+          الطلب #${esc(order.orderId||order.id.slice(-6))} · ${esc(order.customerName||'')}
+        </p>
       </div>
       <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
 
+    ${provCoords ? `
+    <div style="background:rgba(14,165,233,0.07);border:1.5px solid rgba(14,165,233,0.25);border-radius:14px;padding:10px 16px;margin:14px 0 0;font-size:12px;color:var(--text-secondary);display:flex;align-items:center;gap:8px">
+      <span style="font-size:18px">📍</span>
+      <span>المندوبون مرتبون حسب قربهم من <b style="color:var(--primary)">${esc(provCoords.name||'مزود الخدمة')}</b> — سيستلم الأقرب الطلب ويوصله للعميل أسرع</span>
+    </div>` : `
+    <div style="background:rgba(245,158,11,0.07);border:1.5px solid rgba(245,158,11,0.2);border-radius:14px;padding:10px 16px;margin:14px 0 0;font-size:12px;color:var(--text-secondary)">
+      ⚠️ موقع مزود الخدمة غير محدد — يتم عرض المندوبين بدون ترتيب المسافة
+    </div>`}
+
     <!-- المندوب الحالي -->
     ${currentUid ? `
-    <div style="background:rgba(16,185,129,0.07);border:1.5px solid rgba(16,185,129,0.25);border-radius:14px;padding:12px 16px;margin:16px 0;display:flex;align-items:center;gap:12px">
+    <div style="background:rgba(16,185,129,0.07);border:1.5px solid rgba(16,185,129,0.25);border-radius:14px;padding:12px 16px;margin:12px 0;display:flex;align-items:center;gap:12px">
       <div style="font-size:22px">✅</div>
       <div style="flex:1">
         <div style="font-size:12px;color:var(--text-muted);margin-bottom:2px">المندوب المعيّن حالياً</div>
@@ -71,9 +141,17 @@
         ❌ إلغاء التعيين
       </button>
     </div>` : `
-    <div style="background:rgba(245,158,11,0.07);border:1.5px solid rgba(245,158,11,0.2);border-radius:14px;padding:10px 16px;margin:16px 0;font-size:12px;color:var(--text-secondary)">
+    <div style="background:rgba(245,158,11,0.07);border:1.5px solid rgba(245,158,11,0.2);border-radius:14px;padding:10px 16px;margin:12px 0;font-size:12px;color:var(--text-secondary)">
       ⚠️ لم يُعيَّن مندوب على هذا الطلب بعد
     </div>`}
+
+    <!-- زر التعيين التلقائي للأقرب -->
+    ${nearestAvail && !currentUid ? `
+    <button onclick="adminDoAssign('${esc(order.id)}','${esc(nearestAvail.linkedUserId)}','${esc(nearestAvail.name||'مندوب')}')"
+            style="width:100%;padding:12px;background:linear-gradient(135deg,#7c3aed,#0d9488);color:#fff;border:none;border-radius:14px;font-size:14px;font-weight:900;cursor:pointer;font-family:'Cairo',sans-serif;margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:8px">
+      ⚡ تعيين تلقائي للأقرب: ${esc(nearestAvail.name||'مندوب')}
+      ${nearestAvail._distToProvider !== null ? `<span style="font-size:12px;opacity:0.85">(${nearestAvail._distToProvider.toFixed(1)} كم من المزود)</span>` : ''}
+    </button>` : ''}
 
     <!-- بحث -->
     <div style="position:relative;margin-bottom:14px">
@@ -86,32 +164,45 @@
     </div>
 
     <!-- قائمة المندوبين -->
-    <div id="drv-assign-list" style="max-height:380px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding-left:2px">
+    <div id="drv-assign-list" style="max-height:360px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding-left:2px">
       ${filtered.length === 0 ? `
         <div style="text-align:center;padding:40px;color:var(--text-muted)">
           <div style="font-size:36px;margin-bottom:10px">🚗</div>
           <div>لا يوجد مندوبون مرتبطون بحسابات بعد</div>
           <div style="font-size:12px;margin-top:6px">أضف مندوبين من قاعدة المندوبين وارتبطهم بحسابات مستخدمين</div>
         </div>` :
-        filtered.map(d => _driverRow(d, order, currentUid)).join('')
+        filtered.map((d, idx) => _driverRow(d, order, currentUid, idx)).join('')
       }
     </div>`;
   }
 
   /* ── صف مندوب واحد ─────────────────────────────── */
-  function _driverRow(d, order, currentUid) {
+  function _driverRow(d, order, currentUid, idx) {
     const isAssigned  = d.linkedUserId === currentUid;
     const activeOrder = driverActiveOrder(d.linkedUserId);
     const busy        = activeOrder && activeOrder.id !== order.id;
     const stats       = _quickStats(d.linkedUserId);
+    const isNearest   = idx === 0 && d._distToProvider !== null;
+
+    /* شارة المسافة من المزود */
+    let distBadge = '';
+    if (d._distToProvider !== null) {
+      const km = d._distToProvider;
+      const color = km < 2 ? '#10b981' : km < 5 ? '#f59e0b' : '#6b7280';
+      distBadge = `<span style="background:${color}22;color:${color};border-radius:6px;padding:1px 7px;font-size:10px;font-weight:800;border:1px solid ${color}44">
+        📍 ${km < 1 ? Math.round(km*1000)+'م' : km.toFixed(1)+'كم'} من المزود
+      </span>`;
+    }
 
     return `
-    <div style="background:var(--bg-card);border:1.5px solid ${isAssigned ? 'rgba(16,185,129,0.4)' : 'var(--border)'};border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:12px;transition:all 0.15s"
+    <div style="background:var(--bg-card);border:1.5px solid ${isAssigned ? 'rgba(16,185,129,0.4)' : isNearest ? 'rgba(124,58,237,0.35)' : 'var(--border)'};border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:12px;transition:all 0.15s;position:relative"
          onmouseover="this.style.borderColor='var(--primary)';this.style.background='rgba(124,58,237,0.04)'"
-         onmouseout="this.style.borderColor='${isAssigned ? 'rgba(16,185,129,0.4)' : 'var(--border)'}';this.style.background='var(--bg-card)'">
+         onmouseout="this.style.borderColor='${isAssigned ? 'rgba(16,185,129,0.4)' : isNearest ? 'rgba(124,58,237,0.35)' : 'var(--border)'}';this.style.background='var(--bg-card)'">
+
+      ${isNearest ? `<div style="position:absolute;top:-1px;right:12px;background:linear-gradient(135deg,#7c3aed,#0d9488);color:#fff;font-size:10px;font-weight:900;padding:2px 10px;border-radius:0 0 8px 8px">⚡ الأقرب للمزود</div>` : ''}
 
       <!-- صورة/حرف -->
-      <div style="position:relative;flex-shrink:0">
+      <div style="position:relative;flex-shrink:0;${isNearest?'margin-top:8px':''}">
         <div style="width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#0d9488);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900">
           ${esc((d.name||'م').charAt(0).toUpperCase())}
         </div>
@@ -119,16 +210,16 @@
       </div>
 
       <!-- بيانات -->
-      <div style="flex:1;min-width:0">
-        <div style="font-weight:900;font-size:14px;color:var(--text-main);display:flex;align-items:center;gap:6px">
+      <div style="flex:1;min-width:0;${isNearest?'margin-top:8px':''}">
+        <div style="font-weight:900;font-size:14px;color:var(--text-main);display:flex;align-items:center;gap:6px;flex-wrap:wrap">
           ${esc(d.name||'مندوب')}
           ${isAssigned ? '<span style="background:rgba(16,185,129,0.15);color:#10b981;border-radius:6px;padding:1px 7px;font-size:10px;font-weight:800">✓ معيّن</span>' : ''}
           ${busy ? '<span style="background:rgba(245,158,11,0.15);color:#f59e0b;border-radius:6px;padding:1px 7px;font-size:10px;font-weight:800">مشغول</span>' : ''}
         </div>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:3px;display:flex;gap:10px;flex-wrap:wrap">
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          ${distBadge}
           ${d.vehicleType ? `<span>🚗 ${esc(d.vehicleType)}</span>` : ''}
           ${d.phone ? `<span>📞 ${esc(d.phone)}</span>` : ''}
-          ${d.coverageAreas ? `<span>📍 ${esc(d.coverageAreas)}</span>` : ''}
         </div>
         <div style="font-size:11px;color:var(--text-muted);margin-top:3px;display:flex;gap:12px">
           <span>📦 ${stats.total} طلب</span>
@@ -139,7 +230,7 @@
 
       <!-- زر التعيين -->
       <button onclick="adminDoAssign('${esc(order.id)}','${esc(d.linkedUserId)}','${esc(d.name||'مندوب')}')"
-              style="flex-shrink:0;background:${isAssigned ? 'rgba(16,185,129,0.1)' : 'rgba(124,58,237,0.1)'};color:${isAssigned ? '#10b981' : '#7c3aed'};border:1.5px solid ${isAssigned ? 'rgba(16,185,129,0.3)' : 'rgba(124,58,237,0.3)'};border-radius:10px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer;font-family:'Cairo',sans-serif;white-space:nowrap">
+              style="flex-shrink:0;${isNearest?'margin-top:8px':''}background:${isAssigned ? 'rgba(16,185,129,0.1)' : 'rgba(124,58,237,0.1)'};color:${isAssigned ? '#10b981' : '#7c3aed'};border:1.5px solid ${isAssigned ? 'rgba(16,185,129,0.3)' : 'rgba(124,58,237,0.3)'};border-radius:10px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer;font-family:'Cairo',sans-serif;white-space:nowrap">
         ${isAssigned ? '✓ معيّن' : '🚗 تعيين'}
       </button>
     </div>`;
@@ -161,6 +252,24 @@
     const order   = (AppData.orders || []).find(o => o.id === orderId);
     if (!order) return;
     const drivers = (AppData.ddbEntries || []).filter(d => d.linkedUserId);
+
+    /* أعد احتساب المسافات */
+    const provCoords = _getProviderCoords(order);
+    drivers.forEach(d => {
+      if (provCoords) {
+        const dc = _getDriverCoords(d.linkedUserId);
+        d._distToProvider = dc ? _dist(dc.lat, dc.lng, provCoords.lat, provCoords.lng) : null;
+      } else {
+        d._distToProvider = null;
+      }
+    });
+    drivers.sort((a, b) => {
+      if (a._distToProvider === null && b._distToProvider === null) return 0;
+      if (a._distToProvider === null) return 1;
+      if (b._distToProvider === null) return -1;
+      return a._distToProvider - b._distToProvider;
+    });
+
     const currentUid = order.driverId || '';
     const q = sq.toLowerCase().trim();
     const filtered = q
@@ -170,34 +279,42 @@
           (d.phone||'').includes(q)
         )
       : drivers;
+
     const listEl = document.getElementById('drv-assign-list');
     if (!listEl) return;
     listEl.innerHTML = filtered.length === 0
       ? `<div style="text-align:center;padding:40px;color:var(--text-muted)">🔍 لا توجد نتائج</div>`
-      : filtered.map(d => _driverRow(d, order, currentUid)).join('');
+      : filtered.map((d, idx) => _driverRow(d, order, currentUid, idx)).join('');
   };
 
   /* ══════════════════════════════════════════════════
      adminDoAssign — تنفيذ التعيين
   ══════════════════════════════════════════════════ */
   window.adminDoAssign = async function (orderId, driverUid, driverName) {
-    const btn = event?.target;
+    const btn = event?.target?.closest('button');
     if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
 
     try {
       await fsUpdate('orders', orderId, {
         driverId:   driverUid,
         driverName: driverName,
-        assignedAt: firebase.firestore.FieldValue.serverTimestamp()
+        assignedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        driverAssignMethod: 'nearest_to_provider'
       });
 
       const order = (AppData.orders || []).find(o => o.id === orderId);
       const orderRef = order?.orderId || orderId.slice(-6);
 
+      const provCoords = _getProviderCoords(order);
+      const dc = _getDriverCoords(driverUid);
+      const distInfo = (provCoords && dc)
+        ? ` — يبعد ${_dist(dc.lat, dc.lng, provCoords.lat, provCoords.lng).toFixed(1)} كم من موقع المزود`
+        : '';
+
       await db.collection('driver_messages').add({
         toUid:     driverUid,
         fromUid:   State.currentUser?.uid || 'admin',
-        message:   `📦 تم تعيينك على الطلب #${orderRef}\nالعميل: ${order?.customerName || ''}\nالخدمة: ${order?.svcName || ''}`,
+        message:   `📦 تم تعيينك على الطلب #${orderRef}\nالعميل: ${order?.customerName || ''}\nالخدمة: ${order?.svcName || ''}\n📍 توجه لمزود الخدمة لاستلام الطلب${distInfo}`,
         type:      'assignment',
         orderId:   orderId,
         read:      false,
@@ -234,5 +351,45 @@
     }
   };
 
-  console.log('[DriverAssign] نظام تعيين المندوبين جاهز 🚗');
+  /* ══════════════════════════════════════════════════
+     ph43_autoAssignNearestDriver
+     يُستدعى تلقائياً بعد الموافقة النهائية على الطلب
+     لتعيين أقرب مندوب متاح لموقع مزود الخدمة
+  ══════════════════════════════════════════════════ */
+  window.ph43_autoAssignNearestDriver = async function (orderId) {
+    const order = (AppData.orders || []).find(o => o.id === orderId);
+    if (!order) return;
+
+    const provCoords = _getProviderCoords(order);
+    if (!provCoords) {
+      console.warn('[DriverAssign] لا يوجد موقع للمزود — لا يمكن التعيين التلقائي');
+      return;
+    }
+
+    const drivers = (AppData.ddbEntries || []).filter(d => d.linkedUserId);
+
+    /* استبعد المشغولين */
+    const available = drivers.filter(d => !driverActiveOrder(d.linkedUserId));
+    if (!available.length) {
+      toast('لا يوجد مندوبون متاحون حالياً', 'warning');
+      return;
+    }
+
+    /* احسب المسافة من كل مندوب لموقع المزود */
+    available.forEach(d => {
+      const dc = _getDriverCoords(d.linkedUserId);
+      d._distToProvider = dc ? _dist(dc.lat, dc.lng, provCoords.lat, provCoords.lng) : null;
+    });
+
+    available.sort((a, b) => {
+      if (a._distToProvider === null) return 1;
+      if (b._distToProvider === null) return -1;
+      return a._distToProvider - b._distToProvider;
+    });
+
+    const best = available[0];
+    await window.adminDoAssign(orderId, best.linkedUserId, best.name || 'مندوب');
+  };
+
+  console.log('[DriverAssign] نظام تعيين المندوبين (الأقرب للمزود) جاهز 🚗');
 })();
