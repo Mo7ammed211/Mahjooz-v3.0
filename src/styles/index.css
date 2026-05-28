@@ -3103,48 +3103,60 @@ body.light-theme {
   clip-path: circle(160% at var(--rx, 50%) var(--ry, 50%));
 }
 
-/* Floating pill button */
-#theme-toggle-btn {
-  position: fixed;
-  bottom: 28px;
-  inset-inline-end: 24px;
-  z-index: 9000;
+/* Theme toggle row inside profile menu */
+.profile-menu-theme-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 0 16px 0 10px;
-  height: 44px;
-  border-radius: 99px;
-  border: 1.5px solid rgba(139,92,246,0.25);
+  gap: 10px;
   cursor: pointer;
-  background: var(--bg-card);
-  color: var(--text-main);
-  font-family: var(--font);
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.2px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.18), 0 0 0 1px rgba(139,92,246,0.08);
-  transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1),
-              box-shadow 0.2s ease,
-              background 0.3s ease,
-              border-color 0.3s ease;
-  overflow: hidden;
-  white-space: nowrap;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  user-select: none;
 }
-body.light-theme #theme-toggle-btn {
-  background: rgba(255,255,255,0.9);
-  border-color: rgba(139,92,246,0.18);
-  box-shadow: 0 4px 20px rgba(139,92,246,0.12), 0 1px 4px rgba(0,0,0,0.06);
+.profile-menu-theme-row:hover {
+  background: var(--bg-secondary);
 }
-#theme-toggle-btn:hover {
-  transform: translateY(-3px) scale(1.03);
-  box-shadow: 0 8px 28px rgba(139,92,246,0.35), 0 2px 8px rgba(0,0,0,0.15);
-  border-color: rgba(139,92,246,0.5);
+
+/* iOS-style toggle switch */
+.theme-menu-switch {
+  position: relative;
+  display: inline-flex;
+  width: 46px;
+  height: 26px;
+  cursor: pointer;
+  margin-inline-start: auto;
+  flex-shrink: 0;
 }
-#theme-toggle-btn:active {
-  transform: scale(0.94) !important;
+.theme-menu-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+.theme-menu-track {
+  position: absolute;
+  inset: 0;
+  border-radius: 99px;
+  background: rgba(139,92,246,0.2);
+  transition: background 0.3s ease;
+  border: 1.5px solid rgba(139,92,246,0.18);
+}
+.theme-menu-track::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  inset-inline-start: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+  transition: inset-inline-start 0.28s cubic-bezier(0.34,1.56,0.64,1);
+}
+.theme-menu-switch input:checked + .theme-menu-track {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+.theme-menu-switch input:checked + .theme-menu-track::after {
+  inset-inline-start: calc(100% - 21px);
 }
 
 /* Icon container — stacks sun & moon, shows one at a time */

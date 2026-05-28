@@ -207,52 +207,43 @@ function stars(n) {
 let isDarkMode = localStorage.getItem('mahjooz_theme') !== 'light';
 if (!isDarkMode) document.body.classList.add('light-theme');
 
-// Update theme button label
+// Update theme toggle state everywhere
 function _updateThemeBtn() {
-  const lbl = document.getElementById('theme-btn-label');
-  if (lbl) lbl.textContent = isDarkMode ? 'وضع الإضاءة' : 'الوضع الداكن';
+  const cb   = document.getElementById('theme-menu-cb');
+  const icon = document.getElementById('theme-menu-icon');
+  const lbl  = document.getElementById('theme-menu-label');
+  if (cb)   cb.checked       = isDarkMode;
+  if (icon) icon.textContent = isDarkMode ? '☀️' : '🌙';
+  if (lbl)  lbl.textContent  = isDarkMode ? 'وضع الإضاءة' : 'الوضع الداكن';
 }
 _updateThemeBtn();
 
 function toggleTheme(event) {
-  // ── 1. Determine ripple origin ──
   const ripple = document.getElementById('theme-ripple');
-  const btn    = document.getElementById('theme-toggle-btn');
   if (ripple) {
-    // New theme is the opposite of current
-    const goingLight = isDarkMode; // about to switch TO light
+    const goingLight = isDarkMode;
     ripple.style.setProperty('--ripple-color', goingLight ? '#fbfbfe' : '#0f0c20');
 
-    // Position ripple at button center, or event position
-    let rx = '90%', ry = '90%';
-    if (event && btn) {
-      const r = btn.getBoundingClientRect();
-      rx = Math.round(r.left + r.width  / 2) + 'px';
-      ry = Math.round(r.top  + r.height / 2) + 'px';
+    // Use event target position, or default to top corner
+    let rx = '90%', ry = '10%';
+    if (event && event.target) {
+      try {
+        const r = (event.target.closest('label,button') || event.target).getBoundingClientRect();
+        rx = Math.round(r.left + r.width  / 2) + 'px';
+        ry = Math.round(r.top  + r.height / 2) + 'px';
+      } catch(e) {}
     }
     ripple.style.setProperty('--rx', rx);
     ripple.style.setProperty('--ry', ry);
-
-    // ── 2. Start expand ──
     ripple.classList.add('expanding');
 
-    // ── 3. Switch theme exactly at midpoint ──
     setTimeout(() => {
       isDarkMode = !isDarkMode;
       localStorage.setItem('mahjooz_theme', isDarkMode ? 'dark' : 'light');
       document.body.classList.toggle('light-theme', !isDarkMode);
       _updateThemeBtn();
-
-      // Spin the icon
-      if (btn) {
-        btn.classList.add('switching');
-        btn.addEventListener('animationend', () => btn.classList.remove('switching'), { once: true });
-      }
-
-      // ── 4. Collapse ripple ──
       setTimeout(() => {
         ripple.classList.remove('expanding');
-        // Reset clip-path instantly after transition to avoid flicker
         ripple.addEventListener('transitionend', () => {
           ripple.style.setProperty('--ripple-color', '');
         }, { once: true });
@@ -260,7 +251,6 @@ function toggleTheme(event) {
     }, 310);
 
   } else {
-    // Fallback (no ripple element)
     isDarkMode = !isDarkMode;
     localStorage.setItem('mahjooz_theme', isDarkMode ? 'dark' : 'light');
     document.body.classList.toggle('light-theme', !isDarkMode);
@@ -622,6 +612,15 @@ function renderNavbar() {
           <div style="height:1px;background:var(--glass-border);margin:4px 0"></div>
           ` : ''}
           <button class="profile-menu-item profile-menu-danger" onclick="closeProfileMenu();logoutConfirm()"><span>🚪</span><span>تسجيل الخروج</span></button>
+          <div style="height:1px;background:var(--glass-border);margin:4px 0"></div>
+          <div class="profile-menu-item profile-menu-theme-row" onclick="toggleTheme(event)">
+            <span id="theme-menu-icon">${isDarkMode ? '☀️' : '🌙'}</span>
+            <span id="theme-menu-label">${isDarkMode ? 'وضع الإضاءة' : 'الوضع الداكن'}</span>
+            <label class="theme-menu-switch" onclick="event.stopPropagation()">
+              <input type="checkbox" id="theme-menu-cb" ${isDarkMode ? 'checked' : ''} onchange="toggleTheme(event)">
+              <span class="theme-menu-track"></span>
+            </label>
+          </div>
         </div>
       </div>
     </div>
@@ -657,6 +656,14 @@ function renderNavbar() {
       <div class="drawer-section-title">الخيارات</div>
       <button class="drawer-tool" onclick="navigate('settings');closeDrawer()"><span>الإعدادات</span></button>
       <button class="drawer-tool drawer-tool-danger" onclick="closeDrawer();logoutConfirm()"><span>تسجيل الخروج</span></button>
+      <div class="drawer-tool profile-menu-theme-row" style="cursor:pointer" onclick="toggleTheme(event)">
+        <span>${isDarkMode ? '☀️' : '🌙'}</span>
+        <span>${isDarkMode ? 'وضع الإضاءة' : 'الوضع الداكن'}</span>
+        <label class="theme-menu-switch" onclick="event.stopPropagation()">
+          <input type="checkbox" ${isDarkMode ? 'checked' : ''} onchange="toggleTheme(event)">
+          <span class="theme-menu-track"></span>
+        </label>
+      </div>
     </div>
   </aside>` : ''}` + bottomNavHTML;
 }
