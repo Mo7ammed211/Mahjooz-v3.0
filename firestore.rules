@@ -35,6 +35,35 @@ service cloud.firestore {
       allow read, write: if request.auth != null;
     }
 
+    // ═══════════════════════════════════════════════════════
+    //  🔐 سجل تدقيق المحافظ — محمي من الحذف والتعديل
+    //  Wallet Audit Log — append-only, no delete or update
+    // ═══════════════════════════════════════════════════════
+    match /wallet_audit_log/{logId} {
+      // القراءة: للمستخدمين المصادق عليهم فقط
+      allow read: if request.auth != null;
+      // الإنشاء: مسموح للمستخدمين المصادق عليهم (التطبيق يكتب فقط)
+      allow create: if request.auth != null;
+      // التعديل والحذف: ممنوع تماماً — حتى للمدير
+      allow update, delete: if false;
+    }
+
+    // ═══════════════════════════════════════════════════════
+    //  💰 المحافظ — قراءة وكتابة للمصادق عليهم فقط
+    // ═══════════════════════════════════════════════════════
+    match /wallets/{uid} {
+      allow read, write: if request.auth != null;
+    }
+
+    // ═══════════════════════════════════════════════════════
+    //  📊 المعاملات — إنشاء فقط (لا حذف ولا تعديل)
+    // ═══════════════════════════════════════════════════════
+    match /transactions/{txId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update, delete: if false;
+    }
+
     // All other collections: authenticated only
     match /{document=**} {
       allow read, write: if request.auth != null;

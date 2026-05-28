@@ -102,8 +102,9 @@ window.renderAdmin = function () {
     {
       id: 'hub_finance', icon: '💰', title: 'الإدارة المالية',
       items: [
-        { k: 'wallet', icon: '👛', label: 'المحافظ الإلكترونية', desc: 'رصيد المستخدمين وسجل المعاملات' },
-        { k: 'banks',  icon: '🏦', label: 'الحسابات البنكية',    desc: 'إدارة حسابات التحويل البنكي' },
+        { k: 'wallet',       icon: '👛', label: 'المحافظ الإلكترونية', desc: 'إدارة أرصدة المستخدمين بأمان عالٍ' },
+        { k: 'wallet_audit', icon: '📋', label: 'سجل تدقيق المحافظ', desc: 'كل العمليات الإدارية على المحافظ موثّقة' },
+        { k: 'banks',        icon: '🏦', label: 'الحسابات البنكية',    desc: 'إدارة حسابات التحويل البنكي' },
       ]
     },
     {
@@ -227,7 +228,8 @@ window.renderAdmin = function () {
           ${activeTab.startsWith('rental_stores_') ? _renderRentalStoresTab(activeTab.replace('rental_stores_', '')) : ''}
           ${activeTab === 'orders'              ? renderAdminOrders() : ''}
           ${activeTab === 'ads'                 ? renderAdminAds() : ''}
-          ${activeTab === 'wallet'              ? renderAdminWallet() : ''}
+          ${activeTab === 'wallet'              ? (typeof renderSecureWalletPanel === 'function' ? renderSecureWalletPanel() : renderAdminWallet()) : ''}
+          ${activeTab === 'wallet_audit'        ? (typeof renderAdminWalletAudit === 'function' ? renderAdminWalletAudit() : '<div style="padding:40px;text-align:center;color:var(--text-muted)">⏳ جاري التحميل...</div>') : ''}
           ${activeTab === 'reports'             ? renderAdminReports() : ''}
           ${activeTab === 'permissions'         ? (typeof renderAdminPermissions === 'function' ? renderAdminPermissions() : renderAdminUsers()) : ''}
           ${activeTab === 'live_tracking'       ? (typeof renderAdminLiveTracking === 'function' ? renderAdminLiveTracking() : renderAdminOrders()) : ''}
