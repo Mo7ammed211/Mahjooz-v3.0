@@ -94,6 +94,7 @@ window.renderAdmin = function () {
       items: [
         { k: 'orders',        icon: '📦', label: 'إدارة الطلبات',    desc: 'مراجعة وتتبع جميع الطلبات',       badge: pendingOrders || null, urgent: pendingOrders > 0 },
         { k: 'live_tracking', icon: '🗺️', label: 'التتبع المباشر',   desc: 'تتبع المندوبين لحظياً على الخريطة' },
+        { k: 'availability_monitor', icon: '📡', label: 'مراقبة الإتاحة', desc: 'حالة المزودين والمندوبين في الخدمة / خارجها' },
         { k: 'provider_svcs', icon: '🛎️', label: 'خدمات المزودين',  desc: 'مراجعة وقبول خدمات المزودين',     badge: pendingSvcs || null, urgent: pendingSvcs > 0 },
         { k: 'ads',           icon: '📣', label: 'الكوبونات والعروض',desc: 'إدارة العروض الترويجية' },
       ]
@@ -230,6 +231,7 @@ window.renderAdmin = function () {
           ${activeTab === 'reports'             ? renderAdminReports() : ''}
           ${activeTab === 'permissions'         ? (typeof renderAdminPermissions === 'function' ? renderAdminPermissions() : renderAdminUsers()) : ''}
           ${activeTab === 'live_tracking'       ? (typeof renderAdminLiveTracking === 'function' ? renderAdminLiveTracking() : renderAdminOrders()) : ''}
+          ${activeTab === 'availability_monitor' ? (typeof renderAdminAvailabilityMonitor === 'function' ? renderAdminAvailabilityMonitor() : '<div style="padding:40px;text-align:center;color:var(--text-muted)">⏳ جاري تحميل نظام المراقبة...</div>') : ''}
           ${activeTab === 'advance_stats'       ? (typeof renderAdvancedAnalytics === 'function' ? renderAdvancedAnalytics() : renderAdminReports()) : ''}
           ${activeTab === 'advanced'            ? (typeof renderAdminAdvancedStats === 'function' ? renderAdminAdvancedStats() : renderAdminReports()) : ''}
           ${activeTab === 'driver_performance' ? (typeof renderAdminDriverPerformance === 'function' ? renderAdminDriverPerformance() : renderAdminReports()) : ''}
