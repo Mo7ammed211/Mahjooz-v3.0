@@ -65,10 +65,11 @@ window.renderAdmin = function () {
     {
       id: 'hub_stats', icon: '📊', title: 'الإحصائيات والتقارير',
       items: [
-        { k: 'dashboard',     icon: '🏠', label: 'نظرة عامة',          desc: 'ملخص الأداء والأرقام الرئيسية' },
-        { k: 'reports',       icon: '📈', label: 'التقارير المالية',    desc: 'إيرادات ومصروفات مفصّلة' },
-        { k: 'advance_stats', icon: '🔬', label: 'التحليلات المتقدمة', desc: 'إحصائيات وتوقعات ذكية' },
-        { k: 'advanced',      icon: '📊', label: 'الإحصائيات المتقدمة', desc: 'رسوم بيانية وتحليلات الأداء' },
+        { k: 'dashboard',          icon: '🏠', label: 'نظرة عامة',           desc: 'ملخص الأداء والأرقام الرئيسية' },
+        { k: 'reports',            icon: '📈', label: 'التقارير المالية',     desc: 'إيرادات ومصروفات مفصّلة' },
+        { k: 'advance_stats',      icon: '🔬', label: 'التحليلات المتقدمة',  desc: 'إحصائيات وتوقعات ذكية' },
+        { k: 'advanced',           icon: '📊', label: 'الإحصائيات المتقدمة', desc: 'رسوم بيانية وتحليلات الأداء' },
+        { k: 'driver_performance', icon: '🚗', label: 'أداء المندوبين',      desc: 'تقرير الطلبات والتقييمات ووقت التوصيل' },
       ]
     },
     {
@@ -231,6 +232,7 @@ window.renderAdmin = function () {
           ${activeTab === 'live_tracking'       ? (typeof renderAdminLiveTracking === 'function' ? renderAdminLiveTracking() : renderAdminOrders()) : ''}
           ${activeTab === 'advance_stats'       ? (typeof renderAdvancedAnalytics === 'function' ? renderAdvancedAnalytics() : renderAdminReports()) : ''}
           ${activeTab === 'advanced'            ? (typeof renderAdminAdvancedStats === 'function' ? renderAdminAdvancedStats() : renderAdminReports()) : ''}
+          ${activeTab === 'driver_performance' ? (typeof renderAdminDriverPerformance === 'function' ? renderAdminDriverPerformance() : renderAdminReports()) : ''}
           ${activeTab === 'provider_svcs'       ? (typeof renderAdminProviderSvcs === 'function' ? renderAdminProviderSvcs() : renderAdminDash()) : ''}
           ${activeTab === 'banks'               ? (typeof renderAdminBanks === 'function' ? renderAdminBanks() : renderAdminWallet()) : ''}
           ${activeTab === 'cms_banners'         ? (typeof renderAdminCmsBanners === 'function' ? renderAdminCmsBanners() : renderAdminDash()) : ''}
