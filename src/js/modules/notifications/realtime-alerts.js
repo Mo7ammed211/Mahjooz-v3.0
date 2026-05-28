@@ -56,21 +56,24 @@
     css.id = 'ph19-styles';
     css.textContent = `
       .ph19-pill {
-        display: inline-flex; align-items: center; gap: 8px;
-        padding: 8px 14px; border-radius: 999px;
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 6px 10px; border-radius: 999px;
         background: linear-gradient(135deg, #7c3aed, #4f46e5);
-        color: #fff; font-weight: 700; font-size: 13px;
+        color: #fff; font-weight: 700; font-size: 12px;
         cursor: pointer; user-select: none;
-        box-shadow: 0 8px 24px rgba(124,58,237,.25);
+        box-shadow: 0 4px 14px rgba(124,58,237,.25);
         transition: transform .18s ease, box-shadow .18s ease;
       }
       .ph19-pill:not(.in-nav) {
         position: fixed; top: 12px; left: 12px; z-index: 9998;
       }
       .ph19-pill.in-nav {
-        padding: 6px 12px; font-size: 12px;
+        padding: 5px 10px; font-size: 12px;
       }
-      .ph19-pill:hover { transform: translateY(-1px); box-shadow: 0 10px 28px rgba(124,58,237,.35); }
+      .ph19-pill.in-nav .ph19-text-label {
+        display: none;
+      }
+      .ph19-pill:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(124,58,237,.35); }
       .ph19-pill .ph19-dot {
         display: inline-block; width: 8px; height: 8px; border-radius: 50%;
         background: #22c55e; box-shadow: 0 0 0 0 rgba(34,197,94,.6);
