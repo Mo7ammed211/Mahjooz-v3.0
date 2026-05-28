@@ -1578,6 +1578,17 @@ function renderAdminOrders() {
                 <button class="btn btn-sm" style="background:rgba(239,68,68,0.05);color:#ef4444;border:1px solid rgba(239,68,68,0.1);padding:8px 10px;font-size:12px" onclick="deleteOrder('${o.id}')" title="حذف الطلب">🗑️</button>
               ` : ''}
             </div>
+
+            ${canEdit ? `
+            <div style="border-top:1px dashed var(--border);padding-top:10px;margin-top:6px">
+              ${o.driverId ? `
+              <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.2);border-radius:10px;padding:7px 12px;margin-bottom:8px">
+                <span style="font-size:12px;color:#10b981;font-weight:700">🚗 ${escHtml(o.driverName||'مندوب معيّن')}</span>
+                <button class="btn btn-sm" style="background:rgba(124,58,237,0.08);color:#7c3aed;border:1px solid rgba(124,58,237,0.2);padding:4px 10px;font-size:11px;font-weight:700" onclick="adminAssignDriver('${o.id}')">🔄 تغيير</button>
+              </div>` : `
+              <button class="btn btn-sm" style="width:100%;background:rgba(124,58,237,0.08);color:#7c3aed;border:1.5px solid rgba(124,58,237,0.25);padding:8px;font-size:12px;font-weight:800" onclick="adminAssignDriver('${o.id}')">🚗 تعيين مندوب</button>
+              `}
+            </div>` : ''}
           </div>
         </div>`;
       }).join('')}
