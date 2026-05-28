@@ -140,58 +140,11 @@
   }
 
   function ensurePill() {
-    if (document.getElementById('ph19-pill')) return;
-    ensureStyles();
-
-    const target = document.getElementById('nav-live-alerts-target');
-    const pill = document.createElement('div');
-    pill.id = 'ph19-pill';
-    pill.className = 'ph19-pill';
-    pill.title = 'التنبيهات الفورية';
-    pill.innerHTML = `
-      <span class="ph19-dot"></span>
-      <span class="ph19-text-label">🛎️ تنبيهات حيّة</span>
-      <span class="ph19-badge zero" id="ph19-badge">0</span>
-    `;
-    pill.addEventListener('click', togglePanel);
-    
-    if (target) {
-      target.appendChild(pill);
-      pill.classList.add('in-nav');
-    } else {
-      document.body.appendChild(pill);
-    }
-
-    const panel = document.createElement('div');
-    panel.id = 'ph19-panel';
-    panel.className = 'ph19-panel';
-    panel.innerHTML = `
-      <div class="ph19-panel-header">
-        <span>📡 آخر التنبيهات</span>
-        <div class="ph19-panel-actions">
-          <button id="ph19-sound-toggle" title="الصوت"></button>
-          <button id="ph19-clear">مسح</button>
-        </div>
-      </div>
-      <div class="ph19-feed" id="ph19-feed"></div>
-    `;
-    document.body.appendChild(panel);
-
-    document.getElementById('ph19-sound-toggle').addEventListener('click', toggleSound);
-    document.getElementById('ph19-clear').addEventListener('click', clearFeed);
-    document.addEventListener('click', (e) => {
-      const p = document.getElementById('ph19-panel');
-      const pl = document.getElementById('ph19-pill');
-      if (!p || !pl) return;
-      if (!p.contains(e.target) && !pl.contains(e.target)) p.classList.remove('on');
-    });
-
-    refreshSoundButton();
+    window.__unifiedNotif?.update('live', PH19.feed, PH19.unseen);
   }
 
   function removePillUI() {
-    document.getElementById('ph19-pill')?.remove();
-    document.getElementById('ph19-panel')?.remove();
+    window.__unifiedNotif?.update('live', [], 0);
   }
 
   function refreshSoundButton() {
@@ -207,64 +160,32 @@
   }
 
   function togglePanel() {
-    const p = document.getElementById('ph19-panel');
-    if (!p) return;
-    const opening = !p.classList.contains('on');
-    p.classList.toggle('on');
-    if (opening) {
-      PH19.unseen = 0;
-      updateBadge();
+    if (typeof window.toggleUnifiedNotif === 'function') {
+      window.toggleUnifiedNotif();
     }
+    PH19.unseen = 0;
+    updateBadge();
   }
 
   function clearFeed() {
     PH19.feed = [];
     PH19.unseen = 0;
-    renderFeed();
     updateBadge();
   }
 
   function updateBadge() {
-    const b = document.getElementById('ph19-badge');
-    if (!b) return;
-    b.textContent = String(PH19.unseen);
-    b.classList.toggle('zero', PH19.unseen === 0);
+    window.__unifiedNotif?.update('live', PH19.feed, PH19.unseen);
   }
 
   function renderFeed() {
-    const host = document.getElementById('ph19-feed');
-    if (!host) return;
-    if (!PH19.feed.length) {
-      host.innerHTML = `<div class="ph19-feed-empty">لا توجد تنبيهات بعد — ستظهر الطلبات الجديدة هنا فور وصولها.</div>`;
-      return;
-    }
-    host.innerHTML = PH19.feed.slice(0, 12).map(it => `
-      <div class="ph19-item" data-nav="${escHtml(it.nav || '')}">
-        <div class="ph19-icon">${it.icon}</div>
-        <div class="ph19-text">
-          <div class="ph19-title">${escHtml(it.title)}</div>
-          <div class="ph19-sub">${escHtml(it.sub || '')}</div>
-          <div class="ph19-time">${escHtml(it.time)}</div>
-        </div>
-      </div>
-    `).join('');
-    host.querySelectorAll('.ph19-item').forEach(el => {
-      el.addEventListener('click', () => {
-        const nav = el.getAttribute('data-nav');
-        if (nav && typeof window.navigate === 'function') {
-          window.navigate(nav);
-          document.getElementById('ph19-panel')?.classList.remove('on');
-        }
-      });
-    });
+    window.__unifiedNotif?.update('live', PH19.feed, PH19.unseen);
   }
 
   function pushFeed(entry) {
     PH19.feed.unshift(entry);
     if (PH19.feed.length > 50) PH19.feed.length = 50;
     PH19.unseen += 1;
-    updateBadge();
-    renderFeed();
+    window.__unifiedNotif?.update('live', PH19.feed, PH19.unseen);
   }
 
   function fireDesktopNotification(title, body) {

@@ -193,55 +193,20 @@
   }
 
   window.DA_toggleFeed = function () {
-    ensureStyles();
-    let panel = document.getElementById('da-feed-panel');
-    if (!panel) {
-      panel = document.createElement('div');
-      panel.id = 'da-feed-panel';
-      document.body.appendChild(panel);
+    if (typeof window.toggleUnifiedNotif === 'function') {
+      window.toggleUnifiedNotif();
     }
-    const isVisible = panel.style.display === 'block';
-    panel.style.display = isVisible ? 'none' : 'block';
-    if (!isVisible) {
-      renderFeedPanel();
-      DA.newCount = 0;
-      updateBell();
-    }
+    DA.newCount = 0;
+    updateBell();
   };
 
   /* ── Bell في الـ Navbar ─────────────────────────── */
   function updateBell() {
-    const el = document.getElementById('da-bell-badge');
-    if (!el) return;
-    el.textContent = DA.newCount > 0 ? DA.newCount : '';
-    el.style.display = DA.newCount > 0 ? 'inline-flex' : 'none';
+    window.__unifiedNotif?.update('driver', DA.feed, DA.newCount);
   }
 
   function injectBellIfNeeded() {
-    if (document.getElementById('da-bell')) return;
-    const target = document.getElementById('nav-notif-target');
-    if (!target) return;
-    const wrap = document.createElement('div');
-    wrap.style.cssText = 'position:relative;display:inline-flex;align-items:center;';
-    const bell = document.createElement('button');
-    bell.id = 'da-bell';
-    bell.setAttribute('onclick', 'DA_toggleFeed()');
-    bell.title = 'إشعارات التوصيل';
-    bell.style.cssText = `
-      width:38px; height:38px; border-radius:50%;
-      background:var(--glass-bg); border:1.5px solid var(--border);
-      color:var(--text-main); font-size:18px; cursor:pointer;
-      display:flex; align-items:center; justify-content:center;
-      position:relative; transition:background 0.2s;
-    `;
-    bell.innerHTML = `🚚<span id="da-bell-badge" style="
-      display:none; position:absolute; top:-4px; right:-4px;
-      background:#ef4444; color:#fff; border-radius:99px;
-      font-size:10px; font-weight:900; font-family:'Cairo',sans-serif;
-      min-width:17px; height:17px; align-items:center; justify-content:center; padding:0 3px;
-    "></span>`;
-    wrap.appendChild(bell);
-    target.appendChild(wrap);
+    updateBell();
   }
 
   /* ── معالجة كل تغيير ────────────────────────────── */

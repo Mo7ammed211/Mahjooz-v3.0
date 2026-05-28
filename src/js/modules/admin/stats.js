@@ -87,20 +87,17 @@ async function loadMyNotifications(uid, limit = 20) {
 // ─── Notification bell (added to navbar) ───────────────
 async function refreshNotifBell() {
   const u = State.currentUser;
-  const wrap = document.getElementById('notif-bell-wrap');
-  if (!wrap || !u) return;
+  if (!u) return;
   const list = await loadMyNotifications(u.uid);
   State._notifs = list;
   const unread = list.filter(n => !n.read).length;
-  wrap.querySelector('.notif-badge').textContent = unread > 99 ? '99+' : (unread || '');
-  wrap.querySelector('.notif-badge').style.display = unread ? 'flex' : 'none';
+  window.__unifiedNotif?.update('notif', list, unread);
 }
 
 function toggleNotifPanel() {
-  const p = document.getElementById('notif-panel');
-  if (!p) return;
-  const open = p.classList.toggle('show');
-  if (open) renderNotifPanel();
+  if (typeof window.toggleUnifiedNotif === 'function') {
+    window.toggleUnifiedNotif();
+  }
 }
 
 function renderNotifPanel() {
@@ -182,22 +179,6 @@ window.render = async function (...args) {
 };
 
 function injectNotifBell() {
-  const u = State.currentUser;
-  if (!u) return;
-  if (document.getElementById('notif-bell-wrap')) return;
-  const target = document.getElementById('nav-notif-target');
-  if (!target) return;
-  const wrap = document.createElement('div');
-  wrap.id = 'notif-bell-wrap';
-  wrap.className = 'notif-wrap';
-  wrap.style.cssText = 'position:relative;display:inline-flex;align-items:center;';
-  wrap.innerHTML = `
-    <button class="notif-bell" onclick="toggleNotifPanel(event)" title="${t('notifications')}"
-      style="width:38px;height:38px;border-radius:50%;background:var(--glass-bg);border:1.5px solid var(--border);color:var(--text-main);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;position:relative;transition:background 0.2s;">
-      🔔<span class="notif-badge" style="position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;border-radius:99px;font-size:10px;font-weight:900;min-width:17px;height:17px;display:none;align-items:center;justify-content:center;padding:0 3px;font-family:'Cairo',sans-serif;"></span>
-    </button>
-    <div id="notif-panel" class="notif-panel"></div>`;
-  target.appendChild(wrap);
   refreshNotifBell();
 }
 
