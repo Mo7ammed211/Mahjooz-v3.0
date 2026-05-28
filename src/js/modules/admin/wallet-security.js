@@ -362,7 +362,228 @@
     .wsec-wrap { padding: 12px; }
     .wsec-user-grid { grid-template-columns: 1fr; }
   }
+
+  /* ══ جرس الإشعارات المالية ══ */
+  #wsec-alert-bell {
+    position: fixed;
+    bottom: 24px;
+    left: 24px;
+    z-index: 8500;
+    width: 52px;
+    height: 52px;
+    background: linear-gradient(135deg,#7c3aed,#5b21b6);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(124,58,237,0.5);
+    border: none;
+    transition: transform 0.2s, box-shadow 0.2s;
+    animation: wsec-bell-idle 4s ease-in-out infinite;
+  }
+  #wsec-alert-bell:hover { transform: scale(1.1); box-shadow: 0 6px 26px rgba(124,58,237,0.7); }
+  #wsec-alert-bell.ringing { animation: wsec-bell-ring 0.5s ease-in-out 3; }
+  @keyframes wsec-bell-idle {
+    0%,90%,100% { transform: rotate(0deg); }
+    93% { transform: rotate(-8deg); }
+    96% { transform: rotate(8deg); }
+  }
+  @keyframes wsec-bell-ring {
+    0%   { transform: rotate(0deg); }
+    20%  { transform: rotate(-20deg); }
+    40%  { transform: rotate(20deg); }
+    60%  { transform: rotate(-15deg); }
+    80%  { transform: rotate(10deg); }
+    100% { transform: rotate(0deg); }
+  }
+  #wsec-bell-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: #ef4444;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 900;
+    font-family: 'Cairo',sans-serif;
+    min-width: 18px;
+    height: 18px;
+    border-radius: 9px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    border: 2px solid #fff;
+    animation: wsec-badge-pop 0.3s cubic-bezier(.175,.885,.32,1.275);
+  }
+  @keyframes wsec-badge-pop {
+    from { transform: scale(0); }
+    to   { transform: scale(1); }
+  }
+
+  /* ── لوحة الإشعارات المنزلقة ── */
+  #wsec-alerts-panel {
+    position: fixed;
+    bottom: 86px;
+    left: 24px;
+    width: 360px;
+    max-height: 520px;
+    background: var(--card-bg, #1a1a2e);
+    border: 1.5px solid rgba(124,58,237,0.35);
+    border-radius: 18px;
+    box-shadow: 0 16px 60px rgba(0,0,0,0.45);
+    z-index: 8400;
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+    font-family: 'Cairo',sans-serif;
+    transform: translateY(20px);
+    opacity: 0;
+    transition: transform 0.25s ease, opacity 0.25s ease;
+  }
+  #wsec-alerts-panel.open {
+    display: flex;
+    transform: translateY(0);
+    opacity: 1;
+  }
+  .wsec-ap-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(124,58,237,0.08);
+  }
+  .wsec-ap-title {
+    font-size: 13px;
+    font-weight: 900;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .wsec-ap-actions {
+    display: flex;
+    gap: 6px;
+  }
+  .wsec-ap-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    border-radius: 8px;
+    padding: 4px 8px;
+    font-size: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: 'Cairo',sans-serif;
+    transition: all 0.2s;
+  }
+  .wsec-ap-btn:hover { background: rgba(124,58,237,0.12); color: #a78bfa; border-color: #7c3aed; }
+  .wsec-ap-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .wsec-ap-empty {
+    text-align: center;
+    padding: 30px 10px;
+    color: var(--text-muted);
+    font-size: 12px;
+  }
+
+  /* ── بطاقة الإشعار الواحد ── */
+  .wsec-alert-card {
+    background: var(--card-bg, #1e1e2e);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 14px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .wsec-alert-card.unread { border-color: rgba(124,58,237,0.5); background: rgba(124,58,237,0.06); }
+  .wsec-alert-card:hover { background: rgba(124,58,237,0.1); }
+  .wsec-alert-icon {
+    font-size: 24px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .wsec-alert-body { flex: 1; min-width: 0; }
+  .wsec-alert-title {
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--text);
+    margin-bottom: 3px;
+  }
+  .wsec-alert-meta {
+    font-size: 10.5px;
+    color: var(--text-muted);
+    margin-bottom: 2px;
+  }
+  .wsec-alert-amount {
+    font-size: 14px;
+    font-weight: 900;
+  }
+  .wsec-alert-amount.credit { color: #10b981; }
+  .wsec-alert-amount.debit  { color: #ef4444; }
+  .wsec-alert-amount.set    { color: #a78bfa; }
+  .wsec-alert-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #7c3aed;
+    flex-shrink: 0;
+    margin-top: 5px;
+  }
+
+  /* ── توست الإشعار المنزلق من الأسفل ── */
+  .wsec-toast-alert {
+    position: fixed;
+    bottom: 86px;
+    left: 390px;
+    max-width: 340px;
+    background: linear-gradient(135deg, #1e1347, #2d1a6e);
+    border: 1.5px solid rgba(124,58,237,0.6);
+    border-radius: 16px;
+    padding: 14px 16px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    z-index: 9000;
+    font-family: 'Cairo',sans-serif;
+    color: #fff;
+    direction: rtl;
+    animation: wsec-toast-in 0.4s cubic-bezier(.175,.885,.32,1.275) forwards;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  @keyframes wsec-toast-in {
+    from { opacity:0; transform: translateY(20px) scale(0.95); }
+    to   { opacity:1; transform: translateY(0) scale(1); }
+  }
+  .wsec-toast-alert.removing {
+    animation: wsec-toast-out 0.3s ease-in forwards;
+  }
+  @keyframes wsec-toast-out {
+    to { opacity:0; transform: translateY(20px) scale(0.9); }
+  }
+  .wsec-ta-icon { font-size: 26px; flex-shrink: 0; }
+  .wsec-ta-body { flex: 1; }
+  .wsec-ta-title { font-size: 12px; font-weight: 900; margin-bottom: 4px; opacity: 0.85; }
+  .wsec-ta-amount { font-size: 20px; font-weight: 900; }
+  .wsec-ta-meta { font-size: 11px; opacity: 0.7; margin-top: 3px; }
+  .wsec-ta-close {
+    background: none; border: none; color: rgba(255,255,255,0.5);
+    cursor: pointer; font-size: 16px; padding: 0; line-height: 1;
+    align-self: flex-start;
+  }
   `;
+
 
   if (!document.getElementById('wsec-styles')) {
     const el = document.createElement('style');
@@ -1231,6 +1452,266 @@
       document.querySelector('[style*="z-index: 9999"]')?.remove?.();
     }
   };
+
+  /* ══════════════════════════════════════════════════════════
+     نظام إشعارات العمليات المالية الكبيرة — Real-time Alerts
+  ══════════════════════════════════════════════════════════ */
+
+  const ALERT_SEEN_KEY   = 'wsec_seen_alerts';
+  let _alertsStore       = [];      /* بطاقات الإشعارات المحفوظة */
+  let _alertWatcherUnsub = null;    /* إلغاء مستمع Firestore */
+  let _panelOpen         = false;
+  let _toastQueue        = [];
+  let _toastActive       = false;
+
+  /* ── المعرّفات المشاهَدة (localStorage) ── */
+  function _getSeenIds() {
+    try { return new Set(JSON.parse(localStorage.getItem(ALERT_SEEN_KEY) || '[]')); }
+    catch { return new Set(); }
+  }
+  function _markSeen(id) {
+    const s = _getSeenIds();
+    s.add(id);
+    try { localStorage.setItem(ALERT_SEEN_KEY, JSON.stringify([...s].slice(-200))); } catch {}
+  }
+  function _isUnseen(id) { return !_getSeenIds().has(id); }
+
+  /* ── عدد الإشعارات غير المقروءة ── */
+  function _unreadCount() {
+    const seen = _getSeenIds();
+    return _alertsStore.filter(a => !seen.has(a.id)).length;
+  }
+
+  /* ── تحديث شارة الجرس ── */
+  function _updateBadge() {
+    const badge = document.getElementById('wsec-bell-badge');
+    if (!badge) return;
+    const n = _unreadCount();
+    if (n > 0) {
+      badge.style.display = 'flex';
+      badge.textContent   = n > 99 ? '99+' : String(n);
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+
+  /* ── الأيقونة والألوان حسب نوع العملية ── */
+  function _alertMeta(action, amount) {
+    if (action === 'credit') return { icon:'💰', color:'#10b981', cls:'credit', label:'إضافة رصيد كبيرة' };
+    if (action === 'debit')  return { icon:'🔴', color:'#ef4444', cls:'debit',  label:'خصم رصيد كبير'  };
+    if (action === 'set')    return { icon:'✏️', color:'#a78bfa', cls:'set',    label:'تعيين رصيد'     };
+    return { icon:'⚠️', color:'#fbbf24', cls:'set', label:'عملية مالية' };
+  }
+
+  /* ── توست الإشعار المنزلق ── */
+  function _showToastAlert(alert) {
+    _toastQueue.push(alert);
+    if (!_toastActive) _processToastQueue();
+  }
+
+  function _processToastQueue() {
+    if (!_toastQueue.length) { _toastActive = false; return; }
+    _toastActive = true;
+    const alert = _toastQueue.shift();
+    const m     = _alertMeta(alert.action);
+    const id    = 'wsta-' + Date.now();
+
+    const div = document.createElement('div');
+    div.className = 'wsec-toast-alert';
+    div.id = id;
+    div.innerHTML = `
+      <div class="wsec-ta-icon">${m.icon}</div>
+      <div class="wsec-ta-body">
+        <div class="wsec-ta-title">${m.label}</div>
+        <div class="wsec-ta-amount" style="color:${m.color}">
+          ${alert.amount?.toLocaleString('ar-SA') || '—'} ر.س
+        </div>
+        <div class="wsec-ta-meta">
+          ${_esc(alert.targetName || '—')} · بواسطة: ${_esc(alert.adminName || '—')}
+        </div>
+        ${alert.note ? `<div class="wsec-ta-meta" style="color:rgba(255,255,255,0.6)">${_esc(alert.note)}</div>` : ''}
+      </div>
+      <button class="wsec-ta-close" onclick="document.getElementById('${id}')?.remove()">✕</button>
+    `;
+    document.body.appendChild(div);
+
+    /* رنين الجرس */
+    const bell = document.getElementById('wsec-alert-bell');
+    if (bell) {
+      bell.classList.remove('ringing');
+      void bell.offsetWidth;
+      bell.classList.add('ringing');
+      setTimeout(() => bell.classList.remove('ringing'), 1600);
+    }
+
+    /* إزالة تلقائية بعد 8 ثواني */
+    setTimeout(() => {
+      div.classList.add('removing');
+      setTimeout(() => { div.remove(); _processToastQueue(); }, 350);
+    }, 8000);
+  }
+
+  /* ── رسم لوحة الإشعارات ── */
+  function _renderAlertsPanel() {
+    const panel = document.getElementById('wsec-alerts-panel');
+    if (!panel) return;
+
+    const seen = _getSeenIds();
+    const list = _alertsStore.length === 0
+      ? `<div class="wsec-ap-empty">🔕 لا توجد عمليات مالية كبيرة حتى الآن</div>`
+      : _alertsStore.map(a => {
+          const m   = _alertMeta(a.action);
+          const cls = seen.has(a.id) ? '' : ' unread';
+          return `
+          <div class="wsec-alert-card${cls}" onclick="wsecAlertCardClick('${a.id}')">
+            <div class="wsec-alert-icon">${m.icon}</div>
+            <div class="wsec-alert-body">
+              <div class="wsec-alert-title">${m.label}</div>
+              <div class="wsec-alert-amount ${m.cls}">${(a.amount||0).toLocaleString('ar-SA')} ر.س</div>
+              <div class="wsec-alert-meta">${_esc(a.targetName||'—')} · ${_esc(a.adminName||'—')}</div>
+              <div class="wsec-alert-meta">${_fmtTs(a.timestamp)}</div>
+              ${a.note ? `<div class="wsec-alert-meta" style="color:var(--text)">${_esc(a.note)}</div>` : ''}
+            </div>
+            ${!seen.has(a.id) ? '<div class="wsec-alert-dot"></div>' : ''}
+          </div>`;
+        }).join('');
+
+    panel.innerHTML = `
+      <div class="wsec-ap-header">
+        <div class="wsec-ap-title">🔔 تنبيهات المحافظ <span style="font-size:11px;color:var(--text-muted);font-weight:400">(≥${LARGE_AMOUNT_THRESHOLD} ر.س)</span></div>
+        <div class="wsec-ap-actions">
+          <button class="wsec-ap-btn" onclick="wsecMarkAllAlerts()">✓ تعليم الكل مقروء</button>
+          <button class="wsec-ap-btn" onclick="wsecToggleAlertsPanel()">✕</button>
+        </div>
+      </div>
+      <div class="wsec-ap-list">${list}</div>`;
+  }
+
+  /* ── تبديل اللوحة ── */
+  window.wsecToggleAlertsPanel = function () {
+    let panel = document.getElementById('wsec-alerts-panel');
+    if (!panel) {
+      panel = document.createElement('div');
+      panel.id = 'wsec-alerts-panel';
+      document.body.appendChild(panel);
+    }
+    _panelOpen = !_panelOpen;
+    if (_panelOpen) {
+      _renderAlertsPanel();
+      /* تأخير للـ CSS transition يعمل */
+      requestAnimationFrame(() => panel.classList.add('open'));
+    } else {
+      panel.classList.remove('open');
+      setTimeout(() => { if (!_panelOpen) panel.style.display = 'none'; }, 260);
+    }
+  };
+
+  /* ── النقر على بطاقة إشعار ── */
+  window.wsecAlertCardClick = function (id) {
+    _markSeen(id);
+    _updateBadge();
+    _renderAlertsPanel();
+    /* الانتقال لتبويب سجل التدقيق */
+    if (typeof setAdminTab === 'function') {
+      wsecToggleAlertsPanel();
+      setTimeout(() => setAdminTab('wallet_audit'), 200);
+    }
+  };
+
+  /* ── تعليم الكل مقروء ── */
+  window.wsecMarkAllAlerts = function () {
+    _alertsStore.forEach(a => _markSeen(a.id));
+    _updateBadge();
+    _renderAlertsPanel();
+  };
+
+  /* ── إنشاء/تحديث جرس الجرس ── */
+  function _ensureBell() {
+    if (document.getElementById('wsec-alert-bell')) return;
+    const btn = document.createElement('button');
+    btn.id = 'wsec-alert-bell';
+    btn.setAttribute('aria-label', 'إشعارات المحافظ');
+    btn.innerHTML = `🔔<span id="wsec-bell-badge"></span>`;
+    btn.onclick = wsecToggleAlertsPanel;
+    document.body.appendChild(btn);
+    _updateBadge();
+  }
+
+  /* ── بدء المراقبة الفورية على Firestore ── */
+  function _startLargeAmountWatcher() {
+    if (_alertWatcherUnsub) return; /* لا تبدأ مرتين */
+
+    const startTime = firebase.firestore.Timestamp.now();
+
+    _alertWatcherUnsub = db.collection(AUDIT_COLLECTION)
+      .where('amount', '>=', LARGE_AMOUNT_THRESHOLD)
+      .orderBy('amount', 'desc')
+      .limit(50)
+      .onSnapshot(snap => {
+        let hasNew = false;
+
+        snap.docChanges().forEach(change => {
+          if (change.type !== 'added') return;
+          const data  = change.doc.data();
+          const docId = change.doc.id;
+
+          /* فقط العمليات المالية (ليس gate_access وما شابه) */
+          if (!['credit','debit','set'].includes(data.action)) return;
+
+          /* لا نُنبّه بسجلات قديمة (موجودة قبل فتح الصفحة) */
+          const ts = data.timestamp;
+          const docTime = ts?.seconds ? ts.seconds : (ts instanceof Date ? ts.getTime()/1000 : 0);
+          const isNew = docTime >= startTime.seconds;
+
+          /* أضف للمخزن إن لم يكن موجوداً */
+          const exists = _alertsStore.some(a => a.id === docId);
+          if (!exists) {
+            _alertsStore.unshift({ id: docId, ...data });
+            if (_alertsStore.length > 50) _alertsStore.pop();
+          }
+
+          /* أظهر توست للمستجدات فقط */
+          if (isNew && _isUnseen(docId)) {
+            hasNew = true;
+            _showToastAlert({ id: docId, ...data });
+          }
+        });
+
+        if (hasNew) _updateBadge();
+        if (_panelOpen) _renderAlertsPanel();
+
+      }, err => {
+        console.warn('[WalletSecurity] فشل مراقبة الإشعارات:', err.message);
+      });
+
+    console.log('[WalletSecurity] مراقب العمليات الكبيرة نشط 🔔');
+  }
+
+  /* ── تهيئة النظام عند جاهزية المستخدم الإداري ── */
+  function _initAlertSystem() {
+    const me = State.currentUser;
+    if (!me || !['admin','staff'].includes(me.role)) return;
+    _ensureBell();
+    _startLargeAmountWatcher();
+  }
+
+  /* ── انتظر حتى يصبح State.currentUser جاهزاً ── */
+  let _initTries = 0;
+  const _initInterval = setInterval(() => {
+    _initTries++;
+    const me = State.currentUser;
+    if (me && me.role && me.role !== 'guest') {
+      clearInterval(_initInterval);
+      _initAlertSystem();
+    } else if (_initTries > 60) { /* 30 ثانية كحد أقصى */
+      clearInterval(_initInterval);
+    }
+  }, 500);
+
+  /* تنظيف المراقب عند إغلاق الصفحة */
+  window.addEventListener('beforeunload', () => {
+    if (_alertWatcherUnsub) _alertWatcherUnsub();
+  });
 
   console.log('[WalletSecurity] نظام أمان المحافظ المتكامل جاهز 🔐');
 })();
