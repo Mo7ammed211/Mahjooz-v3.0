@@ -2242,6 +2242,7 @@ window.ph46_saveItem = async function(sectionId) {
       allowMultiDate,
       mainImage: window.__ph46_mainImg || null,
       images: window.__ph46_imgs || [],
+      adminAlerts: typeof window.getAdminAlerts === 'function' ? window.getAdminAlerts() : [],
       status: isEditMode() ? (allItems.find(i => i.id === editId)?.status || 'active') : 'active',
       updatedAt: new Date()
     };
@@ -2588,7 +2589,12 @@ window.ph46_showAddItemModalDirect = function(sectionId, catId = null) {
           <div id="ph46-media-manager-preview" style="margin-top:12px;"></div>
         </div>
       </div>
-      
+
+      <!-- حقول التنبيهات الإدارية المرقمة -->
+      <div style="margin-top:16px;">
+        ${typeof renderAdminAlerts === 'function' ? renderAdminAlerts([]) : ''}
+      </div>
+
       <div style="margin-top:20px; display:flex; justify-content:flex-end; gap:10px;">
         <button class="ph46-btn ph46-btn-secondary" onclick="closeModal()">إلغاء</button>
         <button class="ph46-btn ph46-btn-primary" onclick="ph46_saveItem('${sectionId}')">💾 إضافة وحفظ للكتالوج</button>
@@ -2788,7 +2794,12 @@ window.ph46_showEditItemModal = function(itemId) {
           <div id="ph46-media-manager-preview" style="margin-top:12px;"></div>
         </div>
       </div>
-      
+
+      <!-- حقول التنبيهات الإدارية المرقمة -->
+      <div style="margin-top:16px;">
+        ${typeof renderAdminAlerts === 'function' ? renderAdminAlerts(item.adminAlerts || []) : ''}
+      </div>
+
       <div style="margin-top:20px; display:flex; justify-content:flex-end; gap:10px;">
         <button class="ph46-btn ph46-btn-secondary" onclick="closeModal()">إلغاء</button>
         <button class="ph46-btn ph46-btn-primary" onclick="ph46_saveItem('${sectionId}')">💾 حفظ التغييرات والكتالوج</button>

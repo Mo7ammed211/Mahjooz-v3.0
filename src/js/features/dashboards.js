@@ -2995,6 +2995,11 @@ window._svcModalBody = function(s = {}, section = null) {
       </div>
 
       ${_renderVendorPicker(s.assignedVendors||[], s.multiVendors!==false)}
+
+    <!-- حقول التنبيهات الإدارية المرقمة -->
+    <div style="margin-top:18px;">
+      ${typeof renderAdminAlerts === 'function' ? renderAdminAlerts(s.adminAlerts || []) : ''}
+    </div>
     </div>`;
 }
 
@@ -3030,7 +3035,7 @@ function _collectSvcForm(existingImages = []) {
     assignedVendors: Array.from(document.querySelectorAll('.svc-vendor-cb:checked')).map(cb=>cb.value),
     sectionId: document.getElementById('svc-section-id')?.value || null,
     images,
-
+    adminAlerts: typeof window.getAdminAlerts === 'function' ? window.getAdminAlerts() : [],
   };
 }
 
