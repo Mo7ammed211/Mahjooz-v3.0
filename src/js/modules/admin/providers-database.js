@@ -75,23 +75,31 @@ function _pdb_renderCatsList() {
     const cEntries = entries.filter(e => e.catId === c.id);
     const isActive = c.active !== false;
     return `
-    <div class="pdb-card pdb-cat-card" onclick="pdb_goSubcats('${c.id}')" style="opacity:${isActive ? 1 : 0.6}">
-      <div class="pdb-cat-header">
+    <div class="pdb-cat-card" onclick="pdb_goSubcats('${c.id}')" style="opacity:${isActive ? 1 : 0.65}">
+      <div class="pdb-cat-top-bar"></div>
+      <div class="pdb-cat-body">
         <div class="pdb-cat-icon-wrap">${escHtml(c.icon || '🏢')}</div>
-        <div class="pdb-cat-info">
-          <div class="pdb-cat-title">${escHtml(c.name)}</div>
-          ${c.desc ? `<div class="pdb-cat-desc">${escHtml(c.desc)}</div>` : ''}
+        <div class="pdb-cat-title">${escHtml(c.name)}</div>
+        ${c.desc ? `<div class="pdb-cat-desc">${escHtml(c.desc)}</div>` : '<div class="pdb-cat-desc"></div>'}
+        <div class="pdb-cat-stats">
+          <div class="pdb-cat-stat">
+            <div class="pdb-cat-stat-val">${cSubs.length}</div>
+            <div class="pdb-cat-stat-lbl">فئة فرعية</div>
+          </div>
+          <div class="pdb-cat-stat-divider"></div>
+          <div class="pdb-cat-stat">
+            <div class="pdb-cat-stat-val">${cEntries.length}</div>
+            <div class="pdb-cat-stat-lbl">مزود</div>
+          </div>
+          ${!isActive ? `<div class="pdb-cat-stat-divider"></div><div class="pdb-cat-stat"><div class="pdb-cat-stat-val" style="color:#f59e0b;font-size:14px;">⚠️</div><div class="pdb-cat-stat-lbl" style="color:#f59e0b;">معطّل</div></div>` : ''}
         </div>
-        <div class="pdb-cat-arrow">›</div>
       </div>
       <div class="pdb-cat-footer">
-        <span class="pdb-stat-chip">📂 ${cSubs.length} فئة فرعية</span>
-        <span class="pdb-stat-chip">👤 ${cEntries.length} مزود</span>
-        ${!isActive ? `<span class="pdb-stat-chip pdb-chip-warn">⚠️ معطّل</span>` : ''}
-      </div>
-      <div class="pdb-cat-actions" onclick="event.stopPropagation()">
-        <button class="pdb-icon-btn" onclick="pdb_openEditCatModal('${c.id}')" title="تعديل">✏️</button>
-        <button class="pdb-icon-btn danger" onclick="pdb_confirmDeleteCat('${c.id}','${escAttr(c.name)}')" title="حذف">🗑️</button>
+        <div class="pdb-cat-actions" onclick="event.stopPropagation()">
+          <button class="pdb-icon-btn" onclick="pdb_openEditCatModal('${c.id}')" title="تعديل">✏️</button>
+          <button class="pdb-icon-btn danger" onclick="pdb_confirmDeleteCat('${c.id}','${escAttr(c.name)}')" title="حذف">🗑️</button>
+        </div>
+        <span class="pdb-cat-arrow">‹</span>
       </div>
     </div>`;
   }).join('');
@@ -110,22 +118,34 @@ function _pdb_renderCatsList() {
     </div>
 
     <!-- KPIs -->
-    <div class="pdb-kpi-row">
-      <div class="pdb-kpi">
-        <div class="pdb-kpi-icon" style="background:rgba(139,92,246,0.12);color:#8b5cf6">🏢</div>
-        <div><div class="pdb-kpi-val">${cats.length}</div><div class="pdb-kpi-lbl">تصنيف</div></div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px;">
+      <div style="display:flex;align-items:center;gap:14px;padding:18px 20px;background:rgba(139,92,246,0.07);border:1.5px solid rgba(139,92,246,0.2);border-radius:16px;">
+        <div style="width:48px;height:48px;min-width:48px;border-radius:14px;background:rgba(139,92,246,0.15);display:flex;align-items:center;justify-content:center;font-size:22px;line-height:1;">🏢</div>
+        <div style="min-width:0;">
+          <div style="font-size:26px;font-weight:900;color:#c4b5fd;line-height:1.1;">${cats.length}</div>
+          <div style="font-size:12px;color:rgba(196,181,253,0.7);margin-top:3px;font-family:'Cairo',sans-serif;">تصنيف رئيسي</div>
+        </div>
       </div>
-      <div class="pdb-kpi">
-        <div class="pdb-kpi-icon" style="background:rgba(16,185,129,0.12);color:#10b981">📂</div>
-        <div><div class="pdb-kpi-val">${totalSubcats}</div><div class="pdb-kpi-lbl">فئة فرعية</div></div>
+      <div style="display:flex;align-items:center;gap:14px;padding:18px 20px;background:rgba(16,185,129,0.07);border:1.5px solid rgba(16,185,129,0.2);border-radius:16px;">
+        <div style="width:48px;height:48px;min-width:48px;border-radius:14px;background:rgba(16,185,129,0.15);display:flex;align-items:center;justify-content:center;font-size:22px;line-height:1;">📂</div>
+        <div style="min-width:0;">
+          <div style="font-size:26px;font-weight:900;color:#6ee7b7;line-height:1.1;">${totalSubcats}</div>
+          <div style="font-size:12px;color:rgba(110,231,183,0.7);margin-top:3px;font-family:'Cairo',sans-serif;">فئة فرعية</div>
+        </div>
       </div>
-      <div class="pdb-kpi">
-        <div class="pdb-kpi-icon" style="background:rgba(59,130,246,0.12);color:#3b82f6">👤</div>
-        <div><div class="pdb-kpi-val">${totalEntries}</div><div class="pdb-kpi-lbl">مزود خدمة</div></div>
+      <div style="display:flex;align-items:center;gap:14px;padding:18px 20px;background:rgba(59,130,246,0.07);border:1.5px solid rgba(59,130,246,0.2);border-radius:16px;">
+        <div style="width:48px;height:48px;min-width:48px;border-radius:14px;background:rgba(59,130,246,0.15);display:flex;align-items:center;justify-content:center;font-size:22px;line-height:1;">👤</div>
+        <div style="min-width:0;">
+          <div style="font-size:26px;font-weight:900;color:#93c5fd;line-height:1.1;">${totalEntries}</div>
+          <div style="font-size:12px;color:rgba(147,197,253,0.7);margin-top:3px;font-family:'Cairo',sans-serif;">مزود خدمة</div>
+        </div>
       </div>
-      <div class="pdb-kpi">
-        <div class="pdb-kpi-icon" style="background:rgba(245,158,11,0.12);color:#f59e0b">📍</div>
-        <div><div class="pdb-kpi-val">${entries.reduce((acc,e) => acc + (e.addresses||[]).length, 0)}</div><div class="pdb-kpi-lbl">عنوان مسجّل</div></div>
+      <div style="display:flex;align-items:center;gap:14px;padding:18px 20px;background:rgba(245,158,11,0.07);border:1.5px solid rgba(245,158,11,0.2);border-radius:16px;">
+        <div style="width:48px;height:48px;min-width:48px;border-radius:14px;background:rgba(245,158,11,0.15);display:flex;align-items:center;justify-content:center;font-size:22px;line-height:1;">📍</div>
+        <div style="min-width:0;">
+          <div style="font-size:26px;font-weight:900;color:#fcd34d;line-height:1.1;">${entries.reduce((acc,e) => acc + (e.addresses||[]).length, 0)}</div>
+          <div style="font-size:12px;color:rgba(252,211,77,0.7);margin-top:3px;font-family:'Cairo',sans-serif;">عنوان مسجّل</div>
+        </div>
       </div>
     </div>
 
@@ -972,119 +992,248 @@ function _pdb_breadcrumb(items) {
 }
 
 function _pdb_styles() {
-  if (document.getElementById('pdb-styles')) return '';
+  const existing = document.getElementById('pdb-styles');
+  if (existing) existing.remove();
   return `
   <style id="pdb-styles">
-    .pdb-wrap { padding: 20px; max-width: 1100px; margin: 0 auto; font-family: 'Cairo', sans-serif; }
-    .pdb-page-header { display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px; margin-bottom:24px; }
-    .pdb-page-title  { font-size:22px; font-weight:900; margin:0; color:var(--text-main); }
-    .pdb-page-sub    { color:var(--text-muted); font-size:13px; margin:4px 0 0; }
-    .pdb-kpi-row     { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:28px; }
-    .pdb-kpi         { display:flex; align-items:center; gap:12px; padding:14px 20px; background:var(--glass-bg); border:1px solid var(--border); border-radius:14px; flex:1; min-width:120px; }
-    .pdb-kpi-icon    { width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; }
-    .pdb-kpi-val     { font-size:24px; font-weight:900; line-height:1; }
-    .pdb-kpi-lbl     { font-size:12px; color:var(--text-muted); margin-top:2px; }
+    * { box-sizing: border-box; }
+    .pdb-wrap { padding:24px; max-width:1200px; margin:0 auto; font-family:'Cairo',sans-serif; direction:rtl; }
 
-    .pdb-cats-grid   { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px; }
-    .pdb-card        { background:var(--glass-bg); border:1.5px solid var(--border); border-radius:18px; overflow:hidden; cursor:pointer; transition:border-color 0.2s,box-shadow 0.2s,transform 0.15s; position:relative; }
-    .pdb-card:hover  { border-color:var(--primary); box-shadow:0 4px 24px rgba(139,92,246,0.14); transform:translateY(-2px); }
-    .pdb-cat-card    {}
-    .pdb-cat-header  { display:flex; align-items:center; gap:14px; padding:18px 16px 12px; }
-    .pdb-cat-icon-wrap { width:52px; height:52px; border-radius:14px; background:rgba(139,92,246,0.1); display:flex; align-items:center; justify-content:center; font-size:26px; flex-shrink:0; }
-    .pdb-cat-info    { flex:1; min-width:0; }
-    .pdb-cat-title   { font-size:16px; font-weight:800; color:var(--text-main); }
-    .pdb-cat-desc    { font-size:12px; color:var(--text-muted); margin-top:2px; }
-    .pdb-cat-arrow   { color:var(--text-muted); font-size:20px; padding-left:4px; }
-    .pdb-cat-footer  { display:flex; flex-wrap:wrap; gap:6px; padding:10px 16px; border-top:1px solid var(--border); background:rgba(255,255,255,0.01); }
-    .pdb-cat-actions { position:absolute; top:10px; left:10px; display:flex; gap:4px; opacity:0; transition:opacity 0.15s; }
-    .pdb-card:hover .pdb-cat-actions { opacity:1; }
-    .pdb-stat-chip   { font-size:11.5px; background:var(--bg-card); border:1px solid var(--border); border-radius:20px; padding:3px 9px; color:var(--text-secondary); white-space:nowrap; }
-    .pdb-chip-warn   { background:rgba(245,158,11,0.1); border-color:rgba(245,158,11,0.3); color:#f59e0b; }
-    .pdb-chip-ok     { background:rgba(16,185,129,0.1); border-color:rgba(16,185,129,0.3); color:#10b981; }
+    /* ── ترويسة الصفحة ── */
+    .pdb-page-header { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:24px; }
+    .pdb-page-title  { font-size:22px; font-weight:900; margin:0; color:#f1f5f9; }
+    .pdb-page-sub    { color:#94a3b8; font-size:13px; margin:4px 0 0; }
 
-    .pdb-breadcrumb  { display:flex; align-items:center; flex-wrap:wrap; gap:4px; margin-bottom:18px; }
-    .pdb-bc-btn      { background:none; border:none; cursor:pointer; color:var(--primary); font-size:14px; font-weight:600; font-family:'Cairo',sans-serif; padding:3px 6px; border-radius:6px; transition:background 0.15s; }
-    .pdb-bc-btn:hover{ background:rgba(139,92,246,0.1); }
-    .pdb-bc-sep      { color:var(--text-muted); font-size:16px; }
-    .pdb-bc-current  { font-size:14px; color:var(--text-muted); padding:3px 6px; }
+    /* ── بطاقات التصنيفات ── */
+    .pdb-cats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 16px;
+    }
+    .pdb-cat-card {
+      background: rgba(255,255,255,0.04);
+      border: 1.5px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    .pdb-cat-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(139,92,246,0.5);
+      box-shadow: 0 12px 40px rgba(139,92,246,0.18);
+    }
+    .pdb-cat-top-bar {
+      height: 4px;
+      background: linear-gradient(90deg, #8b5cf6, #6366f1);
+      flex-shrink: 0;
+    }
+    .pdb-cat-body {
+      padding: 20px 18px 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      flex: 1;
+      gap: 8px;
+    }
+    .pdb-cat-icon-wrap {
+      width: 64px;
+      height: 64px;
+      border-radius: 18px;
+      background: rgba(139,92,246,0.12);
+      border: 1.5px solid rgba(139,92,246,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 30px;
+      margin-bottom: 4px;
+    }
+    .pdb-cat-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: #f1f5f9;
+      line-height: 1.3;
+    }
+    .pdb-cat-desc {
+      font-size: 12px;
+      color: #64748b;
+      min-height: 16px;
+      line-height: 1.4;
+    }
+    .pdb-cat-stats {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 12px;
+      padding: 8px 16px;
+      margin-top: 6px;
+      width: 100%;
+      justify-content: center;
+    }
+    .pdb-cat-stat { text-align:center; padding: 0 12px; }
+    .pdb-cat-stat-val { font-size:18px; font-weight:900; color:#c4b5fd; line-height:1; }
+    .pdb-cat-stat-lbl { font-size:10px; color:#64748b; margin-top:2px; }
+    .pdb-cat-stat-divider { width:1px; height:28px; background:rgba(255,255,255,0.08); flex-shrink:0; }
+    .pdb-cat-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      border-top: 1px solid rgba(255,255,255,0.05);
+      background: rgba(0,0,0,0.1);
+    }
+    .pdb-cat-actions { display:flex; gap:4px; }
+    .pdb-cat-arrow { color:#475569; font-size:20px; font-weight:900; }
+    .pdb-cat-card:hover .pdb-cat-arrow { color:#8b5cf6; }
 
+    /* ── breadcrumb ── */
+    .pdb-breadcrumb { display:flex; align-items:center; flex-wrap:wrap; gap:4px; margin-bottom:20px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-radius:12px; padding:10px 16px; }
+    .pdb-bc-btn     { background:none; border:none; cursor:pointer; color:#8b5cf6; font-size:13px; font-weight:700; font-family:'Cairo',sans-serif; padding:2px 6px; border-radius:6px; transition:background 0.15s; }
+    .pdb-bc-btn:hover { background:rgba(139,92,246,0.1); }
+    .pdb-bc-sep     { color:#475569; font-size:16px; }
+    .pdb-bc-current { font-size:13px; color:#94a3b8; padding:2px 6px; font-family:'Cairo',sans-serif; }
+
+    /* ── بحث ── */
     .pdb-search-row  { margin-bottom:18px; }
     .pdb-search-wrap { position:relative; }
-    .pdb-search-icon { position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:15px; color:var(--text-muted); pointer-events:none; }
-    .pdb-search-input{ width:100%; padding:10px 38px 10px 14px; border:1.5px solid var(--border); border-radius:10px; background:var(--glass-bg); color:var(--text-main); font-family:'Cairo',sans-serif; font-size:14px; transition:border-color 0.2s; box-sizing:border-box; }
-    .pdb-search-input:focus { outline:none; border-color:var(--primary); }
+    .pdb-search-icon { position:absolute; right:14px; top:50%; transform:translateY(-50%); font-size:15px; color:#64748b; pointer-events:none; z-index:1; }
+    .pdb-search-input {
+      width: 100%;
+      padding: 11px 44px 11px 16px;
+      border: 1.5px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      background: rgba(255,255,255,0.05);
+      color: #f1f5f9;
+      font-family: 'Cairo', sans-serif;
+      font-size: 14px;
+      transition: border-color 0.2s;
+      box-sizing: border-box;
+      outline: none;
+    }
+    .pdb-search-input:focus { border-color:#8b5cf6; background:rgba(139,92,246,0.06); }
+    .pdb-search-input::placeholder { color:#475569; }
 
+    /* ── قائمة الفئات الفرعية ── */
     .pdb-subcats-list { display:flex; flex-direction:column; gap:10px; }
-    .pdb-subcat-row  { display:flex; align-items:center; gap:14px; padding:14px 16px; background:var(--glass-bg); border:1.5px solid var(--border); border-radius:14px; cursor:pointer; transition:all 0.2s; }
-    .pdb-subcat-row:hover { border-color:var(--primary); background:rgba(139,92,246,0.04); }
-    .pdb-subcat-icon { font-size:26px; flex-shrink:0; }
+    .pdb-subcat-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 16px 18px;
+      background: rgba(255,255,255,0.04);
+      border: 1.5px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .pdb-subcat-row:hover { border-color:rgba(139,92,246,0.4); background:rgba(139,92,246,0.05); transform:translateX(-2px); }
+    .pdb-subcat-icon { font-size:28px; flex-shrink:0; width:44px; height:44px; display:flex; align-items:center; justify-content:center; background:rgba(139,92,246,0.1); border-radius:12px; }
     .pdb-subcat-body { flex:1; min-width:0; }
-    .pdb-subcat-name { font-size:15px; font-weight:700; color:var(--text-main); }
-    .pdb-subcat-desc { font-size:12px; color:var(--text-muted); }
+    .pdb-subcat-name { font-size:15px; font-weight:700; color:#f1f5f9; }
+    .pdb-subcat-desc { font-size:12px; color:#64748b; margin-top:2px; }
     .pdb-subcat-meta { display:flex; gap:6px; flex-shrink:0; }
-    .pdb-subcat-actions { display:flex; gap:4px; opacity:0; transition:opacity 0.15s; }
+    .pdb-subcat-actions { display:flex; gap:4px; opacity:0; transition:opacity 0.15s; flex-shrink:0; }
     .pdb-subcat-row:hover .pdb-subcat-actions { opacity:1; }
-    .pdb-subcat-arrow { color:var(--text-muted); font-size:18px; }
+    .pdb-subcat-arrow { color:#475569; font-size:20px; font-weight:900; flex-shrink:0; }
+    .pdb-subcat-row:hover .pdb-subcat-arrow { color:#8b5cf6; }
 
-    .pdb-entries-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:14px; }
-    .pdb-entry-card  { background:var(--glass-bg); border:1.5px solid var(--border); border-radius:16px; padding:16px; cursor:pointer; transition:all 0.2s; position:relative; display:flex; flex-direction:column; gap:10px; }
-    .pdb-entry-card:hover { border-color:var(--primary); box-shadow:0 4px 20px rgba(139,92,246,0.12); }
-    .pdb-entry-avatar{ width:60px; height:60px; border-radius:50%; background:linear-gradient(135deg,var(--primary),#7c3aed); display:flex; align-items:center; justify-content:center; color:#fff; font-size:24px; font-weight:900; overflow:hidden; margin:0 auto; }
-    .pdb-entry-body  { text-align:center; }
-    .pdb-entry-name  { font-size:15px; font-weight:800; color:var(--text-main); }
-    .pdb-entry-phone { font-size:12px; color:var(--text-muted); margin-top:2px; }
-    .pdb-entry-notes { font-size:11px; color:var(--text-muted); margin-top:4px; }
-    .pdb-entry-chips { display:flex; justify-content:center; flex-wrap:wrap; gap:5px; margin-top:6px; }
-    .pdb-entry-actions { position:absolute; top:8px; left:8px; display:flex; gap:4px; opacity:0; transition:opacity 0.15s; }
+    /* ── شبكة المزودين ── */
+    .pdb-entries-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:14px; }
+    .pdb-entry-card {
+      background: rgba(255,255,255,0.04);
+      border: 1.5px solid rgba(255,255,255,0.08);
+      border-radius: 18px;
+      padding: 20px 16px 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+    .pdb-entry-card:hover { border-color:rgba(139,92,246,0.4); box-shadow:0 8px 30px rgba(139,92,246,0.15); transform:translateY(-3px); }
+    .pdb-entry-avatar {
+      width: 64px; height: 64px; border-radius: 50%;
+      background: linear-gradient(135deg,#8b5cf6,#6366f1);
+      display: flex; align-items:center; justify-content:center;
+      color:#fff; font-size:26px; font-weight:900; overflow:hidden;
+      box-shadow: 0 4px 16px rgba(139,92,246,0.35);
+    }
+    .pdb-entry-body  { text-align:center; width:100%; }
+    .pdb-entry-name  { font-size:15px; font-weight:800; color:#f1f5f9; }
+    .pdb-entry-phone { font-size:12px; color:#64748b; margin-top:3px; }
+    .pdb-entry-notes { font-size:11px; color:#64748b; margin-top:4px; }
+    .pdb-entry-chips { display:flex; justify-content:center; flex-wrap:wrap; gap:5px; margin-top:8px; }
+    .pdb-entry-actions { position:absolute; top:10px; left:10px; display:flex; gap:4px; opacity:0; transition:opacity 0.15s; }
     .pdb-entry-card:hover .pdb-entry-actions { opacity:1; }
 
-    .pdb-provider-hero { display:flex; align-items:flex-start; gap:20px; background:var(--glass-bg); border:1.5px solid var(--border); border-radius:18px; padding:24px; margin-bottom:28px; flex-wrap:wrap; }
-    .pdb-provider-avatar-lg { width:72px; height:72px; border-radius:50%; background:linear-gradient(135deg,var(--primary),#7c3aed); display:flex; align-items:center; justify-content:center; color:#fff; font-size:28px; font-weight:900; flex-shrink:0; }
-    .pdb-provider-hero-info { flex:1; min-width:0; }
-    .pdb-provider-name { font-size:20px; font-weight:900; margin:0 0 8px; }
-    .pdb-provider-meta-row { display:flex; flex-wrap:wrap; gap:6px; }
-    .pdb-meta-badge  { font-size:12px; padding:4px 10px; border-radius:20px; background:var(--bg-card); border:1px solid var(--border); }
-    .pdb-badge-warn  { background:rgba(245,158,11,0.1); border-color:rgba(245,158,11,0.3); color:#f59e0b; }
-    .pdb-badge-ok    { background:rgba(16,185,129,0.1); border-color:rgba(16,185,129,0.3); color:#10b981; }
-    .pdb-provider-notes { font-size:13px; color:var(--text-muted); margin-top:10px; line-height:1.6; }
+    /* ── Chips ── */
+    .pdb-stat-chip { font-size:11px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:20px; padding:3px 10px; color:#94a3b8; white-space:nowrap; font-family:'Cairo',sans-serif; }
+    .pdb-chip-warn { background:rgba(245,158,11,0.1); border-color:rgba(245,158,11,0.25); color:#f59e0b; }
+    .pdb-chip-ok   { background:rgba(16,185,129,0.1); border-color:rgba(16,185,129,0.25); color:#10b981; }
 
-    .pdb-addresses-section { }
+    /* ── تفاصيل المزود ── */
+    .pdb-provider-hero { display:flex; align-items:flex-start; gap:20px; background:rgba(139,92,246,0.07); border:1.5px solid rgba(139,92,246,0.18); border-radius:20px; padding:24px; margin-bottom:24px; flex-wrap:wrap; }
+    .pdb-provider-avatar-lg { width:76px; height:76px; min-width:76px; border-radius:50%; background:linear-gradient(135deg,#8b5cf6,#6366f1); display:flex; align-items:center; justify-content:center; color:#fff; font-size:30px; font-weight:900; box-shadow:0 6px 20px rgba(139,92,246,0.4); }
+    .pdb-provider-hero-info { flex:1; min-width:0; }
+    .pdb-provider-name { font-size:20px; font-weight:900; margin:0 0 10px; color:#f1f5f9; }
+    .pdb-provider-meta-row { display:flex; flex-wrap:wrap; gap:6px; }
+    .pdb-meta-badge { font-size:12px; padding:4px 12px; border-radius:20px; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.1); color:#cbd5e1; font-family:'Cairo',sans-serif; }
+    .pdb-badge-warn { background:rgba(245,158,11,0.1); border-color:rgba(245,158,11,0.25); color:#f59e0b; }
+    .pdb-badge-ok   { background:rgba(16,185,129,0.1); border-color:rgba(16,185,129,0.25); color:#10b981; }
+    .pdb-provider-notes { font-size:13px; color:#94a3b8; margin-top:10px; line-height:1.6; }
+
+    /* ── العناوين ── */
     .pdb-section-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
-    .pdb-section-title { font-size:17px; font-weight:800; margin:0; }
+    .pdb-section-title  { font-size:17px; font-weight:800; margin:0; color:#f1f5f9; }
     .pdb-addresses-list { display:flex; flex-direction:column; gap:14px; }
-    .pdb-address-card { background:var(--glass-bg); border:1.5px solid var(--border); border-radius:16px; padding:18px; }
+    .pdb-address-card   { background:rgba(255,255,255,0.04); border:1.5px solid rgba(255,255,255,0.08); border-radius:16px; padding:18px; }
     .pdb-address-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px; }
     .pdb-address-label-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
-    .pdb-address-label { font-size:14px; font-weight:800; color:var(--text-main); }
-    .pdb-map-link    { font-size:12px; color:var(--primary); text-decoration:none; padding:3px 8px; border:1px solid rgba(139,92,246,0.3); border-radius:6px; transition:background 0.15s; }
-    .pdb-map-link:hover { background:rgba(139,92,246,0.08); }
+    .pdb-address-label  { font-size:14px; font-weight:800; color:#f1f5f9; }
+    .pdb-map-link       { font-size:12px; color:#8b5cf6; text-decoration:none; padding:3px 10px; border:1px solid rgba(139,92,246,0.3); border-radius:8px; transition:background 0.15s; font-family:'Cairo',sans-serif; }
+    .pdb-map-link:hover { background:rgba(139,92,246,0.12); }
     .pdb-address-actions { display:flex; gap:4px; }
-    .pdb-address-text { font-size:13px; color:var(--text-secondary); margin-bottom:8px; }
-    .pdb-coords-row  { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
-    .pdb-coord-chip  { font-size:11px; font-family:monospace; background:rgba(139,92,246,0.08); color:#8b5cf6; border:1px solid rgba(139,92,246,0.2); border-radius:6px; padding:2px 8px; }
-    .pdb-images-strip{ display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; align-items:flex-end; }
-    .pdb-img-wrap    { position:relative; width:80px; height:80px; border-radius:10px; overflow:hidden; border:1px solid var(--border); flex-shrink:0; }
-    .pdb-img-wrap img{ width:100%;height:100%;object-fit:cover; }
-    .pdb-img-del     { position:absolute; top:2px; right:2px; background:rgba(239,68,68,0.9); color:#fff; border:none; border-radius:50%; width:20px; height:20px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:11px; line-height:1; }
-    .pdb-add-img-btn { padding:6px 12px; border:1.5px dashed rgba(139,92,246,0.35); border-radius:10px; background:rgba(139,92,246,0.04); color:var(--primary); cursor:pointer; font-family:'Cairo',sans-serif; font-size:12px; font-weight:700; transition:all 0.15s; white-space:nowrap; }
-    .pdb-add-img-btn:hover { background:rgba(139,92,246,0.1); border-color:var(--primary); }
+    .pdb-address-text   { font-size:13px; color:#94a3b8; margin-bottom:8px; }
+    .pdb-coords-row     { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+    .pdb-coord-chip     { font-size:11px; font-family:monospace; background:rgba(139,92,246,0.08); color:#8b5cf6; border:1px solid rgba(139,92,246,0.2); border-radius:6px; padding:2px 8px; }
+    .pdb-images-strip   { display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; align-items:flex-end; }
+    .pdb-img-wrap       { position:relative; width:84px; height:84px; border-radius:12px; overflow:hidden; border:1.5px solid rgba(255,255,255,0.1); flex-shrink:0; }
+    .pdb-img-wrap img   { width:100%; height:100%; object-fit:cover; }
+    .pdb-img-del        { position:absolute; top:3px; right:3px; background:rgba(239,68,68,0.9); color:#fff; border:none; border-radius:50%; width:20px; height:20px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:11px; line-height:1; }
+    .pdb-add-img-btn    { padding:8px 14px; border:1.5px dashed rgba(139,92,246,0.35); border-radius:12px; background:rgba(139,92,246,0.04); color:#8b5cf6; cursor:pointer; font-family:'Cairo',sans-serif; font-size:12px; font-weight:700; transition:all 0.15s; white-space:nowrap; }
+    .pdb-add-img-btn:hover { background:rgba(139,92,246,0.1); border-color:#8b5cf6; }
 
-    .pdb-btn         { display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:9px 18px; border:none; border-radius:10px; font-family:'Cairo',sans-serif; font-size:14px; font-weight:700; cursor:pointer; transition:all 0.15s; }
-    .pdb-btn-primary { background:var(--primary); color:#fff; box-shadow:0 2px 10px rgba(139,92,246,0.3); }
-    .pdb-btn-primary:hover { filter:brightness(1.1); transform:translateY(-1px); }
-    .pdb-btn-secondary { background:var(--glass-bg); color:var(--text-main); border:1.5px solid var(--border); }
-    .pdb-btn-secondary:hover { border-color:var(--primary); color:var(--primary); }
-    .pdb-btn-sm      { padding:6px 12px; font-size:13px; border-radius:8px; }
-    .pdb-icon-btn    { background:var(--glass-bg); border:1px solid var(--border); border-radius:8px; padding:5px 8px; cursor:pointer; font-size:14px; transition:all 0.15s; }
-    .pdb-icon-btn:hover { border-color:var(--primary); background:rgba(139,92,246,0.08); }
-    .pdb-icon-btn.danger:hover { border-color:#ef4444; background:rgba(239,68,68,0.08); }
-    .pdb-empty       { text-align:center; padding:50px 20px; background:rgba(139,92,246,0.02); border:2px dashed rgba(139,92,246,0.15); border-radius:20px; }
-    .pdb-empty-icon  { font-size:48px; margin-bottom:14px; }
-    .pdb-empty h3    { color:var(--text-secondary); font-family:'Cairo',sans-serif; margin-bottom:8px; }
-    .pdb-empty p     { color:var(--text-muted); margin-bottom:18px; font-size:13px; }
-    @media (max-width:600px) {
-      .pdb-cats-grid   { grid-template-columns:1fr; }
-      .pdb-entries-grid{ grid-template-columns:1fr; }
+    /* ── أزرار ── */
+    .pdb-btn           { display:inline-flex; align-items:center; justify-content:center; gap:6px; padding:10px 20px; border:none; border-radius:12px; font-family:'Cairo',sans-serif; font-size:14px; font-weight:700; cursor:pointer; transition:all 0.15s; }
+    .pdb-btn-primary   { background:linear-gradient(135deg,#8b5cf6,#7c3aed); color:#fff; box-shadow:0 3px 12px rgba(139,92,246,0.35); }
+    .pdb-btn-primary:hover { filter:brightness(1.12); transform:translateY(-1px); box-shadow:0 6px 18px rgba(139,92,246,0.4); }
+    .pdb-btn-secondary { background:rgba(255,255,255,0.06); color:#e2e8f0; border:1.5px solid rgba(255,255,255,0.1); }
+    .pdb-btn-secondary:hover { border-color:#8b5cf6; color:#c4b5fd; background:rgba(139,92,246,0.08); }
+    .pdb-btn-sm        { padding:6px 14px; font-size:13px; border-radius:9px; }
+    .pdb-icon-btn      { background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:9px; padding:6px 9px; cursor:pointer; font-size:14px; transition:all 0.15s; line-height:1; }
+    .pdb-icon-btn:hover { border-color:#8b5cf6; background:rgba(139,92,246,0.1); }
+    .pdb-icon-btn.danger:hover { border-color:#ef4444; background:rgba(239,68,68,0.1); }
+
+    /* ── فارغ ── */
+    .pdb-empty       { text-align:center; padding:56px 20px; background:rgba(139,92,246,0.03); border:2px dashed rgba(139,92,246,0.15); border-radius:20px; }
+    .pdb-empty-icon  { font-size:52px; margin-bottom:16px; }
+    .pdb-empty h3    { color:#94a3b8; font-family:'Cairo',sans-serif; margin:0 0 8px; font-size:18px; font-weight:800; }
+    .pdb-empty p     { color:#475569; margin:0 0 20px; font-size:13px; }
+
+    @media (max-width:768px) {
+      .pdb-cats-grid    { grid-template-columns:repeat(2,1fr); }
+      .pdb-entries-grid { grid-template-columns:1fr; }
+    }
+    @media (max-width:480px) {
+      .pdb-cats-grid    { grid-template-columns:1fr; }
       .pdb-provider-hero { flex-direction:column; align-items:center; text-align:center; }
     }
   </style>`;
