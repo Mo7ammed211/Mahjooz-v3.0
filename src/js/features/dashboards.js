@@ -843,9 +843,27 @@ function renderAdminUsers() {
                   : `<span style="font-size:11px;padding:3px 8px;border-radius:20px;background:rgba(100,116,139,0.1);color:var(--text-muted);border:1px solid rgba(100,116,139,0.2);font-weight:500">غير مصنّف</span>`;
               })() : ''}
             </div>
-            <div class="usys-svc-desc" style="font-size:12px;display:flex;flex-direction:column;gap:4px;margin-bottom:16px;flex:1">
-              <div style="display:flex;align-items:center;gap:6px;color:var(--text-secondary)"><span style="font-size:14px">📧</span> <span style="direction:ltr;font-family:monospace">${u.email||'—'}</span></div>
-              ${u.phone ? `<div style="display:flex;align-items:center;gap:6px;color:var(--text-secondary)"><span style="font-size:14px">📞</span> <span style="direction:ltr;font-family:monospace">${u.phone}</span></div>` : ''}
+            <div class="usys-svc-desc" style="font-size:12px;display:flex;flex-direction:column;gap:6px;margin-bottom:16px;flex:1">
+              <div style="display:flex;align-items:center;gap:6px;justify-content:space-between">
+                <div style="display:flex;align-items:center;gap:6px;color:var(--text-secondary);min-width:0;flex:1">
+                  <span style="font-size:14px;flex-shrink:0">📧</span>
+                  <span style="direction:ltr;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${u.email||'—'}</span>
+                </div>
+                ${isAdmin && u.email ? `<button onclick="adminToggleVerify('${u.id||u.uid}','email',${!!u.emailVerified})"
+                  style="flex-shrink:0;padding:2px 8px;border-radius:20px;border:1px solid ${u.emailVerified?'rgba(16,185,129,0.4)':'rgba(239,68,68,0.3)'};background:${u.emailVerified?'rgba(16,185,129,0.1)':'rgba(239,68,68,0.08)'};color:${u.emailVerified?'#10b981':'#ef4444'};cursor:pointer;font-size:10px;font-weight:700;white-space:nowrap"
+                  title="${u.emailVerified?'إلغاء توثيق البريد':'توثيق البريد'}"
+                  >${u.emailVerified?'✅ موثّق':'✕ غير موثّق'}</button>` : ''}
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;justify-content:space-between">
+                <div style="display:flex;align-items:center;gap:6px;color:var(--text-secondary);min-width:0;flex:1">
+                  <span style="font-size:14px;flex-shrink:0">📞</span>
+                  <span style="direction:ltr;font-family:monospace">${u.phone||'—'}</span>
+                </div>
+                ${isAdmin && u.phone ? `<button onclick="adminToggleVerify('${u.id||u.uid}','phone',${!!u.phoneVerified})"
+                  style="flex-shrink:0;padding:2px 8px;border-radius:20px;border:1px solid ${u.phoneVerified?'rgba(16,185,129,0.4)':'rgba(239,68,68,0.3)'};background:${u.phoneVerified?'rgba(16,185,129,0.1)':'rgba(239,68,68,0.08)'};color:${u.phoneVerified?'#10b981':'#ef4444'};cursor:pointer;font-size:10px;font-weight:700;white-space:nowrap"
+                  title="${u.phoneVerified?'إلغاء توثيق الجوال':'توثيق الجوال'}"
+                  >${u.phoneVerified?'✅ موثّق':'✕ غير موثّق'}</button>` : ''}
+              </div>
             </div>
             <div class="usys-svc-footer" style="border-top:1px solid var(--border);padding-top:12px;margin-top:auto">
               ${canViewWallets ? `<div style="text-align:center;font-weight:700;margin-bottom:8px;color:#10b981;font-size:14px">${AppData.wallets ? (AppData.wallets[u.id || u.uid]?.balance || 0) : 0} ر</div>` : ''}
@@ -866,6 +884,24 @@ function renderAdminUsers() {
     </div>
   </div>`;
 }
+window.adminToggleVerify = async function(userId, field, currentVal) {
+  const newVal = !currentVal;
+  const fieldLabel = field === 'phone' ? 'الجوال' : 'البريد الإلكتروني';
+  const action     = newVal ? 'توثيق' : 'إلغاء توثيق';
+  if (!confirm(`${action} ${fieldLabel} لهذا المستخدم؟`)) return;
+  try {
+    const key = field === 'phone' ? 'phoneVerified' : 'emailVerified';
+    await fsUpdate('users', userId, { [key]: newVal });
+    // تحديث AppData محلياً دون إعادة تحميل كاملة
+    const idx = (AppData.users||[]).findIndex(u => (u.id||u.uid) === userId);
+    if (idx !== -1) AppData.users[idx][key] = newVal;
+    toast(`✅ تم ${action} ${fieldLabel} بنجاح`, 'success');
+    render();
+  } catch (e) {
+    toast('خطأ: ' + (e.message || e), 'error');
+  }
+};
+
 async function deleteUser(userId) {
   if (!confirm('حذف هذا المستخدم؟')) return;
   await fsDelete('users', userId);
