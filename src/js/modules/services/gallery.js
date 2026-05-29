@@ -170,7 +170,7 @@ function renderServiceCard(s) {
           <div class="service-price">${s.price?s.price+' ريال':(isProf?'السعر بعد المعاينة':'السعر عند التواصل')}</div>
           <div style="font-size:13px;color:var(--text-muted)">${avg?'⭐ '+avg+' ('+rating.length+')':'لا يوجد تقييم'}</div>
         </div>
-        ${u?.role==='customer' ? `<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();bookService('${s.id}')">${t('book_now')||'احجز'}</button>` : ''}
+        ${u?.role==='customer' ? `<button class="btn btn-primary btn-sm" data-svc-cart-id="${s.id}" onclick="event.stopPropagation();typeof svc_addToCart==='function'?svc_addToCart('${s.id}'):bookService('${s.id}')">🛒 أضف للسلة</button>` : ''}
       </div>
     </div>
   </div>`;
@@ -247,7 +247,7 @@ function renderServiceDetail() {
           <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">${(s.openingHours.days||[]).map(k=>`<span class="day-chip on">${t(dayName(k))}</span>`).join('')}</div>
         </div>` : ''}
 
-        ${u?.role==='customer' ? `<button class="btn btn-primary btn-block btn-lg" style="margin-top:16px" onclick="bookService('${s.id}')">${t('book_now')||'احجز الآن'}</button>` :
+        ${u?.role==='customer' ? `<button class="btn btn-primary btn-block btn-lg" data-svc-cart-id="${s.id}" style="margin-top:16px" onclick="typeof svc_addToCart==='function'?svc_addToCart('${s.id}'):bookService('${s.id}')">🛒 أضف للسلة</button>` :
           u?.role==='guest' ? `<button class="btn btn-secondary btn-block" style="margin-top:16px" onclick="navigate('login')">سجّل لإتمام الحجز</button>` : ''}
       </div>
     </div>
