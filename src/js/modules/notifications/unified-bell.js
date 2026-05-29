@@ -30,7 +30,7 @@
   };
 
   function _getRoleSources() {
-    const role = window.State?.currentUser?.role || 'customer';
+    const role = (typeof State !== 'undefined' ? State : null)?.currentUser?.role || 'customer';
     return ROLE_SOURCES[role] || ['notif'];
   }
 
@@ -378,6 +378,13 @@
       padding: 8px 14px; font-size: 11px; font-weight: 700;
       color: var(--text-muted, #64748b); text-align: center;
       background: var(--bg-hover, rgba(255,255,255,0.03));
+    }
+
+    /* ── إخفاء أي زر إشعارات عائم قديم ── */
+    #da-bell,
+    #notif-bell-wrap:not([data-in-nav]),
+    .ph19-pill:not(.in-nav) {
+      display: none !important;
     }
   `;
   document.head.appendChild(style);
