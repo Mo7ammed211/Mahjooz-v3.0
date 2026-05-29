@@ -1930,6 +1930,7 @@ function renderVendorOrders() {
   const u = State.currentUser;
   const orders = AppData.orders.filter(o=>o.vendorId===u.uid || o.providerUid===u.uid).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
   const isProfUser = orders.some(o => o.isProfession);
+  const availCard   = typeof renderAvailabilityCard   === 'function' ? renderAvailabilityCard('vendor')   : '';
   const availBanner = typeof renderAvailabilityBanner === 'function' ? renderAvailabilityBanner('vendor') : '';
   const sLabel = {
     pending:'⏳ جديد',
@@ -1943,6 +1944,7 @@ function renderVendorOrders() {
     cancelled:'❌ ملغى'
   };
   return `
+    ${availCard}
     ${availBanner}
     <h2>📋 ${isProfUser ? 'طلبات المهن والخدمات' : 'الطلبات الواردة'}</h2>
     ${orders.length ? `
@@ -2121,10 +2123,12 @@ async function setDriverTab(tab) {
 function renderDriverOrders() {
   const u = State.currentUser;
   const orders = AppData.orders.filter(o=>o.driverId===u.uid).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
+  const driverCard   = typeof renderAvailabilityCard   === 'function' ? renderAvailabilityCard('driver')   : '';
   const driverBanner = typeof renderAvailabilityBanner === 'function' ? renderAvailabilityBanner('driver') : '';
 
   if (orders.length === 0) {
     return `
+      ${driverCard}
       ${driverBanner}
       <h2>📋 طلبات التوصيل</h2>
       <div class="empty-state" style="padding:48px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);text-align:center;margin-top:16px">
@@ -2135,6 +2139,7 @@ function renderDriverOrders() {
   }
 
   return `
+    ${driverCard}
     ${driverBanner}
     <h2>📋 طلبات التوصيل</h2>
     <div style="display:flex;flex-direction:column;gap:12px;margin-top:16px">

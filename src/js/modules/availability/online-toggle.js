@@ -300,5 +300,101 @@
     return driverUser ? driverUser.isOnline !== false : true;
   };
 
+  /* ══════════════════════════════════════════════════
+     renderAvailabilityCard — البطاقة البارزة في أعلى الداشبورد
+  ══════════════════════════════════════════════════ */
+  window.renderAvailabilityCard = function (type) {
+    const u = State.currentUser;
+    const isOnline = u?.isOnline !== false;
+    const updTime  = _fmtTime(u?.onlineUpdatedAt);
+    const isDriver = type === 'driver';
+
+    const cfg = isDriver
+      ? {
+          onIcon:     '🟢',
+          offIcon:    '🔴',
+          onTitle:    'أنت في الخدمة',
+          offTitle:   'أنت خارج الخدمة',
+          onDesc:     'تستقبل طلبات التوصيل الآن',
+          offDesc:    'لن يتم تعيينك على أي طلب جديد',
+          onAction:   'إيقاف الدوام',
+          offAction:  'بدء الدوام',
+          fn:         'toggleDriverOnline()',
+          onGrad:     'linear-gradient(135deg,rgba(16,185,129,0.12),rgba(5,150,105,0.06))',
+          offGrad:    'linear-gradient(135deg,rgba(239,68,68,0.1),rgba(220,38,38,0.05))',
+          onBorder:   'rgba(16,185,129,0.3)',
+          offBorder:  'rgba(239,68,68,0.25)',
+          onColor:    '#10b981',
+          offColor:   '#ef4444',
+          typeLabel:  'حالة المندوب',
+        }
+      : {
+          onIcon:     '🏪',
+          offIcon:    '🚫',
+          onTitle:    'المتجر مفتوح',
+          offTitle:   'المتجر مغلق',
+          onDesc:     'يستقبل طلبات العملاء الآن',
+          offDesc:    'لن تصلك طلبات جديدة من العملاء',
+          onAction:   'إغلاق المتجر',
+          offAction:  'فتح المتجر',
+          fn:         'toggleVendorOnline()',
+          onGrad:     'linear-gradient(135deg,rgba(16,185,129,0.12),rgba(5,150,105,0.06))',
+          offGrad:    'linear-gradient(135deg,rgba(239,68,68,0.1),rgba(220,38,38,0.05))',
+          onBorder:   'rgba(16,185,129,0.3)',
+          offBorder:  'rgba(239,68,68,0.25)',
+          onColor:    '#10b981',
+          offColor:   '#ef4444',
+          typeLabel:  'حالة المتجر',
+        };
+
+    const color  = isOnline ? cfg.onColor  : cfg.offColor;
+    const grad   = isOnline ? cfg.onGrad   : cfg.offGrad;
+    const border = isOnline ? cfg.onBorder : cfg.offBorder;
+    const icon   = isOnline ? cfg.onIcon   : cfg.offIcon;
+    const title  = isOnline ? cfg.onTitle  : cfg.offTitle;
+    const desc   = isOnline ? cfg.onDesc   : cfg.offDesc;
+    const action = isOnline ? cfg.onAction : cfg.offAction;
+    const swCls  = isOnline ? 'on' : 'off';
+    const pulseCls = isOnline ? 'avail-pulse-dot' : '';
+
+    return `
+    <div style="background:${grad};border:2px solid ${border};border-radius:20px;padding:20px 22px;margin-bottom:22px;font-family:'Cairo',sans-serif;direction:rtl;transition:all 0.35s" id="avail-big-card">
+      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+
+        <!-- أيقونة الحالة مع نبض -->
+        <div style="position:relative;width:60px;height:60px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:${isOnline ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.12)'};border-radius:18px;font-size:28px;">
+          ${icon}
+          ${isOnline ? `<span style="position:absolute;top:-3px;right:-3px;width:14px;height:14px;background:#10b981;border-radius:50%;border:2px solid var(--bg-card,#1e293b);animation:avail-pulse 1.8s infinite"></span>` : `<span style="position:absolute;top:-3px;right:-3px;width:14px;height:14px;background:#ef4444;border-radius:50%;border:2px solid var(--bg-card,#1e293b)"></span>`}
+        </div>
+
+        <!-- معلومات الحالة -->
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:11px;font-weight:700;color:${color};opacity:0.7;margin-bottom:2px;text-transform:uppercase;letter-spacing:0.5px">${cfg.typeLabel}</div>
+          <div style="font-size:17px;font-weight:900;color:${color};line-height:1.2;">${title}</div>
+          <div style="font-size:12px;color:var(--text-muted,#94a3b8);margin-top:3px;">${desc}${updTime ? ` · آخر تغيير ${updTime}` : ''}</div>
+        </div>
+
+        <!-- مفتاح التبديل الكبير -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0;">
+          <button class="avail-switch ${swCls}" id="avail-switch-btn"
+                  onclick="${cfg.fn}"
+                  style="width:58px;height:32px;"
+                  aria-label="تبديل الحالة">
+            <span class="avail-thumb" style="width:24px;height:24px;${isOnline ? 'left:30px' : 'left:4px'}"></span>
+          </button>
+          <div style="font-size:10px;font-weight:700;color:${color}">${isOnline ? '● مفعّل' : '○ موقوف'}</div>
+        </div>
+
+        <!-- زر الإجراء السريع -->
+        <button onclick="${cfg.fn}"
+                style="background:${color};color:#fff;border:none;border-radius:12px;padding:10px 18px;font-family:'Cairo',sans-serif;font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap;box-shadow:0 4px 12px ${color}40;transition:all 0.2s;flex-shrink:0;"
+                onmouseover="this.style.opacity='0.88'"
+                onmouseout="this.style.opacity='1'">
+          ${isOnline ? '⏹ ' : '▶ '}${action}
+        </button>
+      </div>
+    </div>`;
+  };
+
   console.log('[OnlineToggle] نظام الدوام والإتاحة جاهز ✅');
 })();
