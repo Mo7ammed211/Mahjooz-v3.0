@@ -107,6 +107,19 @@
   <!-- Toast -->
   <div id="toast-container"></div>
 
+  <!-- PWA Install Banner -->
+  <div id="pwa-install-banner" role="banner" aria-label="تثبيت التطبيق">
+    <div class="pwa-banner-icon">📅</div>
+    <div class="pwa-banner-text">
+      <div class="pwa-banner-title">ثبّت تطبيق محجوز</div>
+      <div class="pwa-banner-sub">احصل على تجربة أفضل — يعمل بدون متصفح</div>
+    </div>
+    <div class="pwa-banner-actions">
+      <button class="pwa-btn-install" onclick="pwaTriggerInstall()">ثبّت الآن</button>
+      <button class="pwa-btn-later"   onclick="pwaDismissBanner()">لاحقاً</button>
+    </div>
+  </div>
+
   <!-- Back to Top Button -->
   <button id="back-to-top" aria-label="العودة للأعلى" onclick="window.scrollTo({top:0,behavior:'smooth'})">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
@@ -240,6 +253,7 @@
   <!-- ═══════════════════════════════════════════════════════════
        MODULES / ui — واجهة المستخدم العامة
        ═══════════════════════════════════════════════════════════ -->
+  <script src="src/js/modules/ui/pwa-install.js"></script>
   <script src="src/js/modules/ui/lightbox.js"></script>            <!-- معرض الصور + البحث الفوري + الفاتورة -->
   <script src="src/js/modules/ui/favorites-routing.js"></script>   <!-- المفضلة + دفتر العناوين + خريطة التوصيل + onboarding -->
   <script src="src/js/modules/ui/language.js"></script>            <!-- مبدّل اللغة (عربي/إنجليزي) -->

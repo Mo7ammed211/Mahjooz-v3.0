@@ -589,6 +589,10 @@ function renderNavbar() {
     <div class="nav-user">
       <div id="nav-live-alerts-target"></div>
       <div id="nav-notif-target"></div>
+      <button id="pwa-nav-btn" onclick="pwaTriggerInstall && pwaTriggerInstall()" title="ثبّت التطبيق على جهازك">
+        <span class="pwa-nav-icon">⬇️</span>
+        <span class="pwa-nav-label">ثبّت</span>
+      </button>
       <!-- Theme toggle removed as per request -->
       ${u.role === 'customer' ? `<button class="ph43-cart-nav-btn" onclick="typeof ph43_showCart==='function'&&ph43_showCart()" title="سلة التسوق"><span id="ph43-cart-badge"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg><span class="nav-desktop-only">السلة</span></button>` : ''}
       <div class="nav-profile">
