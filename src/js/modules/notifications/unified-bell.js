@@ -6,26 +6,40 @@
 (function () {
   'use strict';
 
+  /* ── Source definitions ─────────────────────────────────────── */
   const SOURCES = {
-    all:    { label: '🔔 الكل',             color: '#7c3aed', items: [], count: 0 },
-    live:   { label: '🛎️ تنبيهات حيّة',   color: '#7c3aed', items: [], count: 0 },
-    notif:  { label: '🔔 إشعاراتي',        color: '#0ea5e9', items: [], count: 0 },
-    driver: { label: '🚚 طلبات التوصيل',  color: '#0d9488', items: [], count: 0 },
+    live:   { label: '🛎️ تنبيهات حيّة',  color: '#7c3aed', items: [], count: 0 },
+    notif:  { label: '📨 إشعاراتي',       color: '#0ea5e9', items: [], count: 0 },
+    driver: { label: '🚚 طلبات التوصيل', color: '#0d9488', items: [], count: 0 },
   };
 
-  const FILTER_TABS = [
-    { id: 'all',    label: 'الكل',    icon: '🔔' },
-    { id: 'live',   label: 'حيّة',   icon: '🛎️' },
-    { id: 'notif',  label: 'إشعاراتي', icon: '📨' },
-    { id: 'driver', label: 'توصيل',  icon: '🚚' },
-  ];
+  const SOURCE_META = {
+    live:   { label: 'حيّة',    icon: '🛎️' },
+    notif:  { label: 'إشعاراتي', icon: '📨' },
+    driver: { label: 'توصيل',   icon: '🚚' },
+  };
+
+  /* ── Role → relevant sources ───────────────────────────────── */
+  const ROLE_SOURCES = {
+    admin:    ['live', 'notif', 'driver'],
+    staff:    ['live', 'notif'],
+    vendor:   ['live', 'notif'],
+    provider: ['live', 'notif'],
+    driver:   ['driver', 'notif'],
+    customer: ['notif'],
+  };
+
+  function _getRoleSources() {
+    const role = window.State?.currentUser?.role || 'customer';
+    return ROLE_SOURCES[role] || ['notif'];
+  }
 
   let _activeFilter = 'all';
 
   /* ── Public API ─────────────────────────────────────────────── */
   window.__unifiedNotif = {
     update(sourceId, items, count) {
-      if (!SOURCES[sourceId] || sourceId === 'all') return;
+      if (!SOURCES[sourceId]) return;
       SOURCES[sourceId].items = items || [];
       SOURCES[sourceId].count = Math.max(0, count || 0);
       _updateBadge();
@@ -33,22 +47,23 @@
     },
   };
 
-  /* ── Filter API (global) ─────────────────────────────────────── */
+  /* ── Filter API (global) ────────────────────────────────────── */
   window.setUBFilter = function (filterId) {
-    if (!SOURCES[filterId]) return;
+    const allowed = _getRoleSources();
+    if (filterId !== 'all' && !allowed.includes(filterId)) return;
     _activeFilter = filterId;
     _renderPanel();
   };
 
   /* ── Badge ──────────────────────────────────────────────────── */
-  function _totalCount() {
-    return ['live', 'notif', 'driver'].reduce((a, id) => a + (SOURCES[id].count || 0), 0);
+  function _relevantCount() {
+    return _getRoleSources().reduce((a, id) => a + (SOURCES[id].count || 0), 0);
   }
 
   function _updateBadge() {
     const badge = document.getElementById('unified-bell-badge');
     if (!badge) return;
-    const total = _totalCount();
+    const total = _relevantCount();
     badge.textContent = total > 99 ? '99+' : String(total);
     badge.style.display = total > 0 ? 'inline-flex' : 'none';
   }
@@ -71,7 +86,7 @@
       <span class="ub-item-icon">${item.icon || '📋'}</span>
       <div class="ub-item-body">
         <div class="ub-item-title">${_esc(item.title)}</div>
-        ${item.sub  ? `<div class="ub-item-sub">${_esc(item.sub)}</div>` : ''}
+        ${item.sub ? `<div class="ub-item-sub">${_esc(item.sub)}</div>` : ''}
         <div class="ub-item-time">${_esc(item.time || '')}</div>
       </div>
     </div>`;
@@ -102,12 +117,18 @@
   }
 
   /* ── Filter Tabs ─────────────────────────────────────────────── */
-  function _renderFilterTabs() {
+  function _renderFilterTabs(roleSources) {
+    if (roleSources.length <= 1) return '';
+
+    const tabs = [{ id: 'all', label: 'الكل', icon: '🔔' }, ...roleSources.map(id => ({
+      id, label: SOURCE_META[id].label, icon: SOURCE_META[id].icon,
+    }))];
+
     return `<div class="ub-filters">
-      ${FILTER_TABS.map(t => {
+      ${tabs.map(t => {
         const count = t.id === 'all'
-          ? _totalCount()
-          : (SOURCES[t.id].count || 0);
+          ? roleSources.reduce((a, id) => a + (SOURCES[id].count || 0), 0)
+          : (SOURCES[t.id]?.count || 0);
         const isActive = _activeFilter === t.id;
         return `<button
           class="ub-filter-tab${isActive ? ' ub-filter-active' : ''}"
@@ -120,29 +141,34 @@
     </div>`;
   }
 
-  /* ── Panel Rendering ────────────────────────────────────────── */
+  /* ── Panel Rendering ─────────────────────────────────────────── */
   function _renderPanel() {
     const panel = document.getElementById('unified-bell-panel');
     if (!panel) return;
 
-    const sourcesToShow = _activeFilter === 'all'
-      ? ['live', 'notif', 'driver'].filter(id => SOURCES[id].items.length > 0)
-      : (SOURCES[_activeFilter]?.items.length > 0 ? [_activeFilter] : []);
+    const roleSources = _getRoleSources();
 
-    const hasUnreadNotif = (_activeFilter === 'all' || _activeFilter === 'notif')
+    const sourcesToShow = _activeFilter === 'all'
+      ? roleSources.filter(id => SOURCES[id].items.length > 0)
+      : (roleSources.includes(_activeFilter) && SOURCES[_activeFilter]?.items.length > 0
+          ? [_activeFilter] : []);
+
+    const hasUnreadNotif = roleSources.includes('notif')
+      && (_activeFilter === 'all' || _activeFilter === 'notif')
       && (SOURCES.notif.items || []).some(n => !n.read);
 
     let body = '';
     if (sourcesToShow.length === 0) {
       body = `<div class="ub-empty">
         <div style="font-size:36px;margin-bottom:10px;">🔕</div>
-        لا توجد إشعارات في هذا القسم
+        لا توجد إشعارات جديدة
       </div>`;
     } else {
+      const showSectionTitle = sourcesToShow.length > 1;
       body = `<div class="ub-body">${sourcesToShow.map(id => {
         const src = SOURCES[id];
         return `<div class="ub-section">
-          ${sourcesToShow.length > 1
+          ${showSectionTitle
             ? `<div class="ub-section-title" style="color:${src.color}">${src.label}</div>`
             : ''}
           ${src.items.slice(0, 10).map(item =>
@@ -168,7 +194,7 @@
           <button class="ub-close" onclick="toggleUnifiedNotif()">✕</button>
         </div>
       </div>
-      ${_renderFilterTabs()}
+      ${_renderFilterTabs(roleSources)}
       ${body}`;
   }
 
@@ -206,7 +232,7 @@
     if (opening) {
       _activeFilter = 'all';
       _renderPanel();
-      ['live', 'notif', 'driver'].forEach(id => { SOURCES[id].count = 0; });
+      _getRoleSources().forEach(id => { SOURCES[id].count = 0; });
       _updateBadge();
     }
   };
