@@ -50,6 +50,7 @@ window.ph43_addToCart = function (productId, storeId, selectedTier = null) {
   } else {
     cart.push({
       productId: cartItemKey,
+      type: 'store',
       storeId,
       storeName: store.name,
       storeIcon: store.icon || '🏪',
@@ -116,6 +117,89 @@ window.ph43_refreshProductBtn = function (productId) {
   });
 };
 
+// ─── إضافة خدمة/مهنة للسلة ─────────────────────────────
+window.svc_addToCart = function (svcId) {
+  const u = State.currentUser;
+  if (!u || u.role !== 'customer') { navigate('login'); return; }
+  if (typeof checkAccountActive === 'function' && !checkAccountActive()) return;
+
+  const svc = AppData.services.find(s => s.id === svcId);
+  if (!svc) return;
+
+  const cat = AppData.cats.find(c => c.id === svc.catId);
+  const isProfession = cat?.section === 'professions' || cat?.section === 'services';
+  const itemType = isProfession ? 'profession' : 'booking';
+  const cartKey  = `svc_${svcId}`;
+
+  const cart = ph43_getCart();
+  if (cart.find(i => i.productId === cartKey)) {
+    toast('هذه الخدمة موجودة بالفعل في السلة', 'warning');
+    return;
+  }
+
+  cart.push({
+    productId: cartKey,
+    svcId,
+    type: itemType,
+    name: svc.name,
+    icon: svc.icon || (isProfession ? '💼' : '📅'),
+    price: svc.finalPrice || svc.price || 0,
+    qty: 1,
+    priceLabel: (!svc.finalPrice && !svc.price) ? (isProfession ? 'السعر بعد المعاينة' : 'السعر عند التواصل') : null,
+    providerName: svc.providerName || svc.provider || '',
+    providerUid: svc.providerUid || '',
+    requiresDelivery: svc.requiresDelivery !== false,
+    commonIssues: svc.commonIssues || [],
+  });
+
+  ph43_setCart(cart);
+  toast(`✅ أُضيفت "${svc.name}" للسلة 🛒`, 'success');
+  document.querySelectorAll(`[data-svc-cart-id="${svcId}"]`).forEach(btn => {
+    btn.innerHTML = `✅ <span>في السلة</span>`;
+    btn.disabled = true;
+    btn.style.opacity = '0.75';
+  });
+};
+
+// ─── إضافة منتج تأجير للسلة ─────────────────────────────
+window.rental_addToCart = function (productId, storeId) {
+  const u = State.currentUser;
+  if (!u || u.role !== 'customer') { navigate('login'); return; }
+
+  const p     = (AppData.rentalProducts || []).find(x => x.id === productId);
+  const store = (AppData.rentalStores   || []).find(x => x.id === storeId);
+  if (!p || !store) return;
+
+  const cartKey = `rental_${productId}`;
+  const cart    = ph43_getCart();
+  if (cart.find(i => i.productId === cartKey)) {
+    toast('هذا المنتج موجود بالفعل في السلة', 'warning');
+    return;
+  }
+
+  cart.push({
+    productId: cartKey,
+    rentalProductId: productId,
+    storeId,
+    type: 'rental',
+    name: p.name,
+    icon: '🏚️',
+    image: p.imageBase64 || null,
+    price: p.price || 0,
+    qty: 1,
+    storeName: store.name,
+    taxPercent: store.taxPercent || 0,
+  });
+
+  ph43_setCart(cart);
+  toast(`✅ أُضيف "${p.name}" للسلة 🛒`, 'success');
+  document.querySelectorAll(`[data-rental-cart-id="${productId}"]`).forEach(btn => {
+    btn.innerHTML = `✅ <span>في السلة</span>`;
+    btn.disabled = true;
+    btn.style.opacity = '0.75';
+  });
+};
+
 // ───────────────────────────────────────────────────────
 // SECTION 2 — Cart Modal
 // ───────────────────────────────────────────────────────
@@ -133,9 +217,9 @@ window.ph43_showCart = function () {
 };
 
 function ph43_renderCartBody() {
-  const cart  = ph43_getCart();
-  const body  = document.getElementById('ph43-cart-body');
-  const acts  = document.getElementById('ph43-cart-actions');
+  const cart = ph43_getCart();
+  const body = document.getElementById('ph43-cart-body');
+  const acts = document.getElementById('ph43-cart-actions');
   if (!body) return;
 
   if (!cart.length) {
@@ -143,60 +227,105 @@ function ph43_renderCartBody() {
       <div style="text-align:center;padding:60px 20px;color:var(--text-muted)">
         <div style="font-size:64px;margin-bottom:16px">🛒</div>
         <div style="font-size:18px;font-weight:700;margin-bottom:8px;color:var(--text-main)">السلة فارغة</div>
-        <div style="font-size:14px">أضف منتجات من متاجرنا المتنوعة</div>
+        <div style="font-size:14px">أضف خدمات أو منتجات أو حجوزات من الأقسام المختلفة</div>
       </div>`;
     if (acts) acts.innerHTML = '';
     return;
   }
 
-  // Group by store
-  const byStore = {};
-  cart.forEach(item => {
-    if (!byStore[item.storeId]) byStore[item.storeId] = { name: item.storeName, icon: item.storeIcon, items: [] };
-    byStore[item.storeId].items.push(item);
+  // الأقسام الأربعة
+  const SECTIONS = [
+    { type: 'booking',    icon: '📅', label: 'خدمات الحجز',                color: '#3b82f6', hasQty: false },
+    { type: 'profession', icon: '💼', label: 'المهن والخدمات المتخصصة',    color: '#8b5cf6', hasQty: false },
+    { type: 'rental',     icon: '🏚️', label: 'متاجر التأجير',               color: '#10b981', hasQty: false },
+    { type: 'store',      icon: '🏪', label: 'متاجر محجوز',                 color: '#f59e0b', hasQty: true  },
+  ];
+
+  let html = '';
+
+  SECTIONS.forEach(sec => {
+    const items = cart.filter(i => (i.type || 'store') === sec.type);
+    if (!items.length) return;
+
+    html += `
+    <div style="margin-bottom:16px;border-radius:16px;overflow:hidden;border:1px solid var(--glass-border)">
+      <div style="background:var(--bg-secondary);padding:10px 16px;display:flex;align-items:center;gap:10px;font-weight:800;font-size:13px;border-bottom:1px solid var(--glass-border)">
+        <span style="font-size:18px">${sec.icon}</span>
+        <span style="color:${sec.color}">${sec.label}</span>
+        <span style="margin-inline-start:auto;font-size:11px;color:var(--text-muted);font-weight:400">${items.length} ${items.length === 1 ? 'عنصر' : 'عناصر'}</span>
+      </div>`;
+
+    if (sec.hasQty) {
+      // متاجر محجوز — مجمّعة حسب المتجر مع أزرار الكمية
+      const byStore = {};
+      items.forEach(item => {
+        const key = item.storeId || 'unknown';
+        if (!byStore[key]) byStore[key] = { name: item.storeName || '', icon: item.storeIcon || '🏪', items: [] };
+        byStore[key].items.push(item);
+      });
+      Object.values(byStore).forEach(g => {
+        if (Object.keys(byStore).length > 1) {
+          html += `<div style="padding:6px 16px;background:rgba(245,158,11,0.06);font-size:12px;font-weight:700;color:var(--text-muted);display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--glass-border)"><span>${g.icon}</span>${escHtml(g.name)}</div>`;
+        }
+        g.items.forEach(item => {
+          html += `
+          <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-top:1px solid var(--glass-border)">
+            ${item.image
+              ? `<img src="${item.image}" style="width:52px;height:52px;border-radius:12px;object-fit:cover;flex-shrink:0">`
+              : `<div style="width:52px;height:52px;border-radius:12px;background:var(--bg-secondary);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0">📦</div>`}
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(item.name)}</div>
+              <div style="color:var(--primary);font-weight:700;font-size:13px;margin-top:3px">${(item.price * item.qty).toLocaleString('ar-YE')} ريال</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px">
+              <button onclick="ph43_changeQty('${item.productId}',-1)" style="width:30px;height:30px;border-radius:50%;border:1.5px solid var(--glass-border);background:var(--bg-card);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--text-main)">−</button>
+              <span style="font-weight:800;min-width:22px;text-align:center;font-size:15px">${item.qty}</span>
+              <button onclick="ph43_changeQty('${item.productId}',1)" style="width:30px;height:30px;border-radius:50%;border:none;background:var(--primary);color:#fff;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;font-weight:700">+</button>
+              <button onclick="ph43_removeFromCart('${item.productId}')" style="width:30px;height:30px;border-radius:50%;border:1.5px solid var(--rose);background:transparent;color:var(--rose);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;margin-inline-start:4px">✕</button>
+            </div>
+          </div>`;
+        });
+      });
+    } else {
+      // خدمات / مهن / تأجير — بدون كمية
+      items.forEach(item => {
+        const priceText = item.priceLabel || (item.price ? item.price.toLocaleString('ar-YE') + ' ريال' : 'السعر عند التواصل');
+        html += `
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-top:1px solid var(--glass-border)">
+          <div style="width:52px;height:52px;border-radius:12px;background:var(--bg-secondary);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;overflow:hidden">
+            ${item.image ? `<img src="${item.image}" style="width:52px;height:52px;object-fit:cover">` : (item.icon || sec.icon)}
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(item.name)}</div>
+            ${item.storeName ? `<div style="font-size:12px;color:var(--text-muted)">${escHtml(item.storeName)}</div>` : ''}
+            ${item.providerName ? `<div style="font-size:12px;color:var(--text-muted)">👤 ${escHtml(item.providerName)}</div>` : ''}
+            <div style="color:${sec.color};font-weight:700;font-size:13px;margin-top:3px">${priceText}</div>
+          </div>
+          <button onclick="ph43_removeFromCart('${item.productId}')" style="width:30px;height:30px;border-radius:50%;border:1.5px solid var(--rose);background:transparent;color:var(--rose);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0">✕</button>
+        </div>`;
+      });
+    }
+
+    html += `</div>`;
   });
 
-  body.innerHTML = Object.entries(byStore).map(([, g]) => `
-    <div style="margin-bottom:14px;border-radius:16px;border:1px solid var(--glass-border);overflow:hidden">
-      <div style="background:var(--bg-secondary);padding:10px 16px;display:flex;align-items:center;gap:10px;font-weight:700;font-size:14px">
-        <span style="font-size:20px">${g.icon}</span>
-        <span>${escHtml(g.name)}</span>
-        <span style="margin-inline-start:auto;font-size:12px;color:var(--text-muted)">${g.items.reduce((s,i)=>s+i.qty,0)} وحدة</span>
-      </div>
-      ${g.items.map(item => `
-      <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-top:1px solid var(--glass-border)">
-        ${item.image
-          ? `<img src="${item.image}" style="width:52px;height:52px;border-radius:12px;object-fit:cover;flex-shrink:0">`
-          : `<div style="width:52px;height:52px;border-radius:12px;background:var(--bg-secondary);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0">📦</div>`}
-        <div style="flex:1;min-width:0">
-          <div style="font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(item.name)}</div>
-          <div style="color:var(--primary);font-weight:700;font-size:13px;margin-top:3px">${(item.price * item.qty).toLocaleString('ar-YE')} ريال</div>
-        </div>
-        <div style="display:flex;align-items:center;gap:6px">
-          <button onclick="ph43_changeQty('${item.productId}',-1)" style="width:30px;height:30px;border-radius:50%;border:1.5px solid var(--glass-border);background:var(--bg-card);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--text-main)">−</button>
-          <span style="font-weight:800;min-width:22px;text-align:center;font-size:15px">${item.qty}</span>
-          <button onclick="ph43_changeQty('${item.productId}',1)" style="width:30px;height:30px;border-radius:50%;border:none;background:var(--primary);color:#fff;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;font-weight:700">+</button>
-          <button onclick="ph43_removeFromCart('${item.productId}')" style="width:30px;height:30px;border-radius:50%;border:1.5px solid var(--rose);background:transparent;color:var(--rose);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;margin-inline-start:4px">✕</button>
-        </div>
-      </div>`).join('')}
-    </div>
-  `).join('') + `
-  <div style="background:linear-gradient(135deg,rgba(139,92,246,0.06),rgba(139,92,246,0.02));border-radius:16px;border:1px solid var(--glass-border);padding:16px">
+  // ملخص الإجمالي
+  const total = ph43_cartTotal();
+  html += `
+  <div style="background:linear-gradient(135deg,rgba(139,92,246,0.06),rgba(139,92,246,0.02));border-radius:16px;border:1px solid var(--glass-border);padding:16px;margin-top:4px">
     <div style="display:flex;justify-content:space-between;margin-bottom:8px">
-      <span style="color:var(--text-secondary)">المجموع الفرعي</span>
-      <span style="font-weight:700">${ph43_cartTotal().toLocaleString('ar-YE')} ريال</span>
+      <span style="color:var(--text-secondary)">المجموع التقديري</span>
+      <span style="font-weight:700">${total.toLocaleString('ar-YE')} ريال</span>
     </div>
-    <div style="display:flex;justify-content:space-between;margin-bottom:10px">
-      <span style="color:var(--text-secondary)">رسوم التوصيل</span>
-      <span style="font-size:12px;color:var(--text-muted)">تُحسب عند إدخال عنوان التوصيل</span>
+    <div style="height:1px;background:var(--glass-border);margin-bottom:8px"></div>
+    <div style="display:flex;justify-content:space-between">
+      <span style="font-weight:800;font-size:16px">الإجمالي</span>
+      <span style="font-weight:800;font-size:21px;background:var(--gradient-main);-webkit-background-clip:text;-webkit-text-fill-color:transparent">${total.toLocaleString('ar-YE')} ريال</span>
     </div>
-    <div style="height:1px;background:var(--glass-border)"></div>
-    <div style="display:flex;justify-content:space-between;margin-top:10px">
-      <span style="font-weight:800;font-size:17px">المجموع الفرعي</span>
-      <span style="font-weight:800;font-size:22px;background:var(--gradient-main);-webkit-background-clip:text;-webkit-text-fill-color:transparent">${ph43_cartTotal().toLocaleString('ar-YE')} ريال</span>
-    </div>
+    <div style="font-size:11px;color:var(--text-muted);margin-top:6px">* أسعار المهن والخدمات قد تخضع للتأكيد النهائي من المزود</div>
   </div>`;
 
+  body.innerHTML = html;
 
   if (acts) acts.innerHTML = `
     <div style="display:flex;gap:10px">
@@ -220,32 +349,97 @@ window.ph43_proceedCheckout = async function () {
   try { if (typeof ph41_loadAddresses === 'function') savedAddresses = await ph41_loadAddresses(); } catch (e) {}
   const defaultAddr = savedAddresses.find(a => a.isDefault) || savedAddresses[0];
 
+  // تصنيف العناصر
+  const storeItems    = cart.filter(i => (i.type || 'store') === 'store');
+  const bookingItems  = cart.filter(i => i.type === 'booking');
+  const profItems     = cart.filter(i => i.type === 'profession');
+  const rentalItems   = cart.filter(i => i.type === 'rental');
+
+  // حقول المواعيد الديناميكية
+  let schedulingHtml = '';
+
+  if (bookingItems.length) {
+    schedulingHtml += `
+    <div style="margin-bottom:18px;padding:14px 16px;background:rgba(59,130,246,0.06);border:1.5px solid rgba(59,130,246,0.2);border-radius:14px">
+      <div style="font-weight:800;font-size:13px;margin-bottom:10px;color:#3b82f6;display:flex;align-items:center;gap:6px"><span>📅</span> خدمات الحجز — حدد المواعيد</div>
+      ${bookingItems.map(item => `
+      <div style="margin-bottom:10px;padding:10px 12px;background:var(--bg-card);border-radius:10px;border:1px solid var(--glass-border)">
+        <div style="font-weight:700;margin-bottom:8px;font-size:13px">${item.icon || '📅'} ${escHtml(item.name)}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div><label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:2px">📅 التاريخ</label>
+            <input class="form-control" id="bk-date-${item.productId}" type="date" min="${new Date().toISOString().split('T')[0]}" style="font-size:13px;padding:6px 10px"></div>
+          <div><label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:2px">⏰ الوقت</label>
+            <input class="form-control" id="bk-time-${item.productId}" type="time" style="font-size:13px;padding:6px 10px"></div>
+        </div>
+      </div>`).join('')}
+    </div>`;
+  }
+
+  if (profItems.length) {
+    schedulingHtml += `
+    <div style="margin-bottom:18px;padding:14px 16px;background:rgba(139,92,246,0.06);border:1.5px solid rgba(139,92,246,0.2);border-radius:14px">
+      <div style="font-weight:800;font-size:13px;margin-bottom:10px;color:#8b5cf6;display:flex;align-items:center;gap:6px"><span>💼</span> المهن — حدد المواعيد والتفاصيل</div>
+      ${profItems.map(item => `
+      <div style="margin-bottom:10px;padding:10px 12px;background:var(--bg-card);border-radius:10px;border:1px solid var(--glass-border)">
+        <div style="font-weight:700;margin-bottom:8px;font-size:13px">${item.icon || '💼'} ${escHtml(item.name)}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <div><label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:2px">📅 التاريخ</label>
+            <input class="form-control" id="prof-date-${item.productId}" type="date" min="${new Date().toISOString().split('T')[0]}" style="font-size:13px;padding:6px 10px"></div>
+          <div><label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:2px">⏰ الوقت</label>
+            <input class="form-control" id="prof-time-${item.productId}" type="time" style="font-size:13px;padding:6px 10px"></div>
+        </div>
+        <textarea class="form-control" id="prof-note-${item.productId}" placeholder="اشرح المشكلة أو متطلباتك..." rows="2" style="font-size:13px;resize:vertical"></textarea>
+      </div>`).join('')}
+    </div>`;
+  }
+
+  if (rentalItems.length) {
+    schedulingHtml += `
+    <div style="margin-bottom:18px;padding:14px 16px;background:rgba(16,185,129,0.06);border:1.5px solid rgba(16,185,129,0.2);border-radius:14px">
+      <div style="font-weight:800;font-size:13px;margin-bottom:10px;color:#10b981;display:flex;align-items:center;gap:6px"><span>🏚️</span> التأجير — حدد فترة الإيجار</div>
+      ${rentalItems.map(item => `
+      <div style="margin-bottom:10px;padding:10px 12px;background:var(--bg-card);border-radius:10px;border:1px solid var(--glass-border)">
+        <div style="font-weight:700;margin-bottom:8px;font-size:13px">📦 ${escHtml(item.name)} <span style="font-size:11px;color:var(--text-muted);font-weight:400">${escHtml(item.storeName || '')}</span></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div><label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:2px">📅 تاريخ البداية</label>
+            <input class="form-control" id="rent-start-${item.productId}" type="date" min="${new Date().toISOString().split('T')[0]}" style="font-size:13px;padding:6px 10px"></div>
+          <div><label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:2px">📅 تاريخ الانتهاء</label>
+            <input class="form-control" id="rent-end-${item.productId}" type="date" style="font-size:13px;padding:6px 10px"></div>
+        </div>
+      </div>`).join('')}
+    </div>`;
+  }
+
+  const bankHtml = (AppData.bankAccounts||[]).filter(b=>b.active!==false).map(b =>
+    `<div style="font-size:13px;margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid var(--border)">🏦 <strong>${b.bankName}</strong><br><span style="font-family:monospace;font-size:14px">${b.accountNumber}</span><br><span style="color:var(--text-muted)">اسم المستفيد: ${b.ownerName}</span></div>`
+  ).join('');
+
   openModal(`
     <div class="modal-header">
       <h2 class="modal-title">📋 إتمام الطلب</h2>
       <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
-
-    <div style="background:linear-gradient(135deg,rgba(139,92,246,0.08),rgba(139,92,246,0.02));border-radius:14px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;gap:16px">
-      <div style="font-size:36px">🛍️</div>
+    <div style="background:linear-gradient(135deg,rgba(139,92,246,0.08),rgba(139,92,246,0.02));border-radius:14px;padding:14px 18px;margin-bottom:18px;display:flex;align-items:center;gap:14px">
+      <div style="font-size:32px">🛍️</div>
       <div>
-        <div style="font-size:13px;color:var(--text-muted)">${cart.reduce((s,i)=>s+i.qty,0)} منتج من ${[...new Set(cart.map(i=>i.storeName))].length} متجر</div>
-        <div style="font-weight:800;font-size:24px;color:var(--primary)">${ph43_cartTotal().toLocaleString('ar-YE')} ريال</div>
-        <div style="font-size:12px;color:var(--text-muted);margin-top:2px">+ رسوم التوصيل تُحسب بعد إدخال العنوان</div>
+        <div style="font-size:12px;color:var(--text-muted)">${cart.length} عنصر في السلة</div>
+        <div style="font-weight:800;font-size:22px;color:var(--primary)">${ph43_cartTotal().toLocaleString('ar-YE')} ريال</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:1px">+ رسوم التوصيل إن وجدت</div>
       </div>
     </div>
 
-    ${savedAddresses.length && typeof ph41_renderAddressSelector === 'function' ? ph41_renderAddressSelector(savedAddresses) : ''}
+    ${schedulingHtml}
 
+    ${savedAddresses.length && typeof ph41_renderAddressSelector === 'function' ? ph41_renderAddressSelector(savedAddresses) : ''}
     <div class="form-group">
       <label class="form-label">📍 عنوان التوصيل${savedAddresses.length ? ' (أو أدخل جديداً)' : ''}</label>
-      <input class="form-control" id="cart-addr" placeholder="المدينة، الحي، الشارع، رقم المبنى..."
+      <input class="form-control" id="cart-addr" placeholder="المدينة، الحي، الشارع..."
              value="${defaultAddr ? escAttr(defaultAddr.address) : ''}"
              style="${defaultAddr ? 'display:none' : ''}">
     </div>
     <div class="form-group">
-      <label class="form-label">💬 ملاحظات للتوصيل</label>
-      <textarea class="form-control" id="cart-note" placeholder="أي تعليمات أو ملاحظات..." style="resize:vertical"></textarea>
+      <label class="form-label">💬 ملاحظات عامة</label>
+      <textarea class="form-control" id="cart-note" placeholder="أي تعليمات إضافية..." style="resize:vertical"></textarea>
     </div>
     <div class="form-group">
       <label class="form-label">💳 طريقة الدفع</label>
@@ -254,103 +448,199 @@ window.ph43_proceedCheckout = async function () {
         <button class="bk-pay-btn" id="bk-pay-cod" onclick="bkSelectPayment('cod')"><div style="font-weight:700">عند الاستلام</div><div style="font-size:11px;color:var(--text-muted)">+5 ريال</div></button>
         <button class="bk-pay-btn" id="bk-pay-bank" onclick="bkSelectPayment('bank_transfer')"><div style="font-weight:700">تحويل بنكي</div><div style="font-size:11px;color:var(--text-muted)">إيداع مسبق</div></button>
       </div>
-      
-      <div id="bk-bank-info" style="display:none; margin-top:16px; padding:12px; background:rgba(59,130,246,0.05); border:1px solid rgba(59,130,246,0.2); border-radius:8px;">
-        <div style="font-weight:700; margin-bottom:8px; color:var(--primary)">يرجى التحويل إلى أحد الحسابات التالية:</div>
-        ${(AppData.bankAccounts||[]).filter(b=>b.active!==false).map(b => `<div style="font-size:13px; margin-bottom:6px; padding-bottom:6px; border-bottom:1px solid var(--border)">🏦 <strong>${b.bankName}</strong><br><span style="font-family:monospace; font-size:14px">${b.accountNumber}</span><br><span style="color:var(--text-muted)">اسم المستفيد: ${b.ownerName}</span></div>`).join('')}
-        <div style="font-size:12px; color:var(--text-muted); margin-top:8px">سيتم إكمال الطلب، يرجى إرفاق صورة الإيصال لاحقاً في تفاصيل الطلب من صفحة طلباتي لكي نتمكن من اعتماد الطلب.</div>
+      <div id="bk-bank-info" style="display:none;margin-top:14px;padding:12px;background:rgba(59,130,246,0.05);border:1px solid rgba(59,130,246,0.2);border-radius:8px">
+        <div style="font-weight:700;margin-bottom:8px;color:var(--primary)">يرجى التحويل إلى أحد الحسابات التالية:</div>
+        ${bankHtml}
+        <div style="font-size:12px;color:var(--text-muted);margin-top:8px">سيتم إكمال الطلب، يرجى إرفاق صورة الإيصال لاحقاً من صفحة طلباتي.</div>
       </div>
     </div>
     <button class="btn btn-primary btn-block btn-lg" style="margin-top:8px" onclick="ph43_confirmOrder()">✅ تأكيد الطلب</button>
   `);
   State.selectedPaymentMethod = 'wallet';
-  
-  // Fetch wallet balance async
-  if (u && u.uid) {
+  if (u?.uid) {
     getBalance(u.uid).then(bal => {
       const el = document.getElementById('checkout-wallet-bal');
       if (el) el.innerText = bal + ' ريال متاح';
-    }).catch(e => {
-      const el = document.getElementById('checkout-wallet-bal');
-      if (el) el.innerText = 'الرصيد غير متاح';
-    });
+    }).catch(() => {});
   }
 };
 
 window.ph43_confirmOrder = async function () {
-  const cart     = ph43_getCart();
-  const addrEl   = document.getElementById('cart-addr');
-  const addr     = addrEl?.value.trim() || '';
-  const note     = document.getElementById('cart-note')?.value.trim() || '';
-  if (!addr) { toast('أدخل عنوان التوصيل', 'error'); return; }
+  const cart      = ph43_getCart();
+  const addrEl    = document.getElementById('cart-addr');
+  const addr      = addrEl?.value.trim() || (window.__ph41_addresses || []).find(a => a.isSelected)?.address || '';
+  const note      = document.getElementById('cart-note')?.value.trim() || '';
+  const u         = State.currentUser;
+  const payMethod = State.selectedPaymentMethod || 'wallet';
 
-  const u          = State.currentUser;
-  const payMethod  = State.selectedPaymentMethod || 'wallet';
+  const storeItems   = cart.filter(i => (i.type || 'store') === 'store');
+  const bookingItems = cart.filter(i => i.type === 'booking');
+  const profItems    = cart.filter(i => i.type === 'profession');
+  const rentalItems  = cart.filter(i => i.type === 'rental');
 
-  // ─── حساب رسوم التوصيل بناءً على موقع المتجر وعنوان العميل ─────
+  // تحقق من التواريخ
+  for (const item of bookingItems) {
+    if (!document.getElementById(`bk-date-${item.productId}`)?.value) {
+      toast(`يرجى اختيار تاريخ لخدمة: ${item.name}`, 'error'); return;
+    }
+  }
+  for (const item of profItems) {
+    if (!document.getElementById(`prof-date-${item.productId}`)?.value) {
+      toast(`يرجى اختيار تاريخ لمهنة: ${item.name}`, 'error'); return;
+    }
+  }
+  for (const item of rentalItems) {
+    const s = document.getElementById(`rent-start-${item.productId}`)?.value;
+    const e = document.getElementById(`rent-end-${item.productId}`)?.value;
+    if (!s || !e) { toast(`يرجى تحديد فترة الإيجار لـ: ${item.name}`, 'error'); return; }
+    if (s > e)    { toast('تاريخ البداية يجب أن يكون قبل تاريخ الانتهاء', 'error'); return; }
+  }
+
+  const needsAddr = storeItems.length > 0 || bookingItems.some(i => i.requiresDelivery) || profItems.some(i => i.requiresDelivery);
+  if (needsAddr && !addr) { toast('أدخل عنوان التوصيل', 'error'); return; }
+
+  // رسوم التوصيل — فقط للمتاجر
   let deliveryFee = 0;
-  let totalDelivery = 0;
-  if (typeof dp_calculateFee === 'function') {
-    // حساب لكل متجر على حدة
-    const uniqueStores = [...new Set(cart.map(i => i.storeId))];
+  if (storeItems.length && typeof dp_calculateFee === 'function') {
+    const uniqueStores = [...new Set(storeItems.map(i => i.storeId))];
     for (const sid of uniqueStores) {
       const storeObj = (AppData.stores || []).find(s => s.id === sid);
       const fromArea = storeObj?.area || storeObj?.location || storeObj?.address || '';
-      const toArea   = addr || u?.address || u?.area || '';
+      const toArea   = addr || u?.address || '';
       if (fromArea && toArea) {
-        const result = dp_calculateFee(fromArea, toArea);
-        totalDelivery += result.found ? result.fee : (AppData.platformSettings?.deliveryFee || 0);
-        if (!result.found) toast(`⚠️ سعر التوصيل لـ "${storeObj?.name || sid}" غير مسجّل`, 'warning');
+        const res = dp_calculateFee(fromArea, toArea);
+        deliveryFee += res.found ? res.fee : (AppData.platformSettings?.deliveryFee || 0);
+        if (!res.found) toast(`⚠️ سعر التوصيل لـ "${storeObj?.name || sid}" غير مسجّل`, 'warning');
       } else {
-        totalDelivery += AppData.platformSettings?.deliveryFee || 0;
+        deliveryFee += AppData.platformSettings?.deliveryFee || 0;
       }
     }
-    deliveryFee = totalDelivery;
-  } else {
+  } else if (storeItems.length) {
     deliveryFee = AppData.platformSettings?.deliveryFee || 0;
   }
 
-  const codFee = payMethod === 'cod' ? 5 : 0;
-  const total  = ph43_cartTotal() + deliveryFee + codFee;
+  const codFee   = payMethod === 'cod' ? 5 : 0;
+  const grandTotal = ph43_cartTotal() + deliveryFee + codFee;
 
   if (payMethod === 'wallet') {
     const bal = await getBalance(u.uid);
-    if (bal < total) {
-      toast(`رصيدك (${bal} ريال) غير كافٍ. المطلوب: ${total} ريال`, 'error');
+    if (bal < grandTotal) {
+      toast(`رصيدك (${bal} ريال) غير كافٍ. المطلوب: ${grandTotal} ريال`, 'error');
       closeModal(); navigate('wallet'); return;
     }
   }
 
-  showLoader('جاري تأكيد الطلب...');
-  try {
-    const orderId    = await generateOrderId();
-    const storeNames = [...new Set(cart.map(i => i.storeName))].join(' & ');
-    const matchedAddr = (window.__ph41_addresses || []).find(a => a.address === addr);
-    const housePics = matchedAddr ? (matchedAddr.pics || []) : (u.housePics || []);
+  showLoader('جاري تأكيد الطلبات...');
+  const orderIds = [];
 
-    await fsAdd('orders', {
-      orderId, type: 'store_order',
-      items: cart.map(i => ({ productId: i.productId, name: i.name, qty: i.qty, price: i.price, storeId: i.storeId, storeName: i.storeName })),
-      svcName: `طلب من: ${storeNames}`,
-      svcIcon: '🛒',
-      servicePrice: ph43_cartTotal(),
-      deliveryFee, codFee, total,
-      paymentMethod: payMethod,
-      customerId: u.uid, customerName: u.name, customerAddr: addr,
-      vendorId: null, vendorName: storeNames,
-      driverId: null, driverName: null,
-      note, status: 'pending',
-      housePics: housePics
-    });
-    if (payMethod === 'wallet') {
-      await deductWallet(u.uid, total, `طلب متاجر: ${orderId}`, orderId);
+  try {
+    const matchedAddr = (window.__ph41_addresses || []).find(a => a.address === addr);
+    const housePics   = matchedAddr ? (matchedAddr.pics || []) : (u.housePics || []);
+
+    // ── طلبات متاجر محجوز ─────────────────────────────
+    if (storeItems.length) {
+      const orderId    = await generateOrderId();
+      const storeSubtotal = storeItems.reduce((s, i) => s + i.price * i.qty, 0);
+      const storeNames = [...new Set(storeItems.map(i => i.storeName))].join(' & ');
+      await fsAdd('orders', {
+        orderId, type: 'store_order',
+        items: storeItems.map(i => ({ productId: i.productId, name: i.name, qty: i.qty, price: i.price, storeId: i.storeId, storeName: i.storeName })),
+        svcName: `طلب متاجر: ${storeNames}`, svcIcon: '🏪',
+        servicePrice: storeSubtotal, deliveryFee, codFee,
+        total: storeSubtotal + deliveryFee + codFee,
+        paymentMethod: payMethod,
+        customerId: u.uid, customerName: u.name, customerAddr: addr,
+        vendorId: null, vendorName: storeNames,
+        driverId: null, driverName: null,
+        note, status: 'pending', housePics,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+      if (payMethod === 'wallet') await deductWallet(u.uid, storeSubtotal + deliveryFee + codFee, `طلب متاجر: ${orderId}`, orderId);
+      orderIds.push(orderId);
     }
+
+    // ── طلبات خدمات الحجز ────────────────────────────
+    for (const item of bookingItems) {
+      const svc   = AppData.services.find(s => s.id === item.svcId);
+      const date  = document.getElementById(`bk-date-${item.productId}`)?.value || '';
+      const time  = document.getElementById(`bk-time-${item.productId}`)?.value || '';
+      const orderId = await generateOrderId();
+      await fsAdd('orders', {
+        orderId, type: 'booking_order',
+        svcId: item.svcId, svcName: item.name, svcIcon: item.icon || '📅',
+        providerUid: item.providerUid || svc?.providerUid || '',
+        providerName: item.providerName || svc?.providerName || '',
+        vendorId: item.providerUid || svc?.providerUid || '',
+        customerId: u.uid, customerName: u.name, customerAddr: addr,
+        userId: u.uid, userName: u.name,
+        servicePrice: item.price || 0, total: item.price || 0,
+        paymentMethod: payMethod,
+        date, time, note,
+        requiresDelivery: item.requiresDelivery,
+        status: 'pending',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+      if (payMethod === 'wallet' && item.price) await deductWallet(u.uid, item.price, `حجز خدمة: ${orderId}`, orderId);
+      orderIds.push(orderId);
+    }
+
+    // ── طلبات المهن ──────────────────────────────────
+    for (const item of profItems) {
+      const date     = document.getElementById(`prof-date-${item.productId}`)?.value || '';
+      const time     = document.getElementById(`prof-time-${item.productId}`)?.value || '';
+      const profNote = document.getElementById(`prof-note-${item.productId}`)?.value.trim() || note;
+      const orderId  = await generateOrderId();
+      await fsAdd('orders', {
+        orderId, type: 'profession_order',
+        svcId: item.svcId, svcName: item.name, svcIcon: item.icon || '💼',
+        providerUid: item.providerUid || '',
+        providerName: item.providerName || '',
+        vendorId: item.providerUid || '',
+        customerId: u.uid, customerName: u.name, customerAddr: addr,
+        userId: u.uid, userName: u.name,
+        servicePrice: 0, total: 0,
+        paymentMethod: payMethod,
+        date, time, note: profNote,
+        isProfession: true,
+        requiresDelivery: item.requiresDelivery,
+        status: 'pending_inspection',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+      orderIds.push(orderId);
+    }
+
+    // ── طلبات التأجير ────────────────────────────────
+    for (const item of rentalItems) {
+      const startDate = document.getElementById(`rent-start-${item.productId}`)?.value || '';
+      const endDate   = document.getElementById(`rent-end-${item.productId}`)?.value || '';
+      const tax       = Math.round(item.price * (item.taxPercent || 0) / 100);
+      const rentalTotal = item.price + tax;
+      const orderId   = await generateOrderId();
+      await fsAdd('orders', {
+        orderId, type: 'rental_order',
+        rentalProductId: item.rentalProductId,
+        svcName: item.name, svcIcon: '🏚️',
+        storeName: item.storeName, storeId: item.storeId,
+        customerId: u.uid, customerName: u.name, customerAddr: addr,
+        servicePrice: item.price, taxAmount: tax, total: rentalTotal,
+        paymentMethod: payMethod,
+        startDate, endDate, note,
+        status: 'pending',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+      if (payMethod === 'wallet') await deductWallet(u.uid, rentalTotal, `حجز تأجير: ${orderId}`, orderId);
+      orderIds.push(orderId);
+    }
+
     ph43_setCart([]);
     hideLoader(); closeModal();
-    toast(`✅ تم الطلب! رقم العملية: ${orderId}`, 'success');
+    const count = orderIds.length;
+    toast(`✅ تم تأكيد ${count > 1 ? count + ' طلبات' : 'الطلب'} بنجاح!`, 'success');
     await navigate('myorders');
   } catch (e) {
-    hideLoader(); toast('حدث خطأ: ' + (e.message || e), 'error');
+    hideLoader();
+    console.error('[Cart] خطأ في تأكيد الطلبات:', e);
+    toast('حدث خطأ: ' + (e.message || e), 'error');
   }
 };
 

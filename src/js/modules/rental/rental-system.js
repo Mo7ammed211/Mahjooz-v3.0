@@ -803,7 +803,7 @@ window.ph_rentalRenderStorePage = function() {
             </div>
             <div class="ph43-product-footer" style="padding: 0 12px 12px 12px;">
               <div class="ph43-product-price">${(p.price||0).toLocaleString('ar-YE')} <span style="font-size:11px;font-weight:600;color:var(--text-muted)">ريال</span></div>
-              <button class="ph43-add-cart-btn" style="background:var(--primary)" onclick="ph_rentalShowBookingModal('${p.id}', '${storeId}')">📅 احجز الآن</button>
+              <button class="ph43-add-cart-btn" data-rental-cart-id="${p.id}" style="background:var(--primary)" onclick="typeof rental_addToCart==='function'?rental_addToCart('${p.id}','${storeId}'):ph_rentalShowBookingModal('${p.id}','${storeId}')">🛒 أضف للسلة</button>
             </div>
           </div>`).join('')}
         </div>` : `
