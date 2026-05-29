@@ -204,6 +204,9 @@ window.renderAdmin = function () {
 
           <!-- ══ تذييل الدرج ══ -->
           <div class="sidebar-footer">
+            <button class="sidebar-footer-notif" onclick="closeAdminSidebar();navigate('notifications')">
+              <span>🔔</span><span>مركز الإشعارات</span>
+            </button>
             <button class="sidebar-footer-btn" onclick="closeAdminSidebar();navigate('settings')">
               <span>⚙️</span><span>الإعدادات</span>
             </button>
@@ -1909,6 +1912,11 @@ function renderVendor() {
             </button>`).join('')}
         </nav>
         ${typeof renderAvailabilityToggle === 'function' ? renderAvailabilityToggle('vendor') : ''}
+        <div class="sidebar-footer">
+          <button class="sidebar-footer-notif" onclick="closeAdminSidebar();navigate('notifications')">
+            <span>🔔</span><span>مركز الإشعارات</span>
+          </button>
+        </div>
       </aside>
       <main class="admin-main">${content}</main>
     </div>
@@ -2096,6 +2104,11 @@ function renderDriver() {
             </button>`).join('')}
         </nav>
         ${typeof renderAvailabilityToggle === 'function' ? renderAvailabilityToggle('driver') : ''}
+        <div class="sidebar-footer">
+          <button class="sidebar-footer-notif" onclick="closeAdminSidebar();navigate('notifications')">
+            <span>🔔</span><span>مركز الإشعارات</span>
+          </button>
+        </div>
       </aside>
       <main class="admin-main">${content}</main>
     </div>
@@ -2471,6 +2484,11 @@ window.renderStaff = function() {
               <span>${ic}</span><span class="nav-label">${l}</span>
             </button>`).join('')}
         </nav>
+        <div class="sidebar-footer">
+          <button class="sidebar-footer-notif" onclick="closeAdminSidebar();navigate('notifications')">
+            <span>🔔</span><span>مركز الإشعارات</span>
+          </button>
+        </div>
       </aside>
       <main class="admin-main">
         <div class="admin-content-card">
