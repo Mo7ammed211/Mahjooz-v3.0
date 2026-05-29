@@ -65,7 +65,7 @@
         transition: transform .18s ease, box-shadow .18s ease;
       }
       .ph19-pill:not(.in-nav) {
-        position: fixed; top: 12px; left: 12px; z-index: 9998;
+        display: none !important;
       }
       .ph19-pill.in-nav {
         padding: 5px 10px; font-size: 12px;

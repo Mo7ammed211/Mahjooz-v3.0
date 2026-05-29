@@ -402,11 +402,15 @@
       background: var(--bg-hover, rgba(255,255,255,0.03));
     }
 
-    /* ── إخفاء أي زر إشعارات عائم قديم ── */
+    /* ── إخفاء أي زر إشعارات عائم قديم بشكل نهائي ── */
     #da-bell,
     #notif-bell-wrap:not([data-in-nav]),
-    .ph19-pill:not(.in-nav) {
+    .ph19-pill:not(.in-nav),
+    .ph19-panel,
+    #ph19-panel {
       display: none !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
     }
   `;
   document.head.appendChild(style);
