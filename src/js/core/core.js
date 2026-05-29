@@ -517,10 +517,15 @@ function renderNavbar() {
       <span>${p.title}</span>
     </button>`).join('');
 
+  const notifCenterLink = `
+    <button class="drawer-link${isActive('notifications')?' active':''}" onclick="navigate('notifications');closeDrawer()">
+      <span>🔔 مركز الإشعارات</span>
+    </button>`;
+
   const drawerNavLinks = items.map(it => `
     <button class="drawer-link${isActive(it.page)?' active':''}" onclick="navigate('${it.page}');closeDrawer()">
       <span>${it.label}</span>
-    </button>`).join('') + staticPagesLinks;
+    </button>`).join('') + staticPagesLinks + notifCenterLink;
 
   const bottomNavHTML = `
   <div class="mobile-bottom-nav">

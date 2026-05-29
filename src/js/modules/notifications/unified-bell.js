@@ -195,7 +195,13 @@
         </div>
       </div>
       ${_renderFilterTabs(roleSources)}
-      ${body}`;
+      ${body}
+      <div class="ub-footer">
+        <button class="ub-footer-btn" onclick="toggleUnifiedNotif();navigate('notifications')">
+          📋 مركز الإشعارات الكامل
+          <span style="font-size:10px;opacity:.7">تاريخ · بحث · فلترة</span>
+        </button>
+      </div>`;
   }
 
   /* ── Bell Injection ─────────────────────────────────────────── */
@@ -305,6 +311,22 @@
       font-family: 'Cairo', sans-serif; padding: 3px 7px; border-radius: 6px;
     }
     .ub-mark-all:hover { background: rgba(124,58,237,0.1); }
+
+    /* ── Footer ── */
+    .ub-footer {
+      padding: 10px 12px;
+      border-top: 1.5px solid var(--border, rgba(255,255,255,0.08));
+      flex-shrink: 0;
+    }
+    .ub-footer-btn {
+      width: 100%; background: rgba(124,58,237,0.08);
+      border: 1.5px solid rgba(124,58,237,0.25); border-radius: 10px;
+      color: #a78bfa; font-family: 'Cairo', sans-serif;
+      font-size: 13px; font-weight: 800; cursor: pointer;
+      padding: 9px 14px; transition: all 0.18s;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .ub-footer-btn:hover { background: rgba(124,58,237,0.18); border-color: rgba(124,58,237,0.5); }
 
     /* ── Filter Tabs ── */
     .ub-filters {
