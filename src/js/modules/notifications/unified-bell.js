@@ -7,15 +7,25 @@
   'use strict';
 
   const SOURCES = {
+    all:    { label: '🔔 الكل',             color: '#7c3aed', items: [], count: 0 },
     live:   { label: '🛎️ تنبيهات حيّة',   color: '#7c3aed', items: [], count: 0 },
     notif:  { label: '🔔 إشعاراتي',        color: '#0ea5e9', items: [], count: 0 },
     driver: { label: '🚚 طلبات التوصيل',  color: '#0d9488', items: [], count: 0 },
   };
 
+  const FILTER_TABS = [
+    { id: 'all',    label: 'الكل',    icon: '🔔' },
+    { id: 'live',   label: 'حيّة',   icon: '🛎️' },
+    { id: 'notif',  label: 'إشعاراتي', icon: '📨' },
+    { id: 'driver', label: 'توصيل',  icon: '🚚' },
+  ];
+
+  let _activeFilter = 'all';
+
   /* ── Public API ─────────────────────────────────────────────── */
   window.__unifiedNotif = {
     update(sourceId, items, count) {
-      if (!SOURCES[sourceId]) return;
+      if (!SOURCES[sourceId] || sourceId === 'all') return;
       SOURCES[sourceId].items = items || [];
       SOURCES[sourceId].count = Math.max(0, count || 0);
       _updateBadge();
@@ -23,9 +33,16 @@
     },
   };
 
+  /* ── Filter API (global) ─────────────────────────────────────── */
+  window.setUBFilter = function (filterId) {
+    if (!SOURCES[filterId]) return;
+    _activeFilter = filterId;
+    _renderPanel();
+  };
+
   /* ── Badge ──────────────────────────────────────────────────── */
   function _totalCount() {
-    return Object.values(SOURCES).reduce((a, s) => a + (s.count || 0), 0);
+    return ['live', 'notif', 'driver'].reduce((a, id) => a + (SOURCES[id].count || 0), 0);
   }
 
   function _updateBadge() {
@@ -41,7 +58,7 @@
     if (panel && panel.classList.contains('ub-open')) _renderPanel();
   }
 
-  /* ── Panel Rendering ────────────────────────────────────────── */
+  /* ── Item Renderers ─────────────────────────────────────────── */
   function _esc(s) {
     if (s == null) return '';
     return String(s).replace(/[&<>"']/g, c =>
@@ -84,27 +101,59 @@
     </div>`;
   }
 
+  /* ── Filter Tabs ─────────────────────────────────────────────── */
+  function _renderFilterTabs() {
+    return `<div class="ub-filters">
+      ${FILTER_TABS.map(t => {
+        const count = t.id === 'all'
+          ? _totalCount()
+          : (SOURCES[t.id].count || 0);
+        const isActive = _activeFilter === t.id;
+        return `<button
+          class="ub-filter-tab${isActive ? ' ub-filter-active' : ''}"
+          onclick="setUBFilter('${t.id}')">
+          <span class="ub-tab-icon">${t.icon}</span>
+          <span class="ub-tab-label">${t.label}</span>
+          ${count > 0 ? `<span class="ub-tab-count">${count > 99 ? '99+' : count}</span>` : ''}
+        </button>`;
+      }).join('')}
+    </div>`;
+  }
+
+  /* ── Panel Rendering ────────────────────────────────────────── */
   function _renderPanel() {
     const panel = document.getElementById('unified-bell-panel');
     if (!panel) return;
 
-    const active = Object.entries(SOURCES).filter(([, s]) => s.items.length > 0);
-    const hasUnreadNotif = (SOURCES.notif.items || []).some(n => !n.read);
+    const sourcesToShow = _activeFilter === 'all'
+      ? ['live', 'notif', 'driver'].filter(id => SOURCES[id].items.length > 0)
+      : (SOURCES[_activeFilter]?.items.length > 0 ? [_activeFilter] : []);
+
+    const hasUnreadNotif = (_activeFilter === 'all' || _activeFilter === 'notif')
+      && (SOURCES.notif.items || []).some(n => !n.read);
 
     let body = '';
-    if (active.length === 0) {
-      body = `<div class="ub-empty">لا توجد إشعارات جديدة</div>`;
+    if (sourcesToShow.length === 0) {
+      body = `<div class="ub-empty">
+        <div style="font-size:36px;margin-bottom:10px;">🔕</div>
+        لا توجد إشعارات في هذا القسم
+      </div>`;
     } else {
-      body = `<div class="ub-body">${active.map(([id, src]) => `
-        <div class="ub-section">
-          <div class="ub-section-title" style="color:${src.color}">${src.label}</div>
-          ${src.items.slice(0, 8).map(item =>
+      body = `<div class="ub-body">${sourcesToShow.map(id => {
+        const src = SOURCES[id];
+        return `<div class="ub-section">
+          ${sourcesToShow.length > 1
+            ? `<div class="ub-section-title" style="color:${src.color}">${src.label}</div>`
+            : ''}
+          ${src.items.slice(0, 10).map(item =>
             id === 'live'   ? _renderItemLive(item)   :
             id === 'notif'  ? _renderItemNotif(item)  :
                               _renderItemDriver(item)
           ).join('')}
-        </div>`).join('')}
-      </div>`;
+          ${src.items.length > 10
+            ? `<div class="ub-more">+ ${src.items.length - 10} إشعار آخر</div>` : ''}
+        </div>`;
+      }).join('')}</div>`;
     }
 
     const markAllBtn = hasUnreadNotif
@@ -119,6 +168,7 @@
           <button class="ub-close" onclick="toggleUnifiedNotif()">✕</button>
         </div>
       </div>
+      ${_renderFilterTabs()}
       ${body}`;
   }
 
@@ -154,8 +204,9 @@
     const opening = !panel.classList.contains('ub-open');
     panel.classList.toggle('ub-open');
     if (opening) {
+      _activeFilter = 'all';
       _renderPanel();
-      Object.values(SOURCES).forEach(s => { s.count = 0; });
+      ['live', 'notif', 'driver'].forEach(id => { SOURCES[id].count = 0; });
       _updateBadge();
     }
   };
@@ -201,7 +252,7 @@
     .ub-panel {
       display: none; flex-direction: column;
       position: absolute; top: calc(100% + 10px); inset-inline-end: 0;
-      width: 320px; max-height: 480px; overflow: hidden;
+      width: 340px; max-height: 520px; overflow: hidden;
       background: var(--bg-card, #1e293b);
       border: 1.5px solid var(--border, rgba(255,255,255,0.1));
       border-radius: 16px;
@@ -228,6 +279,42 @@
       font-family: 'Cairo', sans-serif; padding: 3px 7px; border-radius: 6px;
     }
     .ub-mark-all:hover { background: rgba(124,58,237,0.1); }
+
+    /* ── Filter Tabs ── */
+    .ub-filters {
+      display: flex; gap: 4px; padding: 8px 10px;
+      border-bottom: 1.5px solid var(--border, rgba(255,255,255,0.08));
+      flex-shrink: 0; overflow-x: auto; scrollbar-width: none;
+    }
+    .ub-filters::-webkit-scrollbar { display: none; }
+    .ub-filter-tab {
+      display: flex; align-items: center; gap: 4px;
+      padding: 5px 10px; border-radius: 20px; border: 1.5px solid transparent;
+      background: var(--bg-hover, rgba(255,255,255,0.05));
+      color: var(--text-secondary, #94a3b8);
+      font-family: 'Cairo', sans-serif; font-size: 12px; font-weight: 700;
+      cursor: pointer; white-space: nowrap; transition: all 0.18s;
+      flex-shrink: 0;
+    }
+    .ub-filter-tab:hover {
+      background: var(--bg-secondary, rgba(255,255,255,0.1));
+      color: var(--text-main, #f1f5f9);
+    }
+    .ub-filter-active {
+      background: rgba(124,58,237,0.15) !important;
+      border-color: rgba(124,58,237,0.5) !important;
+      color: #a78bfa !important;
+    }
+    .ub-tab-icon { font-size: 13px; }
+    .ub-tab-label { font-size: 12px; }
+    .ub-tab-count {
+      background: #ef4444; color: #fff; border-radius: 99px;
+      font-size: 10px; font-weight: 900; min-width: 16px; height: 16px;
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 0 3px; line-height: 1;
+    }
+
+    /* ── Body & Items ── */
     .ub-body { overflow-y: auto; flex: 1; }
     .ub-empty {
       padding: 36px 16px; text-align: center;
@@ -260,6 +347,11 @@
     }
     .ub-item-time {
       font-size: 10px; color: var(--text-muted, #64748b); margin-top: 3px;
+    }
+    .ub-more {
+      padding: 8px 14px; font-size: 11px; font-weight: 700;
+      color: var(--text-muted, #64748b); text-align: center;
+      background: var(--bg-hover, rgba(255,255,255,0.03));
     }
   `;
   document.head.appendChild(style);
