@@ -1,45 +1,50 @@
 /* ═══════════════════════════════════════════════
-   محجوز — Booking Date Picker Component
+   محجوز — Booking Date Picker — Compact Professional
    ═══════════════════════════════════════════════ */
 
 /* ── Wrapper ── */
 .bk-picker-wrap {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 10px;
 }
 
-/* ── Service preview card ── */
-.bk-svc-preview {
+/* ── Service strip ── */
+.bk-svc-strip {
   display: flex;
   align-items: center;
-  gap: 14px;
-  background: linear-gradient(135deg, rgba(139,92,246,0.10), rgba(139,92,246,0.03));
-  border: 1.5px solid rgba(139,92,246,0.20);
-  border-radius: 14px;
-  padding: 14px 16px;
+  gap: 10px;
+  padding: 9px 12px;
+  background: rgba(139,92,246,0.07);
+  border: 1px solid rgba(139,92,246,0.16);
+  border-radius: 10px;
 }
-.bk-svc-preview .bk-svc-icon {
-  font-size: 32px;
+.bk-svc-strip .bk-strip-icon {
+  font-size: 22px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.bk-svc-strip .bk-strip-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-main);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bk-svc-strip .bk-strip-price {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--primary);
   flex-shrink: 0;
 }
-.bk-svc-preview .bk-svc-info h4 {
-  font-size: 15px;
-  font-weight: 800;
-  color: var(--text-main);
-  margin: 0 0 2px;
-}
-.bk-svc-preview .bk-svc-info span {
-  font-size: 13px;
-  color: var(--primary);
-  font-weight: 700;
-}
 
-/* ── Calendar container ── */
+/* ── Calendar card ── */
 .bk-calendar-wrap {
   background: var(--bg-card);
-  border: 1.5px solid var(--glass-border);
-  border-radius: 16px;
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
   overflow: hidden;
 }
 
@@ -48,313 +53,329 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
-  background: var(--bg-secondary, rgba(139,92,246,0.06));
+  padding: 8px 12px;
+  background: linear-gradient(135deg, rgba(139,92,246,0.08), rgba(139,92,246,0.02));
   border-bottom: 1px solid var(--glass-border);
 }
 .bk-cal-header h3 {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 800;
   color: var(--text-main);
   margin: 0;
   text-align: center;
   flex: 1;
+  letter-spacing: 0.3px;
 }
 .bk-cal-nav-btn {
-  width: 32px;
-  height: 32px;
-  border: 1.5px solid var(--glass-border);
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--glass-border);
   background: var(--bg-card);
   border-radius: 50%;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
-  color: var(--text-main);
-  transition: var(--transition);
+  font-size: 13px;
+  color: var(--text-secondary);
+  transition: all 0.15s;
   flex-shrink: 0;
+  line-height: 1;
 }
 .bk-cal-nav-btn:hover {
   background: var(--primary);
   border-color: var(--primary);
   color: #fff;
+  transform: scale(1.08);
 }
 
 /* ── Day labels ── */
 .bk-cal-days-header {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  padding: 10px 12px 4px;
-  gap: 4px;
+  padding: 6px 10px 2px;
+  gap: 2px;
 }
 .bk-cal-day-label {
   text-align: center;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   color: var(--text-muted);
-  padding: 4px 0;
+  padding: 2px 0;
+  opacity: 0.7;
 }
-.bk-cal-day-label.friday {
-  color: #10b981;
-}
+.bk-cal-day-label.friday { color: #10b981; opacity: 1; }
 
 /* ── Calendar grid ── */
 .bk-cal-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  padding: 4px 12px 14px;
-  gap: 4px;
+  padding: 2px 10px 10px;
+  gap: 2px;
 }
 
-/* ── Calendar day cell ── */
+/* ── Day cell ── */
 .bk-cal-day {
   aspect-ratio: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 500;
   border-radius: 50%;
   cursor: pointer;
   color: var(--text-main);
-  transition: background 0.15s, color 0.15s, transform 0.1s;
+  transition: background 0.12s, color 0.12s, transform 0.1s;
   position: relative;
   user-select: none;
 }
 .bk-cal-day:not(.disabled):not(.bk-cal-empty):hover {
-  background: rgba(139,92,246,0.15);
+  background: rgba(139,92,246,0.14);
   color: var(--primary);
-  transform: scale(1.1);
+  transform: scale(1.12);
+  font-weight: 700;
 }
-.bk-cal-day.bk-cal-empty {
-  cursor: default;
-}
+.bk-cal-day.bk-cal-empty { cursor: default; }
 .bk-cal-day.disabled {
-  opacity: 0.28;
+  opacity: 0.22;
   cursor: not-allowed;
+}
+.bk-cal-day.today {
+  color: var(--primary);
+  font-weight: 700;
 }
 .bk-cal-day.today::after {
   content: '';
   position: absolute;
-  bottom: 3px;
+  bottom: 2px;
   left: 50%;
   transform: translateX(-50%);
-  width: 4px;
-  height: 4px;
+  width: 3px;
+  height: 3px;
   border-radius: 50%;
   background: var(--primary);
 }
 .bk-cal-day.selected {
   background: linear-gradient(135deg, #8b5cf6, #7c3aed);
   color: #fff !important;
-  font-weight: 800;
-  transform: scale(1.08);
-  box-shadow: 0 4px 12px rgba(139,92,246,0.4);
+  font-weight: 700;
+  transform: scale(1.06);
+  box-shadow: 0 3px 10px rgba(139,92,246,0.45);
 }
-.bk-cal-day.selected::after {
-  display: none;
-}
+.bk-cal-day.selected::after { display: none; }
 .bk-cal-day.selected:hover {
   background: linear-gradient(135deg, #7c3aed, #6d28d9);
-  transform: scale(1.12);
+  transform: scale(1.1);
 }
 
-/* ── Multi-day range connector ── */
-.bk-cal-day.range-start {
-  border-radius: 50% 0 0 50%;
-}
-.bk-cal-day.range-end {
-  border-radius: 0 50% 50% 0;
-}
-.bk-cal-day.in-range {
-  background: rgba(139,92,246,0.12);
-  border-radius: 0;
-  color: var(--primary);
-}
-
-/* ── Selected dates tags ── */
-.bk-selected-dates {
-  min-height: 36px;
-}
-.bk-selected-dates-inner {
+/* ── Selected dates row ── */
+.bk-selected-row {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
   align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  min-height: 26px;
+  padding: 2px 0;
 }
-.bk-selected-label {
-  font-size: 12px;
+.bk-sel-label {
+  font-size: 10px;
   font-weight: 700;
   color: var(--text-muted);
-  margin-inline-end: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 .bk-date-tag {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  background: rgba(139,92,246,0.12);
-  border: 1px solid rgba(139,92,246,0.25);
+  gap: 3px;
+  background: rgba(139,92,246,0.10);
+  border: 1px solid rgba(139,92,246,0.22);
   border-radius: 20px;
-  padding: 3px 10px 3px 7px;
-  font-size: 12px;
+  padding: 2px 6px 2px 8px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--primary);
+  animation: tagPop 0.15s ease;
+}
+@keyframes tagPop {
+  from { transform: scale(0.8); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
 }
 .bk-date-tag button {
   background: none;
   border: none;
   cursor: pointer;
   color: var(--primary);
-  font-size: 11px;
-  padding: 0;
-  margin-inline-start: 2px;
-  opacity: 0.7;
-  transition: opacity 0.15s;
+  font-size: 9px;
+  padding: 0 1px;
+  opacity: 0.55;
+  transition: opacity 0.12s;
   line-height: 1;
+  margin-inline-start: 1px;
 }
 .bk-date-tag button:hover { opacity: 1; }
-.bk-no-dates {
-  font-size: 13px;
+.bk-no-dates-hint {
+  font-size: 11px;
   color: var(--text-muted);
   font-style: italic;
+  opacity: 0.8;
 }
 
-/* ── Period toggle (Morning / Evening) ── */
-.bk-period-section {
+/* ── Divider ── */
+.bk-divider {
+  height: 1px;
+  background: var(--glass-border);
+  margin: 2px 0;
+}
+
+/* ── Period segmented control ── */
+.bk-period-wrap {
   display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: 8px;
 }
-.bk-period-label {
-  font-size: 12px;
+.bk-period-label-sm {
+  font-size: 11px;
   font-weight: 700;
   color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
-.bk-period-toggle {
+.bk-period-seg {
+  flex: 1;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  background: var(--bg-secondary, rgba(0,0,0,0.2));
+  border-radius: 8px;
+  padding: 3px;
+  gap: 3px;
+  border: 1px solid var(--glass-border);
 }
 .bk-period-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 12px 16px;
-  border: 2px solid var(--glass-border);
-  border-radius: 12px;
-  background: var(--bg-card);
+  gap: 5px;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
   cursor: pointer;
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text-secondary);
-  transition: var(--transition);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  transition: all 0.15s;
   font-family: var(--font);
+  white-space: nowrap;
 }
-.bk-period-btn:hover {
-  border-color: var(--primary);
-  color: var(--primary);
-}
+.bk-period-btn:hover { color: var(--text-main); }
 .bk-period-btn.active {
-  border-color: var(--primary);
-  background: rgba(139,92,246,0.10);
-  color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(139,92,246,0.12);
-}
-.bk-period-btn .period-icon {
-  font-size: 20px;
-}
-
-/* ── Rental date range ── */
-.bk-rental-dates {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-.bk-rental-dates .form-group {
-  margin: 0;
-}
-.bk-rental-duration {
-  background: linear-gradient(135deg, rgba(16,185,129,0.08), rgba(16,185,129,0.02));
-  border: 1.5px solid rgba(16,185,129,0.20);
-  border-radius: 12px;
-  padding: 12px 16px;
-  font-size: 13px;
+  background: var(--primary);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(139,92,246,0.4);
   font-weight: 700;
-  color: #10b981;
-  text-align: center;
-  min-height: 46px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
 }
+.bk-period-btn .period-icon { font-size: 13px; }
 
 /* ── Confirm button ── */
 .bk-confirm-btn {
   width: 100%;
-  padding: 14px;
+  padding: 11px;
   background: linear-gradient(135deg, #8b5cf6, #7c3aed);
   color: #fff;
   border: none;
-  border-radius: 14px;
-  font-size: 15px;
+  border-radius: 10px;
+  font-size: 13px;
   font-weight: 800;
   cursor: pointer;
   font-family: var(--font);
-  transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
-  box-shadow: 0 6px 20px rgba(139,92,246,0.35);
+  transition: opacity 0.18s, transform 0.13s, box-shadow 0.18s;
+  box-shadow: 0 4px 16px rgba(139,92,246,0.35);
+  letter-spacing: 0.2px;
 }
-.bk-confirm-btn:hover {
+.bk-confirm-btn:hover:not(:disabled) {
   opacity: 0.92;
   transform: translateY(-1px);
-  box-shadow: 0 8px 24px rgba(139,92,246,0.45);
+  box-shadow: 0 6px 20px rgba(139,92,246,0.45);
 }
-.bk-confirm-btn:active {
-  transform: translateY(0);
-}
+.bk-confirm-btn:active:not(:disabled) { transform: translateY(0); }
 .bk-confirm-btn:disabled {
-  opacity: 0.4;
+  background: var(--glass-border);
+  color: var(--text-muted);
   cursor: not-allowed;
-  transform: none;
   box-shadow: none;
+  opacity: 0.7;
 }
 
-/* ── Dates summary in cart ── */
+/* ── Rental date inputs ── */
+.bk-rental-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.bk-rental-row .form-group { margin: 0; }
+.bk-rental-row .form-label {
+  font-size: 11px !important;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+  display: block;
+}
+.bk-rental-row .form-control {
+  font-size: 12px !important;
+  padding: 7px 10px !important;
+  border-radius: 8px !important;
+}
+.bk-dur-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: linear-gradient(135deg, rgba(16,185,129,0.08), rgba(16,185,129,0.02));
+  border: 1px solid rgba(16,185,129,0.18);
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #10b981;
+  min-height: 36px;
+  text-align: center;
+}
+
+/* ── Cart date badges ── */
 .cart-date-summary {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
-  margin-top: 6px;
+  gap: 3px;
+  margin-top: 5px;
 }
 .cart-date-badge {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  background: rgba(59,130,246,0.10);
-  border: 1px solid rgba(59,130,246,0.20);
+  gap: 3px;
+  background: rgba(59,130,246,0.09);
+  border: 1px solid rgba(59,130,246,0.18);
   border-radius: 20px;
-  padding: 2px 8px;
-  font-size: 11px;
+  padding: 2px 7px;
+  font-size: 10px;
   font-weight: 600;
   color: #3b82f6;
 }
 .cart-date-badge.rental-badge {
-  background: rgba(16,185,129,0.10);
-  border-color: rgba(16,185,129,0.20);
+  background: rgba(16,185,129,0.09);
+  border-color: rgba(16,185,129,0.18);
   color: #10b981;
 }
 .cart-period-badge {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: 2px;
   background: rgba(139,92,246,0.08);
-  border: 1px solid rgba(139,92,246,0.18);
+  border: 1px solid rgba(139,92,246,0.16);
   border-radius: 20px;
-  padding: 2px 8px;
-  font-size: 11px;
+  padding: 2px 7px;
+  font-size: 10px;
   font-weight: 700;
   color: var(--primary);
 }

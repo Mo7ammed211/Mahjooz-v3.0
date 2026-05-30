@@ -213,11 +213,11 @@ window.bk_renderSelectedTags = function () {
   if (!wrap || !s) return;
   const sorted = [...s.selectedDates].sort();
   if (!sorted.length) {
-    wrap.innerHTML = `<span class="bk-no-dates">اضغط على الأيام لتحديدها</span>`;
+    wrap.innerHTML = `<span class="bk-no-dates-hint">اضغط على أي يوم لتحديده</span>`;
     return;
   }
   wrap.innerHTML = `
-    <span class="bk-selected-label">${sorted.length > 1 ? sorted.length + ' أيام:' : 'يوم:'}</span>
+    <span class="bk-sel-label">${sorted.length > 1 ? sorted.length + ' أيام' : 'يوم'}</span>
     ${sorted.map(ds => `
       <span class="bk-date-tag">
         📅 ${bk_formatAr(ds)}
@@ -254,19 +254,16 @@ window.svc_showBookingDateModal = function (svcId) {
   };
 
   openModal(`
-    <div class="modal-header">
-      <h2 class="modal-title">📅 اختر مواعيد الحجز</h2>
+    <div class="modal-header" style="padding-bottom:10px">
+      <h2 class="modal-title" style="font-size:15px">📅 اختر موعد الحجز</h2>
       <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
     <div class="bk-picker-wrap">
 
-      <div class="bk-svc-preview">
-        <div class="bk-svc-icon">${svc.icon || '📅'}</div>
-        <div class="bk-svc-info">
-          <h4>${escHtml(svc.name)}</h4>
-          <span>${priceText}</span>
-          ${svc.providerName ? `<div style="font-size:12px;color:var(--text-muted);margin-top:2px">👤 ${escHtml(svc.providerName)}</div>` : ''}
-        </div>
+      <div class="bk-svc-strip">
+        <span class="bk-strip-icon">${svc.icon || '📅'}</span>
+        <span class="bk-strip-name">${escHtml(svc.name)}</span>
+        <span class="bk-strip-price">${priceText}</span>
       </div>
 
       <div class="bk-calendar-wrap">
@@ -281,28 +278,26 @@ window.svc_showBookingDateModal = function (svcId) {
         <div id="bk-cal-grid" class="bk-cal-grid"></div>
       </div>
 
-      <div class="bk-selected-dates">
-        <div id="bk-selected-tags" class="bk-selected-dates-inner">
-          <span class="bk-no-dates">اضغط على الأيام لتحديدها</span>
-        </div>
+      <div id="bk-selected-tags" class="bk-selected-row">
+        <span class="bk-no-dates-hint">اضغط على أي يوم لتحديده</span>
       </div>
 
-      <div class="bk-period-section">
-        <div class="bk-period-label">⏰ الوقت المفضل للحجز</div>
-        <div class="bk-period-toggle">
+      <div class="bk-divider"></div>
+
+      <div class="bk-period-wrap">
+        <span class="bk-period-label-sm">⏰ الوقت</span>
+        <div class="bk-period-seg">
           <button id="bk-period-morning" class="bk-period-btn active" onclick="bk_setPeriod('morning')">
-            <span class="period-icon">🌅</span>
-            <span>صباحاً</span>
+            <span class="period-icon">🌅</span> صباحاً
           </button>
           <button id="bk-period-evening" class="bk-period-btn" onclick="bk_setPeriod('evening')">
-            <span class="period-icon">🌆</span>
-            <span>مساءً</span>
+            <span class="period-icon">🌆</span> مساءً
           </button>
         </div>
       </div>
 
       <button id="bk-confirm-btn" class="bk-confirm-btn" disabled onclick="bk_confirmDates()">
-        اختر يوماً واحداً على الأقل
+        اختر يوماً على الأقل
       </button>
     </div>
   `);
@@ -369,50 +364,47 @@ window.rental_showDateModal = function (productId, storeId) {
   const todayStr = bk_todayStr();
 
   openModal(`
-    <div class="modal-header">
-      <h2 class="modal-title">🏚️ حدد فترة الإيجار</h2>
+    <div class="modal-header" style="padding-bottom:10px">
+      <h2 class="modal-title" style="font-size:15px">🏚️ حدد فترة الإيجار</h2>
       <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
     <div class="bk-picker-wrap">
 
-      <div class="bk-svc-preview">
-        <div class="bk-svc-icon">${p.imageBase64
-          ? `<img src="${p.imageBase64}" style="width:48px;height:48px;border-radius:10px;object-fit:cover">`
-          : '🏚️'}</div>
-        <div class="bk-svc-info">
-          <h4>${escHtml(p.name)}</h4>
-          <span>${p.price ? p.price.toLocaleString('ar-YE') + ' ريال' : 'السعر عند التواصل'}</span>
-          <div style="font-size:12px;color:var(--text-muted);margin-top:2px">🏪 ${escHtml(store.name)}</div>
-        </div>
+      <div class="bk-svc-strip">
+        <span class="bk-strip-icon">${p.imageBase64
+          ? `<img src="${p.imageBase64}" style="width:24px;height:24px;border-radius:5px;object-fit:cover;vertical-align:middle">`
+          : '🏚️'}</span>
+        <span class="bk-strip-name">${escHtml(p.name)} <span style="font-weight:400;color:var(--text-muted);font-size:11px">· ${escHtml(store.name)}</span></span>
+        <span class="bk-strip-price">${p.price ? p.price.toLocaleString('ar-YE') + ' ﷼' : '—'}</span>
       </div>
 
-      <div class="bk-rental-dates">
+      <div class="bk-rental-row">
         <div class="form-group">
-          <label class="form-label" style="font-size:12px">📅 تاريخ البداية</label>
+          <label class="form-label">📅 من</label>
           <input class="form-control" id="rent-modal-start" type="date"
-            min="${todayStr}" onchange="rental_calcDuration()" style="font-size:13px;padding:8px 12px">
+            min="${todayStr}" onchange="rental_calcDuration()">
         </div>
         <div class="form-group">
-          <label class="form-label" style="font-size:12px">📅 تاريخ الانتهاء</label>
+          <label class="form-label">📅 إلى</label>
           <input class="form-control" id="rent-modal-end" type="date"
-            min="${todayStr}" onchange="rental_calcDuration()" style="font-size:13px;padding:8px 12px">
+            min="${todayStr}" onchange="rental_calcDuration()">
         </div>
       </div>
 
-      <div id="rent-modal-duration" class="bk-rental-duration">
-        حدد التواريخ لمعرفة المدة
+      <div id="rent-modal-duration" class="bk-dur-badge">
+        📆 حدد التواريخ
       </div>
 
-      <div class="bk-period-section">
-        <div class="bk-period-label">⏰ وقت الاستلام المفضل</div>
-        <div class="bk-period-toggle">
+      <div class="bk-divider"></div>
+
+      <div class="bk-period-wrap">
+        <span class="bk-period-label-sm">⏰ الاستلام</span>
+        <div class="bk-period-seg">
           <button id="rent-period-morning" class="bk-period-btn active" onclick="rental_setPeriod('morning')">
-            <span class="period-icon">🌅</span>
-            <span>صباحاً</span>
+            <span class="period-icon">🌅</span> صباحاً
           </button>
           <button id="rent-period-evening" class="bk-period-btn" onclick="rental_setPeriod('evening')">
-            <span class="period-icon">🌆</span>
-            <span>مساءً</span>
+            <span class="period-icon">🌆</span> مساءً
           </button>
         </div>
       </div>
