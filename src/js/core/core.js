@@ -677,6 +677,25 @@ function renderNavbar() {
   </aside>` : ''}` + bottomNavHTML;
 }
 
+// ── نقل عناصر الدرج إلى <body> لتجاوز حدود الـ stacking context ──
+function _teleportDrawers() {
+  // الدرج الجانبي للعميل/الزائر (داخل navbar-wrap)
+  ['nav-drawer', 'nav-drawer-backdrop'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el.parentElement !== document.body) {
+      document.body.appendChild(el);
+    }
+  });
+  // الدرج الجانبي للمدير/المزود/السائق/الموظف (داخل #app)
+  ['adminSidebar', 'adminSidebarOverlay'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el.parentElement !== document.body) {
+      document.body.appendChild(el);
+    }
+  });
+}
+window._teleportDrawers = _teleportDrawers;
+
 let _closeDrawerTimeout = null;
 function toggleDrawer() {
   const d = document.getElementById('nav-drawer');
@@ -1061,6 +1080,7 @@ async function render() {
   }
   
   nw.innerHTML = renderNavbar(); fw.innerHTML = renderFooter();
+  _teleportDrawers();
   refreshWalletBalanceUI();
   
   if (!State._dataLoaded || window._forceDataReload) {
@@ -1106,6 +1126,7 @@ async function render() {
   }
 
   await setContent(html);
+  _teleportDrawers();
   if (typeof hideLoader === 'function') hideLoader();
 
   if (activeElId) {
