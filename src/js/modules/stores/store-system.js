@@ -594,21 +594,20 @@ function ph43_renderCartBody() {
 
   if (!cart.length) {
     body.innerHTML = `
-      <div style="text-align:center;padding:60px 20px;color:var(--text-muted)">
-        <div style="font-size:64px;margin-bottom:16px">🛒</div>
-        <div style="font-size:18px;font-weight:700;margin-bottom:8px;color:var(--text-main)">السلة فارغة</div>
-        <div style="font-size:14px">أضف خدمات أو منتجات أو حجوزات من الأقسام المختلفة</div>
+      <div style="text-align:center;padding:52px 20px;color:var(--text-muted)">
+        <div style="font-size:56px;margin-bottom:12px;opacity:0.5">🛒</div>
+        <div style="font-size:16px;font-weight:800;margin-bottom:6px;color:var(--text-main)">السلة فارغة</div>
+        <div style="font-size:13px;opacity:0.7">أضف خدمات أو منتجات أو حجوزات</div>
       </div>`;
     if (acts) acts.innerHTML = '';
     return;
   }
 
-  // الأقسام الأربعة
   const SECTIONS = [
-    { type: 'booking',    icon: '📅', label: 'خدمات الحجز',                color: '#3b82f6', hasQty: false },
-    { type: 'profession', icon: '💼', label: 'المهن والخدمات المتخصصة',    color: '#8b5cf6', hasQty: false },
-    { type: 'rental',     icon: '🏚️', label: 'متاجر التأجير',               color: '#10b981', hasQty: false },
-    { type: 'store',      icon: '🏪', label: 'متاجر محجوز',                 color: '#f59e0b', hasQty: true  },
+    { type: 'booking',    icon: '📅', label: 'خدمات الحجز',             color: '#3b82f6', bg: 'rgba(59,130,246,0.07)',   border: 'rgba(59,130,246,0.18)',  hasQty: false },
+    { type: 'profession', icon: '💼', label: 'الخدمات المتخصصة',        color: '#8b5cf6', bg: 'rgba(139,92,246,0.07)',  border: 'rgba(139,92,246,0.18)', hasQty: false },
+    { type: 'rental',     icon: '🏚️', label: 'متاجر التأجير',            color: '#10b981', bg: 'rgba(16,185,129,0.07)', border: 'rgba(16,185,129,0.18)', hasQty: false },
+    { type: 'store',      icon: '🏪', label: 'متاجر محجوز',              color: '#f59e0b', bg: 'rgba(245,158,11,0.07)', border: 'rgba(245,158,11,0.18)', hasQty: true  },
   ];
 
   let html = '';
@@ -617,86 +616,153 @@ function ph43_renderCartBody() {
     const items = cart.filter(i => (i.type || 'store') === sec.type);
     if (!items.length) return;
 
+    const secTotal = items.reduce((s, i) => s + ((i.price || 0) * (i.qty || 1)), 0);
+    const secTotalText = secTotal > 0 ? secTotal.toLocaleString('ar-YE') + ' ﷼' : '';
+
     html += `
-    <div style="margin-bottom:16px;border-radius:16px;overflow:hidden;border:1px solid var(--glass-border)">
-      <div style="background:var(--bg-secondary);padding:10px 16px;display:flex;align-items:center;gap:10px;font-weight:800;font-size:13px;border-bottom:1px solid var(--glass-border)">
-        <span style="font-size:18px">${sec.icon}</span>
-        <span style="color:${sec.color}">${sec.label}</span>
-        <span style="margin-inline-start:auto;font-size:11px;color:var(--text-muted);font-weight:400">${items.length} ${items.length === 1 ? 'عنصر' : 'عناصر'}</span>
+    <div style="margin-bottom:14px;border-radius:14px;overflow:hidden;border:1px solid ${sec.border};box-shadow:0 2px 12px rgba(0,0,0,0.08)">
+      <div style="background:${sec.bg};padding:9px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid ${sec.border}">
+        <div style="width:30px;height:30px;border-radius:8px;background:${sec.color};display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0">${sec.icon}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:800;font-size:13px;color:${sec.color}">${sec.label}</div>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:1px">${items.length} ${items.length === 1 ? 'عنصر' : 'عناصر'}${secTotalText ? ' · ' + secTotalText : ''}</div>
+        </div>
       </div>`;
 
     if (sec.hasQty) {
-      // متاجر محجوز — مجمّعة حسب المتجر مع أزرار الكمية
+      // متاجر محجوز — مجمّعة حسب المتجر
       const byStore = {};
       items.forEach(item => {
         const key = item.storeId || 'unknown';
         if (!byStore[key]) byStore[key] = { name: item.storeName || '', icon: item.storeIcon || '🏪', items: [] };
         byStore[key].items.push(item);
       });
-      Object.values(byStore).forEach(g => {
+      Object.values(byStore).forEach((g, gi) => {
         if (Object.keys(byStore).length > 1) {
-          html += `<div style="padding:6px 16px;background:rgba(245,158,11,0.06);font-size:12px;font-weight:700;color:var(--text-muted);display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--glass-border)"><span>${g.icon}</span>${escHtml(g.name)}</div>`;
+          html += `<div style="padding:5px 14px;background:rgba(245,158,11,0.04);font-size:11px;font-weight:700;color:var(--text-muted);display:flex;align-items:center;gap:5px;border-bottom:1px solid var(--glass-border)"><span>${g.icon}</span>${escHtml(g.name)}</div>`;
         }
-        g.items.forEach(item => {
+        g.items.forEach((item, ii) => {
+          const lineTotal = (item.price * item.qty).toLocaleString('ar-YE');
+          const unitPrice = item.price ? item.price.toLocaleString('ar-YE') : '';
           html += `
-          <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-top:1px solid var(--glass-border)">
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-top:1px solid var(--glass-border);background:var(--bg-card)">
             ${item.image
-              ? `<img src="${item.image}" style="width:52px;height:52px;border-radius:12px;object-fit:cover;flex-shrink:0">`
-              : `<div style="width:52px;height:52px;border-radius:12px;background:var(--bg-secondary);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0">📦</div>`}
+              ? `<img src="${item.image}" style="width:48px;height:48px;border-radius:10px;object-fit:cover;flex-shrink:0;border:1px solid var(--glass-border)">`
+              : `<div style="width:48px;height:48px;border-radius:10px;background:var(--bg-secondary);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">📦</div>`}
             <div style="flex:1;min-width:0">
-              <div style="font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(item.name)}</div>
-              <div style="color:var(--primary);font-weight:700;font-size:13px;margin-top:3px">${(item.price * item.qty).toLocaleString('ar-YE')} ريال</div>
+              <div style="font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:2px">${escHtml(item.name)}</div>
+              ${item.storeName ? `<div style="font-size:11px;color:var(--text-muted);margin-bottom:3px">🏪 ${escHtml(item.storeName)}</div>` : ''}
+              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                ${unitPrice ? `<span style="font-size:11px;color:var(--text-muted)">${unitPrice} ﷼ × ${item.qty}</span>` : ''}
+                <span style="font-weight:800;font-size:13px;color:#f59e0b">${lineTotal} ﷼</span>
+              </div>
             </div>
-            <div style="display:flex;align-items:center;gap:6px">
-              <button onclick="ph43_changeQty('${item.productId}',-1)" style="width:30px;height:30px;border-radius:50%;border:1.5px solid var(--glass-border);background:var(--bg-card);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--text-main)">−</button>
-              <span style="font-weight:800;min-width:22px;text-align:center;font-size:15px">${item.qty}</span>
-              <button onclick="ph43_changeQty('${item.productId}',1)" style="width:30px;height:30px;border-radius:50%;border:none;background:var(--primary);color:#fff;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;font-weight:700">+</button>
-              <button onclick="ph43_removeFromCart('${item.productId}')" style="width:30px;height:30px;border-radius:50%;border:1.5px solid var(--rose);background:transparent;color:var(--rose);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;margin-inline-start:4px">✕</button>
+            <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
+              <button onclick="ph43_changeQty('${item.productId}',-1)" style="width:28px;height:28px;border-radius:50%;border:1.5px solid var(--glass-border);background:var(--bg-secondary);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--text-main)">−</button>
+              <span style="font-weight:800;min-width:20px;text-align:center;font-size:14px">${item.qty}</span>
+              <button onclick="ph43_changeQty('${item.productId}',1)" style="width:28px;height:28px;border-radius:50%;border:none;background:var(--primary);color:#fff;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;font-weight:700">+</button>
+              <button onclick="ph43_removeFromCart('${item.productId}')" style="width:28px;height:28px;border-radius:50%;border:1.5px solid rgba(244,63,94,0.4);background:rgba(244,63,94,0.07);color:#f43f5e;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;margin-inline-start:2px" title="إزالة">✕</button>
             </div>
           </div>`;
         });
       });
+
     } else {
-      // خدمات / مهن / تأجير — بدون كمية
       items.forEach(item => {
-        const priceText = item.priceLabel || (item.price ? item.price.toLocaleString('ar-YE') + ' ريال' : 'السعر عند التواصل');
-        const periodLabel = item.bookingPeriod === 'evening' ? '🌆 مساءً' : item.bookingPeriod === 'morning' ? '🌅 صباحاً' : '';
-        const rentPeriodLabel = item.rentalPeriod === 'evening' ? '🌆 مساءً' : item.rentalPeriod === 'morning' ? '🌅 صباحاً' : '';
+        const priceText  = item.priceLabel || (item.price ? item.price.toLocaleString('ar-YE') + ' ﷼' : 'السعر عند التواصل');
+        const isPriceSet = !item.priceLabel && item.price;
+        const periodLabel    = item.bookingPeriod === 'evening' ? '🌆 مساءً' : item.bookingPeriod === 'morning' ? '🌅 صباحاً' : '';
+        const rentPeriodLabel = item.rentalPeriod === 'evening'  ? '🌆 مساءً' : item.rentalPeriod === 'morning'  ? '🌅 صباحاً' : '';
 
-        // Booking dates summary
-        let datesSummaryHtml = '';
-        if (item.type === 'booking' && item.bookingDates && item.bookingDates.length) {
-          const tags = item.bookingDates.map(ds => `<span class="cart-date-badge">📅 ${bk_formatAr(ds)}</span>`).join('');
-          const periodBadge = periodLabel ? `<span class="cart-period-badge">${periodLabel}</span>` : '';
-          datesSummaryHtml = `<div class="cart-date-summary">${tags}${periodBadge}</div>`;
-        }
+        /* ── Booking card ── */
+        if (item.type === 'booking') {
+          const dates = item.bookingDates || [];
+          const datesRow = dates.length
+            ? dates.map(ds => `<span class="cart-date-badge">📅 ${bk_formatAr(ds)}</span>`).join('')
+            : `<span style="font-size:11px;color:var(--text-muted);font-style:italic">لم تحدد تواريخ</span>`;
+          html += `
+          <div style="padding:12px 14px;border-top:1px solid ${sec.border};background:var(--bg-card)">
+            <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px">
+              <div style="width:44px;height:44px;border-radius:10px;background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.18);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">${item.icon || '📅'}</div>
+              <div style="flex:1;min-width:0">
+                <div style="font-weight:700;font-size:13px;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(item.name)}</div>
+                ${item.providerName ? `<div style="font-size:11px;color:var(--text-muted);margin-bottom:3px">👤 ${escHtml(item.providerName)}</div>` : ''}
+                <div style="display:flex;align-items:center;gap:6px">
+                  <span style="font-weight:800;font-size:13px;color:#3b82f6">${priceText}</span>
+                  ${isPriceSet && dates.length > 1 ? `<span style="font-size:10px;color:var(--text-muted)">× ${dates.length} أيام</span>` : ''}
+                </div>
+              </div>
+              <button onclick="ph43_removeFromCart('${item.productId}')" style="width:26px;height:26px;border-radius:50%;border:1.5px solid rgba(244,63,94,0.35);background:rgba(244,63,94,0.07);color:#f43f5e;cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0" title="إزالة">✕</button>
+            </div>
+            <div style="background:rgba(59,130,246,0.05);border:1px solid rgba(59,130,246,0.14);border-radius:8px;padding:8px 10px">
+              <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px">المواعيد المحجوزة</div>
+              <div class="cart-date-summary" style="margin-bottom:${periodLabel ? '6px' : '0'}">${datesRow}</div>
+              ${periodLabel ? `<div style="margin-top:4px;display:flex;align-items:center;gap:4px"><span style="font-size:10px;color:var(--text-muted)">الوقت المفضل:</span><span class="cart-period-badge">${periodLabel}</span></div>` : ''}
+            </div>
+          </div>`;
 
-        // Rental dates summary
-        if (item.type === 'rental' && item.startDate) {
+        /* ── Rental card ── */
+        } else if (item.type === 'rental') {
           const days = item.rentalDays || 1;
-          const daysLabel = days === 1 ? 'يوم واحد' : `${days} أيام`;
-          const pBadge = rentPeriodLabel ? `<span class="cart-period-badge">${rentPeriodLabel}</span>` : '';
-          datesSummaryHtml = `<div class="cart-date-summary">
-            <span class="cart-date-badge rental-badge">📅 ${bk_formatAr(item.startDate)} ← ${bk_formatAr(item.endDate)}</span>
-            <span class="cart-date-badge rental-badge">📆 ${daysLabel}</span>
-            ${pBadge}
+          const daysLabel = days === 1 ? 'يوم واحد' : days === 2 ? 'يومان' : `${days} أيام`;
+          const totalRent = item.price ? (item.price * days).toLocaleString('ar-YE') + ' ﷼' : '';
+          html += `
+          <div style="padding:12px 14px;border-top:1px solid ${sec.border};background:var(--bg-card)">
+            <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px">
+              <div style="width:44px;height:44px;border-radius:10px;overflow:hidden;flex-shrink:0;border:1px solid rgba(16,185,129,0.2)">
+                ${item.image
+                  ? `<img src="${item.image}" style="width:44px;height:44px;object-fit:cover">`
+                  : `<div style="width:44px;height:44px;background:rgba(16,185,129,0.1);display:flex;align-items:center;justify-content:center;font-size:22px">🏚️</div>`}
+              </div>
+              <div style="flex:1;min-width:0">
+                <div style="font-weight:700;font-size:13px;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(item.name)}</div>
+                ${item.storeName ? `<div style="font-size:11px;color:var(--text-muted);margin-bottom:3px">🏪 ${escHtml(item.storeName)}</div>` : ''}
+                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                  <span style="font-size:11px;color:var(--text-muted)">${priceText} / يوم</span>
+                  ${totalRent ? `<span style="font-weight:800;font-size:13px;color:#10b981">${totalRent} إجمالي</span>` : ''}
+                </div>
+              </div>
+              <button onclick="ph43_removeFromCart('${item.productId}')" style="width:26px;height:26px;border-radius:50%;border:1.5px solid rgba(244,63,94,0.35);background:rgba(244,63,94,0.07);color:#f43f5e;cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0" title="إزالة">✕</button>
+            </div>
+            ${item.startDate ? `
+            <div style="background:rgba(16,185,129,0.05);border:1px solid rgba(16,185,129,0.14);border-radius:8px;padding:8px 10px">
+              <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">فترة الإيجار</div>
+              <div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:6px;margin-bottom:${rentPeriodLabel ? '6px' : '0'}">
+                <div style="background:var(--bg-secondary);border-radius:6px;padding:5px 8px;text-align:center">
+                  <div style="font-size:9px;color:var(--text-muted);margin-bottom:1px">من</div>
+                  <div style="font-size:11px;font-weight:700;color:var(--text-main)">${bk_formatAr(item.startDate)}</div>
+                </div>
+                <div style="display:flex;flex-direction:column;align-items:center;gap:1px">
+                  <div style="font-size:9px;color:var(--text-muted)">${daysLabel}</div>
+                  <div style="width:24px;height:1px;background:rgba(16,185,129,0.4)"></div>
+                  <span style="font-size:9px">🏷️</span>
+                </div>
+                <div style="background:var(--bg-secondary);border-radius:6px;padding:5px 8px;text-align:center">
+                  <div style="font-size:9px;color:var(--text-muted);margin-bottom:1px">إلى</div>
+                  <div style="font-size:11px;font-weight:700;color:var(--text-main)">${bk_formatAr(item.endDate)}</div>
+                </div>
+              </div>
+              ${rentPeriodLabel ? `<div style="display:flex;align-items:center;gap:4px"><span style="font-size:10px;color:var(--text-muted)">وقت الاستلام:</span><span class="cart-period-badge">${rentPeriodLabel}</span></div>` : ''}
+            </div>` : `<div style="font-size:11px;color:var(--text-muted);font-style:italic;text-align:center;padding:4px 0">لم تحدد فترة الإيجار</div>`}
+          </div>`;
+
+        /* ── Profession card ── */
+        } else {
+          html += `
+          <div style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-top:1px solid ${sec.border};background:var(--bg-card)">
+            <div style="width:44px;height:44px;border-radius:10px;background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.18);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">${item.icon || '💼'}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:700;font-size:13px;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(item.name)}</div>
+              ${item.providerName ? `<div style="font-size:11px;color:var(--text-muted);margin-bottom:3px">👤 ${escHtml(item.providerName)}</div>` : ''}
+              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                <span style="font-weight:800;font-size:13px;color:#8b5cf6">${priceText}</span>
+                <span style="font-size:10px;background:rgba(139,92,246,0.1);color:#8b5cf6;border-radius:20px;padding:1px 7px;font-weight:700">مهنة متخصصة</span>
+              </div>
+              ${item.commonIssues && item.commonIssues.length ? `<div style="margin-top:5px;font-size:10px;color:var(--text-muted)">⚙️ ${item.commonIssues.slice(0,2).map(v=>escHtml(v)).join(' · ')}</div>` : ''}
+            </div>
+            <button onclick="ph43_removeFromCart('${item.productId}')" style="width:26px;height:26px;border-radius:50%;border:1.5px solid rgba(244,63,94,0.35);background:rgba(244,63,94,0.07);color:#f43f5e;cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0" title="إزالة">✕</button>
           </div>`;
         }
-
-        html += `
-        <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 16px;border-top:1px solid var(--glass-border)">
-          <div style="width:52px;height:52px;border-radius:12px;background:var(--bg-secondary);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;overflow:hidden;margin-top:2px">
-            ${item.image ? `<img src="${item.image}" style="width:52px;height:52px;object-fit:cover">` : (item.icon || sec.icon)}
-          </div>
-          <div style="flex:1;min-width:0">
-            <div style="font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(item.name)}</div>
-            ${item.storeName ? `<div style="font-size:12px;color:var(--text-muted)">${escHtml(item.storeName)}</div>` : ''}
-            ${item.providerName ? `<div style="font-size:12px;color:var(--text-muted)">👤 ${escHtml(item.providerName)}</div>` : ''}
-            <div style="color:${sec.color};font-weight:700;font-size:13px;margin-top:3px">${priceText}</div>
-            ${datesSummaryHtml}
-          </div>
-          <button onclick="ph43_removeFromCart('${item.productId}')" style="width:30px;height:30px;border-radius:50%;border:1.5px solid var(--rose);background:transparent;color:var(--rose);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px">✕</button>
-        </div>`;
       });
     }
 
@@ -704,27 +770,38 @@ function ph43_renderCartBody() {
   });
 
   // ملخص الإجمالي
-  const total = ph43_cartTotal();
+  const total      = ph43_cartTotal();
+  const totalItems = cart.length;
+  const hasApprox  = cart.some(i => i.type === 'booking' || i.type === 'profession' || i.type === 'rental');
+
   html += `
-  <div style="background:linear-gradient(135deg,rgba(139,92,246,0.06),rgba(139,92,246,0.02));border-radius:16px;border:1px solid var(--glass-border);padding:16px;margin-top:4px">
-    <div style="display:flex;justify-content:space-between;margin-bottom:8px">
-      <span style="color:var(--text-secondary)">المجموع التقديري</span>
-      <span style="font-weight:700">${total.toLocaleString('ar-YE')} ريال</span>
+  <div style="background:linear-gradient(135deg,rgba(139,92,246,0.07),rgba(139,92,246,0.02));border-radius:14px;border:1px solid rgba(139,92,246,0.18);padding:14px;margin-top:4px">
+    <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:10px">ملخص الطلب</div>
+    ${SECTIONS.filter(s => cart.some(i => (i.type||'store') === s.type)).map(s => {
+      const sItems = cart.filter(i => (i.type||'store') === s.type);
+      const sTotal = sItems.reduce((acc, i) => acc + ((i.price||0)*(i.qty||1)), 0);
+      return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <span style="font-size:12px;color:var(--text-secondary);display:flex;align-items:center;gap:5px"><span>${s.icon}</span>${s.label}</span>
+        <span style="font-size:12px;font-weight:700;color:${s.color}">${sTotal > 0 ? sTotal.toLocaleString('ar-YE') + ' ﷼' : '—'}</span>
+      </div>`;
+    }).join('')}
+    <div style="height:1px;background:rgba(139,92,246,0.15);margin:10px 0"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div style="font-weight:800;font-size:15px">الإجمالي</div>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:1px">${totalItems} ${totalItems === 1 ? 'عنصر' : 'عناصر'}</div>
+      </div>
+      <span style="font-weight:800;font-size:20px;background:var(--gradient-main);-webkit-background-clip:text;-webkit-text-fill-color:transparent">${total.toLocaleString('ar-YE')} ﷼</span>
     </div>
-    <div style="height:1px;background:var(--glass-border);margin-bottom:8px"></div>
-    <div style="display:flex;justify-content:space-between">
-      <span style="font-weight:800;font-size:16px">الإجمالي</span>
-      <span style="font-weight:800;font-size:21px;background:var(--gradient-main);-webkit-background-clip:text;-webkit-text-fill-color:transparent">${total.toLocaleString('ar-YE')} ريال</span>
-    </div>
-    <div style="font-size:11px;color:var(--text-muted);margin-top:6px">* أسعار المهن والخدمات قد تخضع للتأكيد النهائي من المزود</div>
+    ${hasApprox ? `<div style="font-size:10px;color:var(--text-muted);margin-top:8px;padding:6px 8px;background:rgba(0,0,0,0.1);border-radius:6px">⚠️ أسعار الخدمات والمهن قد تخضع للتأكيد النهائي من المزود</div>` : ''}
   </div>`;
 
   body.innerHTML = html;
 
   if (acts) acts.innerHTML = `
-    <div style="display:flex;gap:10px">
-      <button class="btn btn-secondary" onclick="ph43_clearCart()" style="flex-shrink:0">🗑️ إفراغ</button>
-      <button class="btn btn-primary btn-block btn-lg" onclick="ph43_proceedCheckout()">💳 متابعة الدفع</button>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-secondary" onclick="ph43_clearCart()" style="flex-shrink:0;font-size:13px;padding:10px 14px">🗑️ إفراغ</button>
+      <button class="btn btn-primary btn-block btn-lg" onclick="ph43_proceedCheckout()" style="font-size:14px">💳 متابعة الدفع</button>
     </div>`;
 }
 
