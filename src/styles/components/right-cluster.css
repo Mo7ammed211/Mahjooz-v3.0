@@ -148,6 +148,29 @@ body.light-theme .nav-drawer {
 }
 .nav-drawer.open { transform: translateX(0) !important; visibility: visible; }
 
+/* ── رسوم متحركة تدريجية عند فتح الدرج ── */
+@keyframes drawerItemSlide {
+  from { opacity: 0; transform: translateX(28px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.nav-drawer.open .drawer-header        { animation: drawerItemSlide 0.35s cubic-bezier(0.16,1,0.3,1) 0.05s both; }
+.nav-drawer.open .drawer-section:nth-child(2) { animation: drawerItemSlide 0.35s cubic-bezier(0.16,1,0.3,1) 0.10s both; }
+.nav-drawer.open .drawer-divider:nth-of-type(1){ animation: drawerItemSlide 0.3s  cubic-bezier(0.16,1,0.3,1) 0.14s both; }
+.nav-drawer.open .drawer-section:nth-child(4) { animation: drawerItemSlide 0.35s cubic-bezier(0.16,1,0.3,1) 0.18s both; }
+.nav-drawer.open .drawer-divider:nth-of-type(2){ animation: drawerItemSlide 0.3s  cubic-bezier(0.16,1,0.3,1) 0.22s both; }
+.nav-drawer.open .drawer-section:nth-child(6) { animation: drawerItemSlide 0.35s cubic-bezier(0.16,1,0.3,1) 0.26s both; }
+
+.nav-drawer.open .drawer-link:nth-child(1) { animation: drawerItemSlide 0.32s cubic-bezier(0.16,1,0.3,1) 0.12s both; }
+.nav-drawer.open .drawer-link:nth-child(2) { animation: drawerItemSlide 0.32s cubic-bezier(0.16,1,0.3,1) 0.17s both; }
+.nav-drawer.open .drawer-link:nth-child(3) { animation: drawerItemSlide 0.32s cubic-bezier(0.16,1,0.3,1) 0.21s both; }
+.nav-drawer.open .drawer-link:nth-child(4) { animation: drawerItemSlide 0.32s cubic-bezier(0.16,1,0.3,1) 0.25s both; }
+.nav-drawer.open .drawer-link:nth-child(5) { animation: drawerItemSlide 0.32s cubic-bezier(0.16,1,0.3,1) 0.29s both; }
+.nav-drawer.open .drawer-link:nth-child(6) { animation: drawerItemSlide 0.32s cubic-bezier(0.16,1,0.3,1) 0.33s both; }
+.nav-drawer.open .drawer-link:nth-child(n+7) { animation: drawerItemSlide 0.32s cubic-bezier(0.16,1,0.3,1) 0.36s both; }
+.nav-drawer.open .drawer-tool:nth-child(1) { animation: drawerItemSlide 0.32s cubic-bezier(0.16,1,0.3,1) 0.20s both; }
+.nav-drawer.open .drawer-tool:nth-child(2) { animation: drawerItemSlide 0.32s cubic-bezier(0.16,1,0.3,1) 0.25s both; }
+.nav-drawer.open .drawer-tool:nth-child(n+3) { animation: drawerItemSlide 0.32s cubic-bezier(0.16,1,0.3,1) 0.30s both; }
+
 .drawer-header {
   display: flex; justify-content: space-between; align-items: center;
   padding: 24px 20px;

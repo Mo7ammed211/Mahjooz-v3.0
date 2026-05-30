@@ -2489,6 +2489,76 @@ body.light-theme .nav-drawer {
 }
 .nav-drawer.open { transform: translateX(0) !important; visibility: visible; }
 
+/* ── رسوم متحركة تدريجية عند فتح الدرج ── */
+@keyframes drawerItemIn {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.nav-drawer.open .drawer-header {
+  animation: drawerItemIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 0.05s;
+}
+.nav-drawer.open .drawer-section:nth-child(1),
+.nav-drawer.open .drawer-nav:nth-child(1) {
+  animation: drawerItemIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 0.1s;
+}
+.nav-drawer.open .drawer-divider:nth-of-type(1) {
+  animation: drawerItemIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 0.14s;
+}
+.nav-drawer.open .drawer-section:nth-child(2),
+.nav-drawer.open .drawer-nav:nth-child(2) {
+  animation: drawerItemIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 0.16s;
+}
+.nav-drawer.open .drawer-divider:nth-of-type(2) {
+  animation: drawerItemIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 0.20s;
+}
+.nav-drawer.open .drawer-section:nth-child(3),
+.nav-drawer.open .drawer-nav:nth-child(3) {
+  animation: drawerItemIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 0.22s;
+}
+.nav-drawer.open .drawer-section:nth-child(4),
+.nav-drawer.open .drawer-nav:nth-child(4) {
+  animation: drawerItemIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 0.27s;
+}
+.nav-drawer.open .drawer-section:nth-child(5),
+.nav-drawer.open .drawer-nav:nth-child(5) {
+  animation: drawerItemIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 0.32s;
+}
+
+/* روابط الدرج — ظهور تدريجي بالترتيب */
+.nav-drawer.open .drawer-link:nth-child(1),
+.nav-drawer.open .drawer-tool:nth-child(1) { animation: drawerItemIn 0.32s cubic-bezier(0.16,1,0.3,1) both; animation-delay: 0.12s; }
+.nav-drawer.open .drawer-link:nth-child(2),
+.nav-drawer.open .drawer-tool:nth-child(2) { animation: drawerItemIn 0.32s cubic-bezier(0.16,1,0.3,1) both; animation-delay: 0.17s; }
+.nav-drawer.open .drawer-link:nth-child(3),
+.nav-drawer.open .drawer-tool:nth-child(3) { animation: drawerItemIn 0.32s cubic-bezier(0.16,1,0.3,1) both; animation-delay: 0.21s; }
+.nav-drawer.open .drawer-link:nth-child(4),
+.nav-drawer.open .drawer-tool:nth-child(4) { animation: drawerItemIn 0.32s cubic-bezier(0.16,1,0.3,1) both; animation-delay: 0.25s; }
+.nav-drawer.open .drawer-link:nth-child(5),
+.nav-drawer.open .drawer-tool:nth-child(5) { animation: drawerItemIn 0.32s cubic-bezier(0.16,1,0.3,1) both; animation-delay: 0.29s; }
+.nav-drawer.open .drawer-link:nth-child(6),
+.nav-drawer.open .drawer-tool:nth-child(6) { animation: drawerItemIn 0.32s cubic-bezier(0.16,1,0.3,1) both; animation-delay: 0.33s; }
+.nav-drawer.open .drawer-link:nth-child(7),
+.nav-drawer.open .drawer-tool:nth-child(7) { animation: drawerItemIn 0.32s cubic-bezier(0.16,1,0.3,1) both; animation-delay: 0.37s; }
+.nav-drawer.open .drawer-link:nth-child(8),
+.nav-drawer.open .drawer-tool:nth-child(8) { animation: drawerItemIn 0.32s cubic-bezier(0.16,1,0.3,1) both; animation-delay: 0.40s; }
+.nav-drawer.open .drawer-link:nth-child(n+9),
+.nav-drawer.open .drawer-tool:nth-child(n+9) { animation: drawerItemIn 0.32s cubic-bezier(0.16,1,0.3,1) both; animation-delay: 0.43s; }
+
 .drawer-header {
   display: flex; justify-content: space-between; align-items: center;
   padding: 28px 20px 20px;
