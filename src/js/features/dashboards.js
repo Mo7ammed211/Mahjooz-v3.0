@@ -3329,14 +3329,36 @@ window.ph46_showAdminAddSvcModal = function(targetCatId = null, targetSection = 
     </div>
     <div class="ph46-modal-body-scroll" style="max-height: 75vh; overflow-y: auto; padding: 12px; direction: rtl; text-align: right; color: #ffffff;">
       
-      <!-- اختيار القسم المحلي للتنزيل فيه -->
+      <!-- اختيار القسم المحلي — يُخفى عند الدخول من داخل تصنيف محدد -->
+      ${targetCatId ? (() => {
+        const cat = localCats.find(c => c.id === targetCatId);
+        return cat ? `
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label class="form-label" style="font-weight: 700;">📂 التصنيف المستهدف</label>
+          <div style="
+            background: rgba(139,92,246,0.08);
+            border: 1px solid rgba(139,92,246,0.3);
+            border-radius: 10px;
+            padding: 10px 14px;
+            font-weight: 700;
+            font-size: 14px;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+          ">
+            <span style="font-size:18px;">${cat.icon || '📁'}</span>
+            <span>${cat.name}</span>
+          </div>
+        </div>` : '';
+      })() : `
       <div class="form-group" style="margin-bottom: 16px;">
         <label class="form-label" style="font-weight: 700;">📂 اختر فئة الحجز المحلية المستهدفة *</label>
         <select class="form-control" id="ph46-local-cat-select" onchange="window.__ph46_selectedLocalCatId = this.value;">
           <option value="">-- اختر الفئة المحلية --</option>
           ${localCats.map(c => `<option value="${c.id}" ${c.id === selectedCatId ? 'selected' : ''}>${c.icon || ''} ${c.name} (${c.section === 'bookings' ? 'حجوزات' : 'مهن/خدمات'})</option>`).join('')}
         </select>
-      </div>
+      </div>`}
 
       <div style="display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 16px; margin-top: 16px;">
         <!-- العمود الأيسر: قائمة الخدمات والمنتجات في الكتالوج -->
