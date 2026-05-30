@@ -196,15 +196,9 @@ window.renderAdmin = function () {
 
           <!-- ══ تذييل الدرج ══ -->
           <div class="sidebar-footer">
-            <button class="sidebar-footer-notif" onclick="closeAdminSidebar();navigate('notifications')">
-              <span>🔔</span><span>مركز الإشعارات</span>
-            </button>
-            <button class="sidebar-footer-btn" onclick="closeAdminSidebar();navigate('settings')">
-              <span>⚙️</span><span>الإعدادات</span>
-            </button>
-            <button class="sidebar-footer-btn sidebar-footer-danger" onclick="closeAdminSidebar();logoutConfirm()">
-              <span>🚪</span><span>تسجيل الخروج</span>
-            </button>
+            <button class="sidebar-footer-notif" onclick="closeAdminSidebar();navigate('notifications')">مركز الإشعارات</button>
+            <button class="sidebar-footer-btn" onclick="closeAdminSidebar();navigate('settings')">الإعدادات</button>
+            <button class="sidebar-footer-btn sidebar-footer-danger" onclick="closeAdminSidebar();logoutConfirm()">تسجيل الخروج</button>
           </div>
 
         </aside>
@@ -1986,9 +1980,7 @@ function renderVendor() {
         </nav>
         ${typeof renderAvailabilityToggle === 'function' ? renderAvailabilityToggle('vendor') : ''}
         <div class="sidebar-footer">
-          <button class="sidebar-footer-notif" onclick="closeAdminSidebar();navigate('notifications')">
-            <span>🔔</span><span>مركز الإشعارات</span>
-          </button>
+          <button class="sidebar-footer-notif" onclick="closeAdminSidebar();navigate('notifications')">مركز الإشعارات</button>
         </div>
       </aside>
       <main class="admin-main">${content}</main>
@@ -2180,9 +2172,7 @@ function renderDriver() {
         </nav>
         ${typeof renderAvailabilityToggle === 'function' ? renderAvailabilityToggle('driver') : ''}
         <div class="sidebar-footer">
-          <button class="sidebar-footer-notif" onclick="closeAdminSidebar();navigate('notifications')">
-            <span>🔔</span><span>مركز الإشعارات</span>
-          </button>
+          <button class="sidebar-footer-notif" onclick="closeAdminSidebar();navigate('notifications')">مركز الإشعارات</button>
         </div>
       </aside>
       <main class="admin-main">${content}</main>
@@ -2563,9 +2553,7 @@ window.renderStaff = function() {
             </button>`).join('')}
         </nav>
         <div class="sidebar-footer">
-          <button class="sidebar-footer-notif" onclick="closeAdminSidebar();navigate('notifications')">
-            <span>🔔</span><span>مركز الإشعارات</span>
-          </button>
+          <button class="sidebar-footer-notif" onclick="closeAdminSidebar();navigate('notifications')">مركز الإشعارات</button>
         </div>
       </aside>
       <main class="admin-main">
