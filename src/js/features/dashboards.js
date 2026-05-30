@@ -189,14 +189,6 @@ window.renderAdmin = function () {
             </div>
           </div>
 
-          <!-- ══ بحث سريع ══ -->
-          <div class="sidebar-search-wrap">
-            <span class="sidebar-search-icon">🔍</span>
-            <input class="sidebar-search-input" id="adminNavSearch"
-              placeholder="بحث في القائمة..."
-              oninput="filterAdminNav(this.value)" autocomplete="off">
-          </div>
-
           <!-- ══ التنقل ══ -->
           <div class="admin-sidebar-body" id="adminSidebarBody">
             ${navHTML}
