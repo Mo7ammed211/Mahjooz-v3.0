@@ -117,6 +117,397 @@ window.ph43_refreshProductBtn = function (productId) {
   });
 };
 
+// ═══════════════════════════════════════════════════════
+// BOOKING DATE PICKER ENGINE
+// ═══════════════════════════════════════════════════════
+
+window.__bkCalState = null;
+
+const BK_MONTH_NAMES = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+const BK_DAY_LABELS  = [
+  {l:'أح', fri:false}, {l:'اث', fri:false}, {l:'ثل', fri:false},
+  {l:'أر', fri:false}, {l:'خم', fri:false}, {l:'جم', fri:true},
+  {l:'سب', fri:false},
+];
+
+function bk_todayStr() {
+  const t = new Date(); t.setHours(0,0,0,0);
+  return t.toISOString().split('T')[0];
+}
+
+function bk_formatAr(dateStr) {
+  if (!dateStr) return '';
+  const [y, m, d] = dateStr.split('-');
+  return `${parseInt(d)} ${BK_MONTH_NAMES[parseInt(m)-1]}`;
+}
+
+window.bk_calRender = function () {
+  const s = window.__bkCalState;
+  const grid = document.getElementById('bk-cal-grid');
+  const title = document.getElementById('bk-cal-month');
+  if (!grid || !title || !s) return;
+
+  title.textContent = `${BK_MONTH_NAMES[s.month]} ${s.year}`;
+
+  const today = bk_todayStr();
+  const firstDay = new Date(s.year, s.month, 1).getDay();
+  const daysInMonth = new Date(s.year, s.month + 1, 0).getDate();
+
+  let html = '';
+  for (let i = 0; i < firstDay; i++) html += `<div class="bk-cal-day bk-cal-empty"></div>`;
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const ds = `${s.year}-${String(s.month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const past = ds < today;
+    const isToday = ds === today;
+    const sel = s.selectedDates.has(ds);
+    let cls = 'bk-cal-day';
+    if (past) cls += ' disabled';
+    if (isToday) cls += ' today';
+    if (sel) cls += ' selected';
+    html += `<div class="${cls}" ${past ? '' : `onclick="bk_calToggleDay('${ds}')"`}>${d}</div>`;
+  }
+
+  grid.innerHTML = html;
+  bk_renderSelectedTags();
+  bk_updateConfirmBtn();
+};
+
+window.bk_calToggleDay = function (ds) {
+  const s = window.__bkCalState;
+  if (!s) return;
+  if (s.selectedDates.has(ds)) s.selectedDates.delete(ds);
+  else s.selectedDates.add(ds);
+  bk_calRender();
+};
+
+window.bk_calPrev = function () {
+  const s = window.__bkCalState; if (!s) return;
+  s.month--; if (s.month < 0) { s.month = 11; s.year--; }
+  bk_calRender();
+};
+
+window.bk_calNext = function () {
+  const s = window.__bkCalState; if (!s) return;
+  s.month++; if (s.month > 11) { s.month = 0; s.year++; }
+  bk_calRender();
+};
+
+window.bk_setPeriod = function (p) {
+  const s = window.__bkCalState; if (!s) return;
+  s.period = p;
+  document.querySelectorAll('.bk-period-btn').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById(`bk-period-${p}`);
+  if (btn) btn.classList.add('active');
+};
+
+window.bk_removeDate = function (ds) {
+  const s = window.__bkCalState; if (!s) return;
+  s.selectedDates.delete(ds);
+  bk_calRender();
+};
+
+window.bk_renderSelectedTags = function () {
+  const s = window.__bkCalState;
+  const wrap = document.getElementById('bk-selected-tags');
+  if (!wrap || !s) return;
+  const sorted = [...s.selectedDates].sort();
+  if (!sorted.length) {
+    wrap.innerHTML = `<span class="bk-no-dates">اضغط على الأيام لتحديدها</span>`;
+    return;
+  }
+  wrap.innerHTML = `
+    <span class="bk-selected-label">${sorted.length > 1 ? sorted.length + ' أيام:' : 'يوم:'}</span>
+    ${sorted.map(ds => `
+      <span class="bk-date-tag">
+        📅 ${bk_formatAr(ds)}
+        <button onclick="bk_removeDate('${ds}')" title="إزالة">✕</button>
+      </span>
+    `).join('')}`;
+};
+
+window.bk_updateConfirmBtn = function () {
+  const s = window.__bkCalState;
+  const btn = document.getElementById('bk-confirm-btn');
+  if (!btn || !s) return;
+  const count = s.selectedDates.size;
+  btn.disabled = count === 0;
+  btn.textContent = count > 0
+    ? `✅ تأكيد الحجز — ${count} ${count === 1 ? 'يوم' : 'أيام'}`
+    : 'اختر يوماً واحداً على الأقل';
+};
+
+// ── Show date picker modal for booking service ──
+window.svc_showBookingDateModal = function (svcId) {
+  const svc = AppData.services.find(s => s.id === svcId);
+  if (!svc) return;
+  const dispPrice = svc.finalPrice || svc.price;
+  const priceText = dispPrice ? dispPrice.toLocaleString('ar-YE') + ' ريال' : 'السعر عند التواصل';
+  const now = new Date();
+
+  window.__bkCalState = {
+    svcId,
+    selectedDates: new Set(),
+    year: now.getFullYear(),
+    month: now.getMonth(),
+    period: 'morning',
+  };
+
+  openModal(`
+    <div class="modal-header">
+      <h2 class="modal-title">📅 اختر مواعيد الحجز</h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="bk-picker-wrap">
+
+      <div class="bk-svc-preview">
+        <div class="bk-svc-icon">${svc.icon || '📅'}</div>
+        <div class="bk-svc-info">
+          <h4>${escHtml(svc.name)}</h4>
+          <span>${priceText}</span>
+          ${svc.providerName ? `<div style="font-size:12px;color:var(--text-muted);margin-top:2px">👤 ${escHtml(svc.providerName)}</div>` : ''}
+        </div>
+      </div>
+
+      <div class="bk-calendar-wrap">
+        <div class="bk-cal-header">
+          <button class="bk-cal-nav-btn" onclick="bk_calPrev()">›</button>
+          <h3 id="bk-cal-month"></h3>
+          <button class="bk-cal-nav-btn" onclick="bk_calNext()">‹</button>
+        </div>
+        <div class="bk-cal-days-header">
+          ${BK_DAY_LABELS.map(l => `<div class="bk-cal-day-label${l.fri?' friday':''}">${l.l}</div>`).join('')}
+        </div>
+        <div id="bk-cal-grid" class="bk-cal-grid"></div>
+      </div>
+
+      <div class="bk-selected-dates">
+        <div id="bk-selected-tags" class="bk-selected-dates-inner">
+          <span class="bk-no-dates">اضغط على الأيام لتحديدها</span>
+        </div>
+      </div>
+
+      <div class="bk-period-section">
+        <div class="bk-period-label">⏰ الوقت المفضل للحجز</div>
+        <div class="bk-period-toggle">
+          <button id="bk-period-morning" class="bk-period-btn active" onclick="bk_setPeriod('morning')">
+            <span class="period-icon">🌅</span>
+            <span>صباحاً</span>
+          </button>
+          <button id="bk-period-evening" class="bk-period-btn" onclick="bk_setPeriod('evening')">
+            <span class="period-icon">🌆</span>
+            <span>مساءً</span>
+          </button>
+        </div>
+      </div>
+
+      <button id="bk-confirm-btn" class="bk-confirm-btn" disabled onclick="bk_confirmDates()">
+        اختر يوماً واحداً على الأقل
+      </button>
+    </div>
+  `);
+
+  bk_calRender();
+};
+
+// ── Confirm and add booking to cart ──
+window.bk_confirmDates = function () {
+  const s = window.__bkCalState;
+  if (!s || s.selectedDates.size === 0) { toast('اختر يوماً واحداً على الأقل', 'error'); return; }
+
+  const svc = AppData.services.find(sv => sv.id === s.svcId);
+  if (!svc) return;
+  const cat = AppData.cats.find(c => c.id === svc.catId);
+  const itemType = 'booking';
+  const cartKey  = `svc_${s.svcId}`;
+
+  const cart = ph43_getCart();
+  if (cart.find(i => i.productId === cartKey)) {
+    toast('هذه الخدمة موجودة بالفعل في السلة', 'warning');
+    return;
+  }
+
+  const sortedDates = [...s.selectedDates].sort();
+
+  cart.push({
+    productId: cartKey,
+    svcId: s.svcId,
+    type: itemType,
+    name: svc.name,
+    icon: svc.icon || '📅',
+    price: svc.finalPrice || svc.price || 0,
+    qty: 1,
+    priceLabel: (!svc.finalPrice && !svc.price) ? 'السعر عند التواصل' : null,
+    providerName: svc.providerName || svc.provider || '',
+    providerUid: svc.providerUid || '',
+    requiresDelivery: svc.requiresDelivery !== false,
+    commonIssues: svc.commonIssues || [],
+    bookingDates: sortedDates,
+    bookingPeriod: s.period,
+  });
+
+  ph43_setCart(cart);
+  closeModal();
+
+  const count = sortedDates.length;
+  const periodLabel = s.period === 'morning' ? 'صباحاً' : 'مساءً';
+  toast(`✅ أُضيفت "${svc.name}" للسلة — ${count} ${count===1?'يوم':'أيام'} ${periodLabel} 🛒`, 'success');
+
+  document.querySelectorAll(`[data-svc-cart-id="${s.svcId}"]`).forEach(btn => {
+    btn.innerHTML = `✅ <span>في السلة</span>`;
+    btn.disabled = true;
+    btn.style.opacity = '0.75';
+  });
+};
+
+// ── Show date range picker for rental ──
+window.rental_showDateModal = function (productId, storeId) {
+  const p     = (AppData.rentalProducts || []).find(x => x.id === productId);
+  const store = (AppData.rentalStores   || []).find(x => x.id === storeId);
+  if (!p || !store) return;
+
+  const todayStr = bk_todayStr();
+
+  openModal(`
+    <div class="modal-header">
+      <h2 class="modal-title">🏚️ حدد فترة الإيجار</h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="bk-picker-wrap">
+
+      <div class="bk-svc-preview">
+        <div class="bk-svc-icon">${p.imageBase64
+          ? `<img src="${p.imageBase64}" style="width:48px;height:48px;border-radius:10px;object-fit:cover">`
+          : '🏚️'}</div>
+        <div class="bk-svc-info">
+          <h4>${escHtml(p.name)}</h4>
+          <span>${p.price ? p.price.toLocaleString('ar-YE') + ' ريال' : 'السعر عند التواصل'}</span>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:2px">🏪 ${escHtml(store.name)}</div>
+        </div>
+      </div>
+
+      <div class="bk-rental-dates">
+        <div class="form-group">
+          <label class="form-label" style="font-size:12px">📅 تاريخ البداية</label>
+          <input class="form-control" id="rent-modal-start" type="date"
+            min="${todayStr}" onchange="rental_calcDuration()" style="font-size:13px;padding:8px 12px">
+        </div>
+        <div class="form-group">
+          <label class="form-label" style="font-size:12px">📅 تاريخ الانتهاء</label>
+          <input class="form-control" id="rent-modal-end" type="date"
+            min="${todayStr}" onchange="rental_calcDuration()" style="font-size:13px;padding:8px 12px">
+        </div>
+      </div>
+
+      <div id="rent-modal-duration" class="bk-rental-duration">
+        حدد التواريخ لمعرفة المدة
+      </div>
+
+      <div class="bk-period-section">
+        <div class="bk-period-label">⏰ وقت الاستلام المفضل</div>
+        <div class="bk-period-toggle">
+          <button id="rent-period-morning" class="bk-period-btn active" onclick="rental_setPeriod('morning')">
+            <span class="period-icon">🌅</span>
+            <span>صباحاً</span>
+          </button>
+          <button id="rent-period-evening" class="bk-period-btn" onclick="rental_setPeriod('evening')">
+            <span class="period-icon">🌆</span>
+            <span>مساءً</span>
+          </button>
+        </div>
+      </div>
+
+      <button id="rent-confirm-btn" class="bk-confirm-btn"
+        onclick="rental_confirmDates('${productId}','${storeId}')">
+        ✅ إضافة للسلة
+      </button>
+    </div>
+  `);
+
+  window.__rentModalPeriod = 'morning';
+};
+
+window.rental_setPeriod = function (p) {
+  window.__rentModalPeriod = p;
+  document.querySelectorAll('.bk-period-btn[id^="rent-period"]').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById(`rent-period-${p}`);
+  if (btn) btn.classList.add('active');
+};
+
+window.rental_calcDuration = function () {
+  const startEl = document.getElementById('rent-modal-start');
+  const endEl   = document.getElementById('rent-modal-end');
+  const durEl   = document.getElementById('rent-modal-duration');
+  if (!startEl || !endEl || !durEl) return;
+  const start = startEl.value;
+  const end   = endEl.value;
+  if (!start || !end) { durEl.textContent = 'حدد التواريخ لمعرفة المدة'; return; }
+  if (end < start) {
+    durEl.innerHTML = '⚠️ تاريخ الانتهاء يجب أن يكون بعد البداية';
+    durEl.style.color = '#f43f5e';
+    endEl.value = '';
+    return;
+  }
+  durEl.style.color = '';
+  const diff = Math.round((new Date(end) - new Date(start)) / 86400000);
+  durEl.innerHTML = diff === 0
+    ? '📌 يوم واحد'
+    : `📆 ${diff} ${diff === 1 ? 'يوم' : diff < 11 ? 'أيام' : 'يوم'}`;
+  if (endEl.min) endEl.min = start;
+};
+
+window.rental_confirmDates = function (productId, storeId) {
+  const start  = document.getElementById('rent-modal-start')?.value;
+  const end    = document.getElementById('rent-modal-end')?.value;
+  if (!start) { toast('اختر تاريخ البداية', 'error'); return; }
+  if (!end)   { toast('اختر تاريخ الانتهاء', 'error'); return; }
+  if (end < start) { toast('تاريخ الانتهاء يجب أن يكون بعد البداية', 'error'); return; }
+
+  const p     = (AppData.rentalProducts || []).find(x => x.id === productId);
+  const store = (AppData.rentalStores   || []).find(x => x.id === storeId);
+  if (!p || !store) return;
+
+  const cartKey = `rental_${productId}`;
+  const cart    = ph43_getCart();
+  if (cart.find(i => i.productId === cartKey)) {
+    toast('هذا المنتج موجود بالفعل في السلة', 'warning');
+    return;
+  }
+
+  const period = window.__rentModalPeriod || 'morning';
+  const diff   = Math.round((new Date(end) - new Date(start)) / 86400000);
+
+  cart.push({
+    productId: cartKey,
+    rentalProductId: productId,
+    storeId,
+    type: 'rental',
+    name: p.name,
+    icon: '🏚️',
+    image: p.imageBase64 || null,
+    price: p.price || 0,
+    qty: 1,
+    storeName: store.name,
+    taxPercent: store.taxPercent || 0,
+    startDate: start,
+    endDate: end,
+    rentalDays: diff || 1,
+    rentalPeriod: period,
+  });
+
+  ph43_setCart(cart);
+  closeModal();
+
+  const periodLabel = period === 'morning' ? 'صباحاً' : 'مساءً';
+  toast(`✅ أُضيف "${p.name}" للسلة — ${diff || 1} ${diff===1?'يوم':'أيام'} (${periodLabel}) 🛒`, 'success');
+
+  document.querySelectorAll(`[data-rental-cart-id="${productId}"]`).forEach(btn => {
+    btn.innerHTML = `✅ <span>في السلة</span>`;
+    btn.disabled = true;
+    btn.style.opacity = '0.75';
+  });
+};
+
 // ─── إضافة خدمة/مهنة للسلة ─────────────────────────────
 window.svc_addToCart = function (svcId) {
   const u = State.currentUser;
@@ -128,24 +519,30 @@ window.svc_addToCart = function (svcId) {
 
   const cat = AppData.cats.find(c => c.id === svc.catId);
   const isProfession = cat?.section === 'professions' || cat?.section === 'services';
-  const itemType = isProfession ? 'profession' : 'booking';
-  const cartKey  = `svc_${svcId}`;
 
-  const cart = ph43_getCart();
+  const cartKey = `svc_${svcId}`;
+  const cart    = ph43_getCart();
   if (cart.find(i => i.productId === cartKey)) {
     toast('هذه الخدمة موجودة بالفعل في السلة', 'warning');
     return;
   }
 
+  if (!isProfession) {
+    // Booking items → show date picker first
+    svc_showBookingDateModal(svcId);
+    return;
+  }
+
+  // Profession items → add directly, date asked at checkout
   cart.push({
     productId: cartKey,
     svcId,
-    type: itemType,
+    type: 'profession',
     name: svc.name,
-    icon: svc.icon || (isProfession ? '💼' : '📅'),
+    icon: svc.icon || '💼',
     price: svc.finalPrice || svc.price || 0,
     qty: 1,
-    priceLabel: (!svc.finalPrice && !svc.price) ? (isProfession ? 'السعر بعد المعاينة' : 'السعر عند التواصل') : null,
+    priceLabel: (!svc.finalPrice && !svc.price) ? 'السعر بعد المعاينة' : null,
     providerName: svc.providerName || svc.provider || '',
     providerUid: svc.providerUid || '',
     requiresDelivery: svc.requiresDelivery !== false,
@@ -177,27 +574,8 @@ window.rental_addToCart = function (productId, storeId) {
     return;
   }
 
-  cart.push({
-    productId: cartKey,
-    rentalProductId: productId,
-    storeId,
-    type: 'rental',
-    name: p.name,
-    icon: '🏚️',
-    image: p.imageBase64 || null,
-    price: p.price || 0,
-    qty: 1,
-    storeName: store.name,
-    taxPercent: store.taxPercent || 0,
-  });
-
-  ph43_setCart(cart);
-  toast(`✅ أُضيف "${p.name}" للسلة 🛒`, 'success');
-  document.querySelectorAll(`[data-rental-cart-id="${productId}"]`).forEach(btn => {
-    btn.innerHTML = `✅ <span>في السلة</span>`;
-    btn.disabled = true;
-    btn.style.opacity = '0.75';
-  });
+  // Always show date picker first for rentals
+  rental_showDateModal(productId, storeId);
 };
 
 // ───────────────────────────────────────────────────────
@@ -290,9 +668,32 @@ function ph43_renderCartBody() {
       // خدمات / مهن / تأجير — بدون كمية
       items.forEach(item => {
         const priceText = item.priceLabel || (item.price ? item.price.toLocaleString('ar-YE') + ' ريال' : 'السعر عند التواصل');
+        const periodLabel = item.bookingPeriod === 'evening' ? '🌆 مساءً' : item.bookingPeriod === 'morning' ? '🌅 صباحاً' : '';
+        const rentPeriodLabel = item.rentalPeriod === 'evening' ? '🌆 مساءً' : item.rentalPeriod === 'morning' ? '🌅 صباحاً' : '';
+
+        // Booking dates summary
+        let datesSummaryHtml = '';
+        if (item.type === 'booking' && item.bookingDates && item.bookingDates.length) {
+          const tags = item.bookingDates.map(ds => `<span class="cart-date-badge">📅 ${bk_formatAr(ds)}</span>`).join('');
+          const periodBadge = periodLabel ? `<span class="cart-period-badge">${periodLabel}</span>` : '';
+          datesSummaryHtml = `<div class="cart-date-summary">${tags}${periodBadge}</div>`;
+        }
+
+        // Rental dates summary
+        if (item.type === 'rental' && item.startDate) {
+          const days = item.rentalDays || 1;
+          const daysLabel = days === 1 ? 'يوم واحد' : `${days} أيام`;
+          const pBadge = rentPeriodLabel ? `<span class="cart-period-badge">${rentPeriodLabel}</span>` : '';
+          datesSummaryHtml = `<div class="cart-date-summary">
+            <span class="cart-date-badge rental-badge">📅 ${bk_formatAr(item.startDate)} ← ${bk_formatAr(item.endDate)}</span>
+            <span class="cart-date-badge rental-badge">📆 ${daysLabel}</span>
+            ${pBadge}
+          </div>`;
+        }
+
         html += `
-        <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-top:1px solid var(--glass-border)">
-          <div style="width:52px;height:52px;border-radius:12px;background:var(--bg-secondary);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;overflow:hidden">
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 16px;border-top:1px solid var(--glass-border)">
+          <div style="width:52px;height:52px;border-radius:12px;background:var(--bg-secondary);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;overflow:hidden;margin-top:2px">
             ${item.image ? `<img src="${item.image}" style="width:52px;height:52px;object-fit:cover">` : (item.icon || sec.icon)}
           </div>
           <div style="flex:1;min-width:0">
@@ -300,8 +701,9 @@ function ph43_renderCartBody() {
             ${item.storeName ? `<div style="font-size:12px;color:var(--text-muted)">${escHtml(item.storeName)}</div>` : ''}
             ${item.providerName ? `<div style="font-size:12px;color:var(--text-muted)">👤 ${escHtml(item.providerName)}</div>` : ''}
             <div style="color:${sec.color};font-weight:700;font-size:13px;margin-top:3px">${priceText}</div>
+            ${datesSummaryHtml}
           </div>
-          <button onclick="ph43_removeFromCart('${item.productId}')" style="width:30px;height:30px;border-radius:50%;border:1.5px solid var(--rose);background:transparent;color:var(--rose);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0">✕</button>
+          <button onclick="ph43_removeFromCart('${item.productId}')" style="width:30px;height:30px;border-radius:50%;border:1.5px solid var(--rose);background:transparent;color:var(--rose);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px">✕</button>
         </div>`;
       });
     }
@@ -355,23 +757,24 @@ window.ph43_proceedCheckout = async function () {
   const profItems     = cart.filter(i => i.type === 'profession');
   const rentalItems   = cart.filter(i => i.type === 'rental');
 
-  // حقول المواعيد الديناميكية
+  // ملخص المواعيد (محددة مسبقاً من شاشة التاريخ)
   let schedulingHtml = '';
 
   if (bookingItems.length) {
     schedulingHtml += `
     <div style="margin-bottom:18px;padding:14px 16px;background:rgba(59,130,246,0.06);border:1.5px solid rgba(59,130,246,0.2);border-radius:14px">
-      <div style="font-weight:800;font-size:13px;margin-bottom:10px;color:#3b82f6;display:flex;align-items:center;gap:6px"><span>📅</span> خدمات الحجز — حدد المواعيد</div>
-      ${bookingItems.map(item => `
-      <div style="margin-bottom:10px;padding:10px 12px;background:var(--bg-card);border-radius:10px;border:1px solid var(--glass-border)">
-        <div style="font-weight:700;margin-bottom:8px;font-size:13px">${item.icon || '📅'} ${escHtml(item.name)}</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          <div><label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:2px">📅 التاريخ</label>
-            <input class="form-control" id="bk-date-${item.productId}" type="date" min="${new Date().toISOString().split('T')[0]}" style="font-size:13px;padding:6px 10px"></div>
-          <div><label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:2px">⏰ الوقت</label>
-            <input class="form-control" id="bk-time-${item.productId}" type="time" style="font-size:13px;padding:6px 10px"></div>
-        </div>
-      </div>`).join('')}
+      <div style="font-weight:800;font-size:13px;margin-bottom:10px;color:#3b82f6;display:flex;align-items:center;gap:6px">
+        <span>📅</span> خدمات الحجز — مواعيدك المختارة
+      </div>
+      ${bookingItems.map(item => {
+        const pLabel = item.bookingPeriod === 'evening' ? '🌆 مساءً' : '🌅 صباحاً';
+        const dates  = (item.bookingDates || []).map(ds => `<span class="cart-date-badge" style="font-size:12px">📅 ${bk_formatAr(ds)}</span>`).join('');
+        return `
+        <div style="margin-bottom:8px;padding:10px 12px;background:var(--bg-card);border-radius:10px;border:1px solid var(--glass-border)">
+          <div style="font-weight:700;margin-bottom:8px;font-size:13px">${item.icon || '📅'} ${escHtml(item.name)}</div>
+          <div class="cart-date-summary" style="margin-bottom:6px">${dates}<span class="cart-period-badge">${pLabel}</span></div>
+        </div>`;
+      }).join('')}
     </div>`;
   }
 
@@ -396,17 +799,24 @@ window.ph43_proceedCheckout = async function () {
   if (rentalItems.length) {
     schedulingHtml += `
     <div style="margin-bottom:18px;padding:14px 16px;background:rgba(16,185,129,0.06);border:1.5px solid rgba(16,185,129,0.2);border-radius:14px">
-      <div style="font-weight:800;font-size:13px;margin-bottom:10px;color:#10b981;display:flex;align-items:center;gap:6px"><span>🏚️</span> التأجير — حدد فترة الإيجار</div>
-      ${rentalItems.map(item => `
-      <div style="margin-bottom:10px;padding:10px 12px;background:var(--bg-card);border-radius:10px;border:1px solid var(--glass-border)">
-        <div style="font-weight:700;margin-bottom:8px;font-size:13px">📦 ${escHtml(item.name)} <span style="font-size:11px;color:var(--text-muted);font-weight:400">${escHtml(item.storeName || '')}</span></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          <div><label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:2px">📅 تاريخ البداية</label>
-            <input class="form-control" id="rent-start-${item.productId}" type="date" min="${new Date().toISOString().split('T')[0]}" style="font-size:13px;padding:6px 10px"></div>
-          <div><label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:2px">📅 تاريخ الانتهاء</label>
-            <input class="form-control" id="rent-end-${item.productId}" type="date" style="font-size:13px;padding:6px 10px"></div>
-        </div>
-      </div>`).join('')}
+      <div style="font-weight:800;font-size:13px;margin-bottom:10px;color:#10b981;display:flex;align-items:center;gap:6px">
+        <span>🏚️</span> التأجير — مواعيدك المختارة
+      </div>
+      ${rentalItems.map(item => {
+        const days = item.rentalDays || 1;
+        const daysLabel = days === 1 ? 'يوم واحد' : `${days} أيام`;
+        const pLabel = item.rentalPeriod === 'evening' ? '🌆 مساءً' : '🌅 صباحاً';
+        return `
+        <div style="margin-bottom:8px;padding:10px 12px;background:var(--bg-card);border-radius:10px;border:1px solid var(--glass-border)">
+          <div style="font-weight:700;margin-bottom:8px;font-size:13px">📦 ${escHtml(item.name)}
+            <span style="font-size:11px;color:var(--text-muted);font-weight:400">${escHtml(item.storeName || '')}</span></div>
+          <div class="cart-date-summary">
+            <span class="cart-date-badge rental-badge">📅 ${bk_formatAr(item.startDate)} ← ${bk_formatAr(item.endDate)}</span>
+            <span class="cart-date-badge rental-badge">📆 ${daysLabel}</span>
+            <span class="cart-period-badge">${pLabel}</span>
+          </div>
+        </div>`;
+      }).join('')}
     </div>`;
   }
 
@@ -478,9 +888,9 @@ window.ph43_confirmOrder = async function () {
   const profItems    = cart.filter(i => i.type === 'profession');
   const rentalItems  = cart.filter(i => i.type === 'rental');
 
-  // تحقق من التواريخ
+  // تحقق من التواريخ (booking/rental: محفوظة في العنصر، profession: من DOM)
   for (const item of bookingItems) {
-    if (!document.getElementById(`bk-date-${item.productId}`)?.value) {
+    if (!item.bookingDates || item.bookingDates.length === 0) {
       toast(`يرجى اختيار تاريخ لخدمة: ${item.name}`, 'error'); return;
     }
   }
@@ -490,10 +900,9 @@ window.ph43_confirmOrder = async function () {
     }
   }
   for (const item of rentalItems) {
-    const s = document.getElementById(`rent-start-${item.productId}`)?.value;
-    const e = document.getElementById(`rent-end-${item.productId}`)?.value;
-    if (!s || !e) { toast(`يرجى تحديد فترة الإيجار لـ: ${item.name}`, 'error'); return; }
-    if (s > e)    { toast('تاريخ البداية يجب أن يكون قبل تاريخ الانتهاء', 'error'); return; }
+    if (!item.startDate || !item.endDate) {
+      toast(`يرجى تحديد فترة الإيجار لـ: ${item.name}`, 'error'); return;
+    }
   }
 
   const needsAddr = storeItems.length > 0 || bookingItems.some(i => i.requiresDelivery) || profItems.some(i => i.requiresDelivery);
@@ -561,9 +970,10 @@ window.ph43_confirmOrder = async function () {
 
     // ── طلبات خدمات الحجز ────────────────────────────
     for (const item of bookingItems) {
-      const svc   = AppData.services.find(s => s.id === item.svcId);
-      const date  = document.getElementById(`bk-date-${item.productId}`)?.value || '';
-      const time  = document.getElementById(`bk-time-${item.productId}`)?.value || '';
+      const svc    = AppData.services.find(s => s.id === item.svcId);
+      const dates  = item.bookingDates || [];
+      const period = item.bookingPeriod || 'morning';
+      const periodLabel = period === 'evening' ? 'مساءً' : 'صباحاً';
       const orderId = await generateOrderId();
       await fsAdd('orders', {
         orderId, type: 'booking_order',
@@ -575,7 +985,11 @@ window.ph43_confirmOrder = async function () {
         userId: u.uid, userName: u.name,
         servicePrice: item.price || 0, total: item.price || 0,
         paymentMethod: payMethod,
-        date, time, note,
+        date: dates[0] || '',
+        dates,
+        period,
+        time: periodLabel,
+        note,
         requiresDelivery: item.requiresDelivery,
         status: 'pending',
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
@@ -611,11 +1025,13 @@ window.ph43_confirmOrder = async function () {
 
     // ── طلبات التأجير ────────────────────────────────
     for (const item of rentalItems) {
-      const startDate = document.getElementById(`rent-start-${item.productId}`)?.value || '';
-      const endDate   = document.getElementById(`rent-end-${item.productId}`)?.value || '';
-      const tax       = Math.round(item.price * (item.taxPercent || 0) / 100);
+      const startDate  = item.startDate || '';
+      const endDate    = item.endDate   || '';
+      const rentalDays = item.rentalDays || 1;
+      const period     = item.rentalPeriod || 'morning';
+      const tax        = Math.round(item.price * (item.taxPercent || 0) / 100);
       const rentalTotal = item.price + tax;
-      const orderId   = await generateOrderId();
+      const orderId    = await generateOrderId();
       await fsAdd('orders', {
         orderId, type: 'rental_order',
         rentalProductId: item.rentalProductId,
@@ -624,7 +1040,7 @@ window.ph43_confirmOrder = async function () {
         customerId: u.uid, customerName: u.name, customerAddr: addr,
         servicePrice: item.price, taxAmount: tax, total: rentalTotal,
         paymentMethod: payMethod,
-        startDate, endDate, note,
+        startDate, endDate, rentalDays, period, note,
         status: 'pending',
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
       });

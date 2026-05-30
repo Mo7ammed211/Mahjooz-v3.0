@@ -1,6 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Cairo:wght@400;500;600;700;800;900&family=Tajawal:wght@400;500;700;800;900&display=swap');
 @import "./components/login-redesign.css";
 @import "./components/pwa-install.css";
+@import "./components/booking-date-picker.css";
 
 /* --- base.css --- */
 :root {
