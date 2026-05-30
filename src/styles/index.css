@@ -320,15 +320,15 @@ textarea.form-control { resize: vertical; min-height: 100px; }
    DRAWER SHELL
 ══════════════════════════════════════ */
 .admin-sidebar {
-  position: fixed; top: 68px; right: 0; bottom: 0;
-  width: 310px; max-width: 90vw; z-index: 10010;
+  position: fixed; top: 0; right: 0; bottom: 0;
+  width: 88%; max-width: 400px; z-index: 10010;
   background: linear-gradient(160deg, #12082e 0%, #0e0620 50%, #080312 100%);
   border-left: 1px solid rgba(139,92,246,0.25);
   padding: 0; display: flex; flex-direction: column;
   transform: translateX(110%);
   transition: transform 0.38s cubic-bezier(0.32,0.72,0,1);
-  overflow: hidden; will-change: transform;
-  box-shadow: -12px 0 60px rgba(0,0,0,0.6), -1px 0 0 rgba(139,92,246,0.2);
+  overflow: hidden; will-change: transform; border-radius: 0;
+  box-shadow: -16px 0 60px rgba(0,0,0,0.7), -1px 0 0 rgba(139,92,246,0.2);
 }
 .admin-sidebar::before {
   content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 0;
@@ -338,6 +338,21 @@ textarea.form-control { resize: vertical; min-height: 100px; }
 }
 .admin-sidebar.open  { transform: translateX(0); }
 .admin-sidebar.dragging { transition: none; }
+
+/* ── رسوم متحركة تدريجية للدرج الأدمن ── */
+@keyframes adminSlideIn {
+  from { opacity: 0; transform: translateX(20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.admin-sidebar.open .admin-sidebar-header { animation: adminSlideIn 0.32s cubic-bezier(0.16,1,0.3,1) 0.05s both; }
+.admin-sidebar.open .sidebar-search-wrap  { animation: adminSlideIn 0.30s cubic-bezier(0.16,1,0.3,1) 0.10s both; }
+.admin-sidebar.open .admin-sidebar-body   { animation: adminSlideIn 0.35s cubic-bezier(0.16,1,0.3,1) 0.14s both; }
+.admin-sidebar.open .sidebar-footer       { animation: adminSlideIn 0.30s cubic-bezier(0.16,1,0.3,1) 0.20s both; }
+.admin-sidebar.open .admin-nav-group:nth-child(1) { animation: adminSlideIn 0.28s cubic-bezier(0.16,1,0.3,1) 0.16s both; }
+.admin-sidebar.open .admin-nav-group:nth-child(2) { animation: adminSlideIn 0.28s cubic-bezier(0.16,1,0.3,1) 0.21s both; }
+.admin-sidebar.open .admin-nav-group:nth-child(3) { animation: adminSlideIn 0.28s cubic-bezier(0.16,1,0.3,1) 0.26s both; }
+.admin-sidebar.open .admin-nav-group:nth-child(4) { animation: adminSlideIn 0.28s cubic-bezier(0.16,1,0.3,1) 0.30s both; }
+.admin-sidebar.open .admin-nav-group:nth-child(n+5) { animation: adminSlideIn 0.28s cubic-bezier(0.16,1,0.3,1) 0.33s both; }
 
 /* ══════════════════════════════════════
    HEADER

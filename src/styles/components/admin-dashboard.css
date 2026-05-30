@@ -43,21 +43,27 @@
 
 .admin-sidebar {
   position: fixed;
-  top: 68px; right: 0; bottom: 0;
-  width: 270px; max-width: 85vw;
+  top: 0; right: 0; bottom: 0;
+  width: 88%; max-width: 400px;
   z-index: 10010;
   background: var(--bg-card);
   border-left: 1px solid var(--border);
   border-radius: 0;
   padding: 0;
-  box-shadow: -6px 0 32px rgba(0,0,0,0.35);
+  box-shadow: -16px 0 60px rgba(0,0,0,0.5);
   display: flex;
   flex-direction: column;
   transform: translateX(110%);
-  transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+  transition: transform 0.38s cubic-bezier(0.32,0.72,0,1);
   overflow: hidden;
 }
 .admin-sidebar.open { transform: translateX(0); }
+
+/* ── رسوم متحركة تدريجية للدرج الأدمن ── */
+.admin-sidebar.open .admin-sidebar-header { animation: adminSlideIn 0.32s cubic-bezier(0.16,1,0.3,1) 0.05s both; }
+.admin-sidebar.open .sidebar-search-wrap  { animation: adminSlideIn 0.30s cubic-bezier(0.16,1,0.3,1) 0.10s both; }
+.admin-sidebar.open .admin-sidebar-body   { animation: adminSlideIn 0.35s cubic-bezier(0.16,1,0.3,1) 0.14s both; }
+.admin-sidebar.open .sidebar-footer       { animation: adminSlideIn 0.30s cubic-bezier(0.16,1,0.3,1) 0.20s both; }
 
 .admin-sidebar-body {
   flex: 1;
