@@ -1713,6 +1713,51 @@ function showOrderDetails(orderId) {
         </div>
       </div>
     ` : ''}
+    ${(() => {
+      const linkedSvc = (AppData.services || []).find(s => s.id === o.svcId);
+      const linkedItem = (AppData.catalogItems || []).find(i =>
+        i.id === o.catalogItemId || i.id === o.itemId || i.id === o.productId
+      );
+      const alerts = (linkedSvc?.adminAlerts?.length ? linkedSvc.adminAlerts : null)
+                  || (linkedItem?.adminAlerts?.length ? linkedItem.adminAlerts : null)
+                  || [];
+      if (!alerts.length) return '';
+      return `
+        <div style="
+          margin-top: 18px;
+          background: linear-gradient(135deg, rgba(234,179,8,0.08), rgba(245,158,11,0.05));
+          border: 1.5px solid rgba(234,179,8,0.5);
+          border-radius: 14px;
+          padding: 14px 16px;
+        ">
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+            <span style="font-size:18px;">⚠️</span>
+            <span style="font-weight:800; font-size:14px; color:#f59e0b;">ملاحظات تنبيهية للإدارة</span>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:7px;">
+            ${alerts.map((a, i) => `
+              <div style="
+                display:flex; align-items:flex-start; gap:9px;
+                background: rgba(234,179,8,0.06);
+                border: 1px solid rgba(234,179,8,0.25);
+                border-radius: 9px;
+                padding: 8px 12px;
+              ">
+                <span style="
+                  background:#f59e0b; color:#fff;
+                  font-weight:800; font-size:11px;
+                  min-width:24px; height:24px;
+                  border-radius:50%;
+                  display:flex; align-items:center; justify-content:center;
+                  flex-shrink:0; margin-top:1px;
+                ">${i + 1}</span>
+                <span style="color:#fef3c7; font-size:13px; line-height:1.6;">${escHtml(a)}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    })()}
   `);
 }
 async function updateOrderStatus(orderId, status) {
