@@ -743,7 +743,7 @@ window.ph43_renderStoresList = function () {
 
 window.ph43_filterStores = function () {
   const q = document.getElementById('stores-search')?.value.toLowerCase() || '';
-  document.querySelectorAll('.ph43-store-card, .ph43-store-list-item, .ph43-slide-card').forEach(c => {
+  document.querySelectorAll('.ph43-store-card, .ph43-store-list-item, .ph43-sl-card').forEach(c => {
     c.style.display = c.textContent.toLowerCase().includes(q) ? '' : 'none';
   });
 };
@@ -770,42 +770,81 @@ function ph43_renderStoreListItem(s) {
 
 function ph43_renderSlideshowView(stores) {
   if (!stores.length) return `<div class="empty-state"><div class="empty-icon">🏪</div><div class="empty-title">لا توجد متاجر</div></div>`;
-  return `<div class="ph43-slideshow-view">${stores.map(s => {
-    const cats = (AppData.storeCats||[]).filter(c=>c.storeId===s.id).sort((a,b)=>(a.order||0)-(b.order||0));
-    const prodCount = (AppData.storeProducts||[]).filter(p=>p.storeId===s.id&&p.active!==false).length;
-    return `
-    <div class="ph43-slide-card">
-      <div class="ph43-slide-hero" onclick="navigate('store',{storeId:'${s.id}'})">
-        ${s.bannerBase64
-          ? `<img src="${s.bannerBase64}" class="ph43-slide-banner-img" alt="">`
-          : `<div class="ph43-slide-banner-ph">${s.icon||'🏪'}</div>`}
-        <div class="ph43-slide-overlay">
-          <div class="ph43-slide-avatar">${s.logoBase64?`<img src="${s.logoBase64}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:10px">`:(s.icon||'🏪')}</div>
-          <div style="flex:1;min-width:0">
-            <div class="ph43-slide-name">${escHtml(s.name)}</div>
-            ${s.desc ? `<div class="ph43-slide-subdesc">${escHtml(s.desc.length>50?s.desc.substring(0,50)+'…':s.desc)}</div>` : ''}
+
+  // ألوان تلقائية للتصنيفات التي لا تملك صورة
+  const palettes = [
+    ['#7c3aed','#a855f7'],['#0891b2','#06b6d4'],['#059669','#10b981'],
+    ['#d97706','#f59e0b'],['#dc2626','#ef4444'],['#db2777','#ec4899'],
+  ];
+
+  return `<div class="ph43-slideshow-view">
+    ${stores.map((s, idx) => {
+      const cats = (AppData.storeCats||[]).filter(c=>c.storeId===s.id).sort((a,b)=>(a.order||0)-(b.order||0));
+      const prodCount = (AppData.storeProducts||[]).filter(p=>p.storeId===s.id&&p.active!==false).length;
+      const [c1, c2] = palettes[idx % palettes.length];
+      const isOpen = s.active !== false;
+
+      return `
+      <div class="ph43-sl-card">
+
+        <!-- ══ رأس البطاقة (صورة أو تدرج) ══ -->
+        <div class="ph43-sl-head" style="${s.bannerBase64 ? '' : `background:linear-gradient(135deg,${c1},${c2})`}"
+             onclick="navigate('store',{storeId:'${s.id}'})">
+          ${s.bannerBase64
+            ? `<img src="${s.bannerBase64}" class="ph43-sl-banner" alt="">`
+            : `<span class="ph43-sl-icon-big">${s.icon||'🏪'}</span>`}
+          <div class="ph43-sl-head-overlay"></div>
+
+          <!-- شارة الحالة -->
+          <span class="ph43-sl-badge ${isOpen?'open':'closed'}">${isOpen?'✅ مفتوح':'⏸️ مغلق'}</span>
+
+          <!-- معلومات المتجر -->
+          <div class="ph43-sl-info">
+            <div class="ph43-sl-avatar" style="border-color:${c1}33">
+              ${s.logoBase64
+                ? `<img src="${s.logoBase64}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:10px">`
+                : `<span style="font-size:22px">${s.icon||'🏪'}</span>`}
+            </div>
+            <div style="flex:1;min-width:0">
+              <div class="ph43-sl-name">${escHtml(s.name)}</div>
+              ${s.desc ? `<div class="ph43-sl-desc">${escHtml(s.desc.length>55?s.desc.substring(0,55)+'…':s.desc)}</div>` : ''}
+            </div>
           </div>
-          <button class="ph43-slide-showall-btn" onclick="event.stopPropagation();navigate('store',{storeId:'${s.id}'})">
-            عرض الكل <span style="font-size:11px;opacity:.8">(${prodCount})</span> ←
-          </button>
         </div>
-      </div>
-      ${cats.length ? `
-      <div class="ph43-slide-cats-row">
-        <div class="ph43-slide-cats-label">الأقسام</div>
-        <div class="ph43-slide-cats-scroll">
-          ${cats.map(c=>{
-            const cnt = (AppData.storeProducts||[]).filter(p=>p.storeId===s.id&&p.catId===c.id&&p.active!==false).length;
-            return `<button class="ph43-slide-chip" onclick="State.storeActiveCat='${c.id}';navigate('store',{storeId:'${s.id}'})">
-              <span>${c.icon||'📦'}</span>
-              <span>${escHtml(c.name)}</span>
-              <span class="ph43-chip-cnt">${cnt}</span>
-            </button>`;
-          }).join('')}
+
+        <!-- ══ الأقسام الداخلية + زر عرض الكل ══ -->
+        <div class="ph43-sl-body">
+          <div class="ph43-sl-body-top">
+            <span class="ph43-sl-body-label">
+              📦 ${cats.length ? cats.length + ' قسم' : prodCount + ' منتج'}
+            </span>
+            <button class="ph43-sl-showall" style="--accent:${c1}"
+                    onclick="navigate('store',{storeId:'${s.id}'})">
+              عرض الكل ←
+            </button>
+          </div>
+
+          ${cats.length ? `
+          <div class="ph43-sl-chips-scroll">
+            ${cats.map(c => {
+              const cnt = (AppData.storeProducts||[]).filter(p=>p.storeId===s.id&&p.catId===c.id&&p.active!==false).length;
+              return `<button class="ph43-sl-chip"
+                              style="border-color:${c1}55;background:${c1}14;"
+                              onmouseover="this.style.background='${c1}28';this.style.borderColor='${c1}99';this.style.color='${c1}'"
+                              onmouseout="this.style.background='${c1}14';this.style.borderColor='${c1}55';this.style.color=''"
+                              onclick="State.storeActiveCat='${c.id}';navigate('store',{storeId:'${s.id}'})">
+                <span class="ph43-sl-chip-ic">${c.icon||'📦'}</span>
+                <span>${escHtml(c.name)}</span>
+                <span class="ph43-sl-chip-cnt">${cnt}</span>
+              </button>`;
+            }).join('')}
+          </div>` : `
+          <p class="ph43-sl-no-cats">اضغط عرض الكل لتصفح المنتجات</p>`}
         </div>
-      </div>` : ''}
-    </div>`;
-  }).join('')}</div>`;
+
+      </div>`;
+    }).join('')}
+  </div>`;
 }
 
 function ph43_renderStoreCard(s) {
@@ -1923,27 +1962,106 @@ setInterval(ph43_updateCartBadge, 1000);
     .ph43-list-meta { display:flex; gap:10px; font-size:11px; color:var(--text-muted); flex-wrap:wrap; }
     .ph43-list-arrow { font-size:18px; color:var(--primary); flex-shrink:0; padding:0 4px; }
 
-    /* ── Slideshow View ── */
-    .ph43-slideshow-view { display:flex; flex-direction:column; gap:16px; }
-    .ph43-slide-card { background:var(--bg-card); border:1px solid var(--glass-border); border-radius:18px; overflow:hidden; }
-    .ph43-slide-hero { position:relative; height:130px; cursor:pointer; overflow:hidden; background:var(--bg-secondary); }
-    .ph43-slide-banner-img { width:100%; height:100%; object-fit:cover; display:block; transition:transform 0.3s; }
-    .ph43-slide-hero:hover .ph43-slide-banner-img { transform:scale(1.04); }
-    .ph43-slide-banner-ph { height:100%; display:flex; align-items:center; justify-content:center; font-size:56px; background:linear-gradient(135deg,rgba(139,92,246,0.08),rgba(139,92,246,0.02)); }
-    .ph43-slide-overlay { position:absolute; bottom:0; inset-inline:0; background:linear-gradient(to top,rgba(0,0,0,0.72) 0%,rgba(0,0,0,0.1) 80%,transparent 100%); padding:10px 14px; display:flex; align-items:flex-end; gap:10px; }
-    .ph43-slide-avatar { width:38px; height:38px; border-radius:10px; background:var(--bg-secondary); display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; overflow:hidden; border:2px solid rgba(255,255,255,0.3); }
-    .ph43-slide-name { font-weight:800; font-size:15px; color:#fff; line-height:1.3; }
-    .ph43-slide-subdesc { font-size:11px; color:rgba(255,255,255,0.7); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .ph43-slide-showall-btn { background:rgba(255,255,255,0.15); backdrop-filter:blur(6px); border:1px solid rgba(255,255,255,0.25); color:#fff; border-radius:9px; padding:6px 11px; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit; white-space:nowrap; flex-shrink:0; transition:all 0.2s; }
-    .ph43-slide-showall-btn:hover { background:rgba(255,255,255,0.25); }
-    .ph43-slide-cats-row { padding:12px 14px 14px; }
-    .ph43-slide-cats-label { font-size:11px; font-weight:700; color:var(--text-muted); margin-bottom:8px; text-transform:uppercase; letter-spacing:.4px; }
-    .ph43-slide-cats-scroll { display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; }
-    .ph43-slide-cats-scroll::-webkit-scrollbar { height:3px; }
-    .ph43-slide-cats-scroll::-webkit-scrollbar-thumb { background:rgba(139,92,246,0.3); border-radius:99px; }
-    .ph43-slide-chip { display:flex; align-items:center; gap:5px; padding:6px 12px; border-radius:20px; border:1px solid var(--glass-border); background:var(--bg-secondary); cursor:pointer; font-size:12px; font-weight:600; color:var(--text-main); font-family:inherit; white-space:nowrap; transition:all 0.18s; flex-shrink:0; }
-    .ph43-slide-chip:hover { background:rgba(139,92,246,0.1); border-color:rgba(139,92,246,0.35); color:var(--primary); }
-    .ph43-chip-cnt { background:var(--bg-card); border-radius:9px; padding:1px 6px; font-size:10px; font-weight:800; color:var(--text-muted); }
+    /* ── Slideshow View (redesigned) ── */
+    .ph43-slideshow-view { display:flex; flex-direction:column; gap:18px; }
+
+    .ph43-sl-card {
+      background:var(--bg-card);
+      border:1px solid var(--glass-border);
+      border-radius:20px;
+      overflow:hidden;
+      box-shadow:0 4px 20px rgba(0,0,0,0.12);
+      transition:transform 0.2s, box-shadow 0.2s;
+    }
+    .ph43-sl-card:hover { transform:translateY(-3px); box-shadow:0 8px 32px rgba(0,0,0,0.18); }
+
+    /* رأس البطاقة */
+    .ph43-sl-head {
+      position:relative; height:148px; cursor:pointer; overflow:hidden;
+      background:linear-gradient(135deg,#7c3aed,#a855f7);
+    }
+    .ph43-sl-banner {
+      width:100%; height:100%; object-fit:cover; display:block;
+      transition:transform 0.4s cubic-bezier(0.4,0,0.2,1);
+    }
+    .ph43-sl-head:hover .ph43-sl-banner { transform:scale(1.05); }
+    .ph43-sl-icon-big {
+      position:absolute; inset:0; display:flex; align-items:center;
+      justify-content:center; font-size:64px; opacity:0.85;
+    }
+    .ph43-sl-head-overlay {
+      position:absolute; inset:0;
+      background:linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.15) 55%, transparent 100%);
+    }
+    /* شارة الحالة */
+    .ph43-sl-badge {
+      position:absolute; top:10px; right:10px;
+      font-size:11px; font-weight:700; padding:4px 10px; border-radius:20px;
+      backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+    }
+    .ph43-sl-badge.open { background:rgba(16,185,129,0.25); color:#6ee7b7; border:1px solid rgba(16,185,129,0.4); }
+    .ph43-sl-badge.closed { background:rgba(239,68,68,0.25); color:#fca5a5; border:1px solid rgba(239,68,68,0.4); }
+    /* معلومات المتجر فوق الصورة */
+    .ph43-sl-info {
+      position:absolute; bottom:0; inset-inline:0;
+      display:flex; align-items:flex-end; gap:10px; padding:12px 14px;
+    }
+    .ph43-sl-avatar {
+      width:42px; height:42px; border-radius:11px;
+      background:rgba(255,255,255,0.15);
+      display:flex; align-items:center; justify-content:center;
+      font-size:22px; flex-shrink:0; overflow:hidden;
+      border:2px solid rgba(255,255,255,0.3);
+      backdrop-filter:blur(6px);
+    }
+    .ph43-sl-name { font-weight:800; font-size:15px; color:#fff; line-height:1.3; }
+    .ph43-sl-desc { font-size:11px; color:rgba(255,255,255,0.72); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+    /* جسم البطاقة */
+    .ph43-sl-body { padding:12px 14px 14px; }
+    .ph43-sl-body-top {
+      display:flex; align-items:center; justify-content:space-between;
+      margin-bottom:10px;
+    }
+    .ph43-sl-body-label { font-size:12px; font-weight:700; color:var(--text-muted); }
+
+    /* زر عرض الكل */
+    .ph43-sl-showall {
+      display:inline-flex; align-items:center; gap:5px;
+      padding:6px 14px; border-radius:10px; border:none; cursor:pointer;
+      font-size:12px; font-weight:700; font-family:inherit;
+      background:var(--primary); color:#fff;
+      box-shadow:0 3px 10px rgba(139,92,246,0.35);
+      transition:all 0.18s;
+    }
+    .ph43-sl-showall:hover { opacity:0.88; transform:translateX(-2px); }
+
+    /* شرائح الأقسام */
+    .ph43-sl-chips-scroll {
+      display:flex; gap:8px; overflow-x:auto;
+      padding-bottom:4px; padding-top:2px;
+      scrollbar-width:none;
+    }
+    .ph43-sl-chips-scroll::-webkit-scrollbar { display:none; }
+    .ph43-sl-chip {
+      display:flex; align-items:center; gap:6px;
+      padding:7px 13px; border-radius:22px; flex-shrink:0;
+      border:1.5px solid rgba(139,92,246,0.25);
+      background:rgba(139,92,246,0.07);
+      color:var(--text-main); cursor:pointer;
+      font-size:12.5px; font-weight:600; font-family:inherit;
+      transition:all 0.18s; white-space:nowrap;
+    }
+    .ph43-sl-chip-ic { font-size:15px; }
+    .ph43-sl-chip-cnt {
+      background:rgba(0,0,0,0.08); border-radius:8px;
+      padding:1px 7px; font-size:10px; font-weight:800;
+      color:var(--text-muted); margin-inline-start:2px;
+    }
+    .ph43-sl-no-cats {
+      font-size:12px; color:var(--text-muted); margin:0;
+      padding:4px 0; font-style:italic;
+    }
 
     /* ── Store Hero ── */
     .ph43-store-hero { background:var(--bg-card); border-radius:20px; overflow:hidden; margin-bottom:20px; border:1px solid var(--glass-border); }
