@@ -1132,6 +1132,13 @@ window.ph43_confirmOrder = async function () {
 // ───────────────────────────────────────────────────────
 // SECTION 4 — Customer: Store Listing Page
 // ───────────────────────────────────────────────────────
+// ── دالة تبديل طريقة عرض المتاجر (مع إعادة تحميل البيانات) ──
+window.ph43_setView = function(v) {
+  State.ph43StoreView = v;
+  window._forceDataReload = true;   // أجبر على تحديث المتاجر من Firebase
+  if (typeof window.render === 'function') window.render();
+};
+
 window.ph43_renderStoresList = function () {
   // Support native routing / phone back button for digital stores
   if (State.params?.digital === 'cats' && typeof ph45_renderDigitalStorefront === 'function') {
@@ -1175,15 +1182,15 @@ window.ph43_renderStoresList = function () {
         </div>
         <!-- أزرار طريقة العرض -->
         <div class="ph43-view-toggle">
-          <button class="ph43-vtbtn${view==='grid'?' active':''}" onclick="State.ph43StoreView='grid';render()" title="مربعات">
+          <button class="ph43-vtbtn${view==='grid'?' active':''}" onclick="ph43_setView('grid')" title="مربعات">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1.5"/><rect x="9" y="1" width="6" height="6" rx="1.5"/><rect x="1" y="9" width="6" height="6" rx="1.5"/><rect x="9" y="9" width="6" height="6" rx="1.5"/></svg>
             <span>مربعات</span>
           </button>
-          <button class="ph43-vtbtn${view==='list'?' active':''}" onclick="State.ph43StoreView='list';render()" title="قائمة">
+          <button class="ph43-vtbtn${view==='list'?' active':''}" onclick="ph43_setView('list')" title="قائمة">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="2" width="14" height="3" rx="1.5"/><rect x="1" y="6.5" width="14" height="3" rx="1.5"/><rect x="1" y="11" width="14" height="3" rx="1.5"/></svg>
             <span>قائمة</span>
           </button>
-          <button class="ph43-vtbtn${view==='slideshow'?' active':''}" onclick="State.ph43StoreView='slideshow';render()" title="شرائح">
+          <button class="ph43-vtbtn${view==='slideshow'?' active':''}" onclick="ph43_setView('slideshow')" title="شرائح">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="2" width="14" height="9" rx="2"/><rect x="4" y="13" width="8" height="2" rx="1"/></svg>
             <span>شرائح</span>
           </button>
